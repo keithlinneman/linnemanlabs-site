@@ -1,0 +1,49 @@
+{{ define "main" }}
+<article class="space-y-6">
+  <header class="space-y-2">
+    <h1 class="text-3xl font-semibold tracking-tight text-balance">{{ .Title }}</h1>
+    <div class="text-sm text-[rgb(var(--muted))] flex flex-wrap gap-2">
+      <span class="tabular">{{ .Date.Format "2006-01-02" }}</span>
+      {{ $author := .Params.author | default .Site.Params.author.name }}
+      {{ with $author }}
+        <span>·</span>
+        <span>{{ . }}</span>
+      {{ end }}
+      {{ with .Params.tags }}
+        <span>·</span>
+        {{ range . }}
+          <a class="hover:text-[rgb(var(--fg))] transition-colors" href="/tags/{{ . | urlize }}/">#{{ . }}</a>
+        {{ end }}
+      {{ end }}
+    </div>
+  </header>
+
+  <div class="prose max-w-none">
+    {{ .Content }}
+  </div>
+
+  {{/* Author box */}}
+  {{ with .Site.Params.author }}
+  <footer class="mt-10 pt-6 border-t border-[rgb(var(--border))]">
+    <div class="blueprint-card">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-full bg-[rgb(var(--accent))] flex items-center justify-center text-[rgb(var(--bg))] font-semibold text-lg">
+            {{ substr .name 0 1 }}
+        </div>
+        <div class="flex-1">
+          <a href="/about/me">
+            <div class="font-medium">{{ .name }}</div>
+          </a>
+          <div class="text-sm text-[rgb(var(--muted))] mt-1">{{ .bio }}</div>
+          {{ with .github }}
+          <a href="https://github.com/{{ . }}" class="text-sm text-[rgb(var(--accent))] hover:underline mt-2 inline-block">
+            github.com/{{ . }}
+          </a>
+          {{ end }}
+        </div>
+      </div>
+    </div>
+  </footer>
+  {{ end }}
+</article>
+{{ end }}

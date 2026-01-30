@@ -1,0 +1,147 @@
+{{/* App Provenance Sidebar - Desktop only */}}
+{{ $rel := .Site.Data.release }}
+{{ $container := index $rel.components 0 }}
+<aside class="app-provenance-sidebar hidden lg:block fixed right-4 top-20 w-56 z-40">
+  <div class="border-l-2 border-[rgb(var(--accent))] pl-3">
+    <div class="border border-[rgb(var(--border))] bg-[rgb(var(--panel))] rounded-lg shadow-lg">
+      <div class="p-3 border-b border-[rgb(var(--border))]">
+        <div class="text-[10px] font-medium text-[rgb(var(--muted))] uppercase tracking-wide">App Provenance</div>
+        <div class="flex items-center gap-2 mt-1">
+          {{ if eq $rel.vulnerabilities.summary.critical 0 }}
+            <span class="status-dot"></span>
+          {{ else }}
+            <span class="status-dot status-dot--bad"></span>
+          {{ end }}
+          <span class="text-xs font-medium">v{{ $rel.version }}</span>
+          <span class="text-[10px] mono text-[rgb(var(--muted))]">{{ $rel.source.commit_short }}</span>
+        </div>
+        <div class="text-[9px] text-[rgb(var(--muted))] mt-1">
+          {{ $rel.track }} · {{ $rel.created_at | time.Format "Jan 2" }}
+        </div>
+      </div>
+
+      <div class="p-3 space-y-3">
+        {{/* Source */}}
+        <div>
+          <div class="text-[9px] font-medium text-[rgb(var(--muted))] uppercase tracking-wide mb-1.5">Source</div>
+          <div class="text-[10px] space-y-0.5">
+            <div class="flex items-center gap-1">
+              <span class="text-[rgb(var(--muted))]">Commit:</span>
+              <span class="mono">{{ $rel.source.commit_short }}</span>
+              {{ if $rel.source.dirty }}
+                <span class="text-[rgb(var(--warn))]">*</span>
+              {{ end }}
+            </div>
+            <div class="text-[rgb(var(--muted))]">{{ $rel.source.commit_date | time.Format "2006-01-02" }}</div>
+          </div>
+        </div>
+
+        {{/* Attestations */}}
+        <div>
+          <div class="text-[9px] font-medium text-[rgb(var(--muted))] uppercase tracking-wide mb-1.5">Attestations</div>
+          <div class="space-y-1 text-[10px]">
+            <div class="flex items-center gap-1.5">
+              {{ if $rel.attestations.cosign.signed }}
+                <span class="w-1.5 h-1.5 rounded-full bg-[rgb(var(--good))]"></span>
+              {{ else }}
+                <span class="w-1.5 h-1.5 rounded-full bg-[rgb(var(--bad))]"></span>
+              {{ end }}
+              <span>Cosign</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              {{ if $rel.attestations.slsa.verified }}
+                <span class="w-1.5 h-1.5 rounded-full bg-[rgb(var(--good))]"></span>
+              {{ else }}
+                <span class="w-1.5 h-1.5 rounded-full bg-[rgb(var(--bad))]"></span>
+              {{ end }}
+              <span>SLSA L{{ $rel.attestations.slsa.level }}</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              {{ if $rel.licenses.compliant }}
+                <span class="w-1.5 h-1.5 rounded-full bg-[rgb(var(--good))]"></span>
+              {{ else }}
+                <span class="w-1.5 h-1.5 rounded-full bg-[rgb(var(--bad))]"></span>
+              {{ end }}
+              <span>Licenses</span>
+            </div>
+          </div>
+        </div>
+
+        {{/* Policy */}}
+        <div>
+          <div class="text-[9px] font-medium text-[rgb(var(--muted))] uppercase tracking-wide mb-1.5">Policy</div>
+          <div class="grid grid-cols-2 gap-1 text-[9px]">
+            <div class="flex items-center gap-1">
+              {{ if $rel.policy.defaults.signing.require_signature }}
+                <span class="w-1 h-1 rounded-full bg-[rgb(var(--good))]"></span>
+              {{ else }}
+                <span class="w-1 h-1 rounded-full bg-[rgb(var(--muted))]"></span>
+              {{ end }}
+              <span>Sign</span>
+            </div>
+            <div class="flex items-center gap-1">
+              {{ if $rel.policy.defaults.evidence.sbom.required }}
+                <span class="w-1 h-1 rounded-full bg-[rgb(var(--good))]"></span>
+              {{ else }}
+                <span class="w-1 h-1 rounded-full bg-[rgb(var(--muted))]"></span>
+              {{ end }}
+              <span>SBOM</span>
+            </div>
+            <div class="flex items-center gap-1">
+              {{ if $rel.policy.defaults.evidence.scan.required }}
+                <span class="w-1 h-1 rounded-full bg-[rgb(var(--good))]"></span>
+              {{ else }}
+                <span class="w-1 h-1 rounded-full bg-[rgb(var(--muted))]"></span>
+              {{ end }}
+              <span>Scan</span>
+            </div>
+            <div class="flex items-center gap-1">
+              {{ if $rel.policy.defaults.vulnerability.gating.block_on }}
+                <span class="w-1 h-1 rounded-full bg-[rgb(var(--good))]"></span>
+              {{ else }}
+                <span class="w-1 h-1 rounded-full bg-[rgb(var(--muted))]"></span>
+              {{ end }}
+              <span>Gate</span>
+            </div>
+          </div>
+        </div>
+
+        {{/* Vulnerability Summary */}}
+        <div>
+          <div class="text-[9px] font-medium text-[rgb(var(--muted))] uppercase tracking-wide mb-1.5">Vulnerabilities</div>
+          <div class="grid grid-cols-4 gap-1 text-[10px]">
+            <div class="text-center">
+              <div class="w-6 h-6 rounded mx-auto flex items-center justify-center bg-[rgb(var(--bad))]/20 text-[rgb(var(--bad))] font-medium">{{ $rel.vulnerabilities.summary.critical }}</div>
+              <div class="text-[rgb(var(--muted))] mt-0.5">C</div>
+            </div>
+            <div class="text-center">
+              <div class="w-6 h-6 rounded mx-auto flex items-center justify-center bg-[rgb(var(--warn))]/20 text-[rgb(var(--warn))] font-medium">{{ $rel.vulnerabilities.summary.high }}</div>
+              <div class="text-[rgb(var(--muted))] mt-0.5">H</div>
+            </div>
+            <div class="text-center">
+              <div class="w-6 h-6 rounded mx-auto flex items-center justify-center bg-[rgb(var(--accent))]/20 text-[rgb(var(--accent))] font-medium">{{ $rel.vulnerabilities.summary.medium }}</div>
+              <div class="text-[rgb(var(--muted))] mt-0.5">M</div>
+            </div>
+            <div class="text-center">
+              <div class="w-6 h-6 rounded mx-auto flex items-center justify-center bg-[rgb(var(--muted))]/20 text-[rgb(var(--muted))] font-medium">{{ $rel.vulnerabilities.summary.low }}</div>
+              <div class="text-[rgb(var(--muted))] mt-0.5">L</div>
+            </div>
+          </div>
+        </div>
+
+        {{/* SBOM */}}
+        <div class="text-[10px]">
+          <div class="text-[rgb(var(--muted))]">SBOM</div>
+          <div>{{ $rel.sbom.package_count }} packages ({{ $rel.sbom.format }})</div>
+        </div>
+
+        {{/* Container digest */}}
+        <div class="text-[10px] pt-2 border-t border-[rgb(var(--border))]">
+          <div class="text-[rgb(var(--muted))]">Container</div>
+          <div class="mono text-[9px]">{{ $container.index.tag }}</div>
+          <div class="mono text-[9px] break-all text-[rgb(var(--muted))]">{{ printf "%.16s" $container.index.digest }}...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</aside>

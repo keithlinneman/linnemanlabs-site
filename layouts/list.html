@@ -1,0 +1,22 @@
+{{ define "main" }}
+<h1 class="text-2xl font-semibold tracking-tight">{{ .Title }}</h1>
+
+<div class="mt-6 space-y-4">
+  {{ range .Pages }}
+    <a class="block blueprint-card hover:border-[rgb(var(--accent))] transition-colors" href="{{ .RelPermalink }}">
+      <div class="font-medium">{{ .Title }}</div>
+      <div class="text-sm text-[rgb(var(--muted))] tabular flex items-center gap-2">
+        <span>{{ .Date.Format "2006-01-02" }}</span>
+        {{ $author := .Params.author | default $.Site.Params.author.name }}
+        {{ with $author }}
+          <span>·</span>
+          <span>{{ . }}</span>
+        {{ end }}
+      </div>
+      {{ with .Params.summary }}
+        <div class="text-sm text-[rgb(var(--muted))] mt-2 line-clamp-2">{{ . }}</div>
+      {{ end }}
+    </a>
+  {{ end }}
+</div>
+{{ end }}

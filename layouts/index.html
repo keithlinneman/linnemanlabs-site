@@ -1,0 +1,99 @@
+{{ define "main" }}
+<div class="space-y-12">
+
+  {{/* Hero / Intro */}}
+  <section class="space-y-4">
+    <h1 class="text-3xl font-semibold tracking-tight">{{ .Site.Title }}</h1>
+    <p class="text-lg text-[rgb(var(--muted))] max-w-2xl">
+      {{ .Site.Params.description | default "Security, infrastructure, and platform engineering expertise built over 20 years of hands-on experience." }}
+    </p>
+  </section>
+
+  {{/* Recent Posts */}}
+  <section class="space-y-6">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-semibold tracking-tight">Recent Posts</h2>
+      <a href="/posts/" class="text-sm text-[rgb(var(--accent))] hover:underline">View all</a>
+    </div>
+
+    <div class="space-y-4">
+      {{ $posts := first 5 (where .Site.RegularPages "Section" "posts") }}
+      {{ range $posts }}
+        <article class="blueprint-card">
+          <a href="{{ .Permalink }}" class="block group">
+            <h3 class="font-medium group-hover:text-[rgb(var(--accent))] transition-colors">{{ .Title }}</h3>
+            <div class="text-sm text-[rgb(var(--muted))] mt-1 flex items-center gap-2">
+              <span class="tabular">{{ .Date.Format "2006-01-02" }}</span>
+              {{ with .Params.tags }}
+                <span>·</span>
+                {{ range first 2 . }}
+                  <span class="text-[rgb(var(--accent))]">#{{ . }}</span>
+                {{ end }}
+              {{ end }}
+            </div>
+            {{ with .Summary }}
+              <p class="text-sm text-[rgb(var(--muted))] mt-2 line-clamp-2">{{ . }}</p>
+            {{ end }}
+          </a>
+        </article>
+      {{ else }}
+        <p class="text-[rgb(var(--muted))]">No posts yet.</p>
+      {{ end }}
+    </div>
+  </section>
+
+  {{/* Browse by Tag & Category */}}
+  <div class="grid md:grid-cols-2 gap-8">
+
+    {{/* Browse by Tag */}}
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold tracking-tight">Browse by Tag</h2>
+      <div class="blueprint-card">
+        {{ $tags := .Site.Taxonomies.tags }}
+        {{ if $tags }}
+          <div class="flex flex-wrap gap-2">
+            {{ range $name, $taxonomy := $tags }}
+              <a
+                href="/tags/{{ $name | urlize }}/"
+                class="text-sm px-3 py-1.5 rounded-full border border-[rgb(var(--border))] hover:border-[rgb(var(--accent))] hover:text-[rgb(var(--accent))] transition-colors"
+              >
+                #{{ $name }}
+                <span class="text-[rgb(var(--muted))] ml-1">{{ len $taxonomy }}</span>
+              </a>
+            {{ end }}
+          </div>
+        {{ else }}
+          <p class="text-[rgb(var(--muted))] text-sm">No tags yet.</p>
+        {{ end }}
+      </div>
+    </section>
+
+    {{/* Browse by Category */}}
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold tracking-tight">Browse by Category</h2>
+      <div class="blueprint-card">
+        {{ $categories := .Site.Taxonomies.categories }}
+        {{ if $categories }}
+          <ul class="space-y-2">
+            {{ range $name, $taxonomy := $categories }}
+              <li>
+                <a
+                  href="/categories/{{ $name | urlize }}/"
+                  class="flex items-center justify-between group"
+                >
+                  <span class="group-hover:text-[rgb(var(--accent))] transition-colors">{{ $name | title }}</span>
+                  <span class="text-sm text-[rgb(var(--muted))] tabular">{{ len $taxonomy }} {{ if eq (len $taxonomy) 1 }}post{{ else }}posts{{ end }}</span>
+                </a>
+              </li>
+            {{ end }}
+          </ul>
+        {{ else }}
+          <p class="text-[rgb(var(--muted))] text-sm">No categories yet.</p>
+        {{ end }}
+      </div>
+    </section>
+
+  </div>
+
+</div>
+{{ end }}

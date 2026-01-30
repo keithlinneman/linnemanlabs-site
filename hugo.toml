@@ -1,0 +1,88 @@
+baseURL = 'https://linnemanlabs.com/'
+languageCode = 'en-us'
+title = 'LinnemanLabs'
+enableRobotsTXT = true
+
+[pagination]
+pagerSize = 25
+
+# where Hugo writes the built site
+publishDir = "public"
+
+[taxonomies]
+  tag = "tags"
+  category = "categories"
+  series = "series"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      # dont render html in markdown files for now
+      unsafe = false
+
+  [markup.highlight]
+    codeFences = true
+    guessSyntax = true
+    lineNos = false
+    noClasses = true
+
+[params]
+  description = "Building systems, breaking systems, observing systems, securing systems, auditing systems... improving systems."
+  githubRepo = "https://github.com/keithlinneman/linnemanlabs_com"
+  logo = "/favicon.svg"
+
+[params.author]
+  name = "Keith Linneman"
+  bio = "20 years of cybersecurity, infrastructure, and platform engineering."
+  github = "keithlinneman"
+
+[build]
+  [build.buildStats]
+    enable = true
+
+[menus]
+  [[menus.main]]
+    identifier = "posts"
+    name = "Posts"
+    weight = 10
+
+  [[menus.main]]
+    parent = "posts"
+    name = "View All"
+    pageRef = "/posts/"
+    weight = 1
+
+  [[menus.main]]
+    parent = "posts"
+    name = "Categories"
+    pageRef = "/categories/"
+    weight = 1
+
+  [[menus.main]]
+    parent = "posts"
+    name = "Tags"
+    pageRef = "/tags/"
+    weight = 1
+
+  [[menus.main]]
+    identifier = "about"
+    name = "About"
+    weight = 20
+
+  [[menus.main]]
+    parent = "about"
+    name = "LinnemanLabs"
+    pageRef = "/about/"
+    weight = 1
+
+  [[menus.main]]
+    parent = "about"
+    name = "Me"
+    pageRef = "/about/me/"
+    weight = 1
+
+  [[menus.main]]
+    parent = "about"
+    name = "Infrastructure"
+    pageRef = "/about/infrastructure/"
+    weight = 1

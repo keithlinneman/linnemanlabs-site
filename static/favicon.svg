@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" fill="rgb(10, 12, 16)"/>
+  <!-- Corner brackets -->
+  <path d="M4 4 L4 10 M4 4 L10 4" stroke="rgb(120, 170, 255)" stroke-width="2" fill="none"/>
+  <path d="M28 4 L28 10 M28 4 L22 4" stroke="rgb(120, 170, 255)" stroke-width="2" fill="none"/>
+  <path d="M4 28 L4 22 M4 28 L10 28" stroke="rgb(120, 170, 255)" stroke-width="2" fill="none"/>
+  <path d="M28 28 L28 22 M28 28 L22 28" stroke="rgb(120, 170, 255)" stroke-width="2" fill="none"/>
+  <!-- LL text -->
+  <text x="17" y="21" font-family="monospace" font-size="14" font-weight="bold" fill="rgb(236, 242, 255)" text-anchor="middle">LL</text>
+</svg>

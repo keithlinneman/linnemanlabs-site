@@ -1,0 +1,11 @@
+{{ define "main" }}
+<article class="space-y-6">
+  <header class="space-y-2">
+    <h1 class="text-3xl font-semibold tracking-tight text-balance">{{ .Title }}</h1>
+  </header>
+
+  <div class="prose max-w-none">
+    {{ .Content }}
+  </div>
+</article>
+{{ end }}
