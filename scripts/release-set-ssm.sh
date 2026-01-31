@@ -22,10 +22,7 @@ fi
 DEPLOY_ROLE_ARN="$( aws ssm get-parameter --name "${DEPLOY_ROLE_ARN_PARAM}" --query 'Parameter.Value' --output text )"
 : "${DEPLOY_ROLE_ARN:?failed to get DEPLOY_ROLE_ARN from SSM param ${DEPLOY_ROLE_ARN_PARAM}}"
 
-# validate that the file exists in s3
-aws s3api head-object --bucket "${RELEASE_BUCKET}" --key "${RELEASE_PREFIX}/${RELEASE_ID}.tar.gz" > /dev/null \
-    || { echo "error: ${RELEASE_PREFIX}/${RELEASE_ID}.tar.gz not in S3 bucket ${RELEASE_BUCKET}"; exit 1; }
-
+# validate the file in s3
 s3_metadata="$( aws s3api head-object --bucket "${RELEASE_BUCKET}" --key "${RELEASE_PREFIX}/${RELEASE_ID}.tar.gz" )"
 s3_size="$( jq -r '.ContentLength' <<< "${s3_metadata}" )"
 [[ -z "${s3_size}" || "${s3_size}" == "null" ]] && { echo "error: ${RELEASE_PREFIX}/${RELEASE_ID}.tar.gz size: not in S3 bucket ${RELEASE_BUCKET}"; exit 1; }
