@@ -9,17 +9,22 @@ if [[ -z "${RELEASE_ID:-}" && -f .release-id ]]; then
   RELEASE_ID="$( cat .release-id )"
 fi
 : "${RELEASE_ID:?RELEASE_ID must be set}"
+rel_len="$( wc -c <<< "${RELEASE_ID}" )"
+if [[ "${rel_len}" != 64 ]]; then
+  echo "error: RELEASE_ID length is ${rel_len} expected 64" >&2
+  exit 1
+fi
 
 : "${RELEASE_BUCKET:?RELEASE_BUCKET must be set in release.conf}"
 : "${RELEASE_PREFIX:?RELEASE_PREFIX must be set in release.conf}"
 
-[[ ! -f "${BUNDLE_FILE}" ]] && { echo "error: missing ${BUNDLE_FILE} - build the bundle first" >&2; exit 1; }
-[[ ! -f "${BUNDLE_FILE}.sha256" ]] && { echo "error: missing ${BUNDLE_FILE}.sha256 - sign the bundle first" >&2; exit 1; }
+bundle_file="${RELEASE_ID}.tar.gz"
 
-echo "==> Uploading site bundle to s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${BUNDLE_FILE}"
-aws s3 cp "${BUNDLE_FILE}" "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${BUNDLE_FILE}"
+# sanity checks
+[[ ! -f "${bundle_file}" ]] && { echo "error: bundle file ${bundle_file} does not exist" >&2; exit 1; }
+[[ ! -s "${bundle_file}" ]] && { echo "error: bundle file ${bundle_file} is empty" >&2; exit 1; }
 
-echo "==> Uploading site bundle checksum to s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${BUNDLE_FILE}.sha256"
-aws s3 cp "${BUNDLE_FILE}.sha256" "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${BUNDLE_FILE}.sha256"
+echo "==> Uploading site bundle to s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${bundle_file}"
+aws s3 cp "${bundle_file}" "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${bundle_file}"
 
 echo "==> store-s3-bundle done"

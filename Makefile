@@ -12,8 +12,6 @@ package: test
 	./scripts/package-build-bundle.sh
 
 store: package
-	@echo "$(shell date +%s).$(shell git rev-parse --short HEAD)" > .release-id
-	@echo "==> release id: $$(cat .release-id)"
 	./scripts/store-s3-bundle.sh
 
 release: store
