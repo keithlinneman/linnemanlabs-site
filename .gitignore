@@ -4,3 +4,6 @@
 /.hugo_build.lock
 /release.json
 /data/*
+/site-bundle.tar.gz
+/site-bundle.tar.gz.sha256
+/.release-id
