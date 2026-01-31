@@ -1,6 +1,7 @@
 {{ $p := .Site.Data.provenance }}
 <footer class="border-t border-[rgb(var(--border))] bg-[rgb(var(--bg))]">
   <div class="mx-auto max-w-3xl px-6 py-10 text-sm space-y-4">
+    {{ with $p }}
     <div class="attestation-card">
       <div class="text-[rgb(var(--fg))] font-medium mb-1">Content Provenance</div>
       <div class="text-xs text-[rgb(var(--muted))] mb-3">
@@ -9,24 +10,25 @@
       <div class="grid gap-2">
         <div>
           <div class="attestation-label">Content Version</div>
-          <div class="attestation-value tabular">{{ $p.content.version }}</div>
+          <div class="attestation-value tabular">{{ .content.version }}</div>
         </div>
         <div>
           <div class="attestation-label">Bundle SHA256</div>
-          <div class="attestation-value text-xs">{{ $p.content.sha256 }}</div>
+          <div class="attestation-value text-xs">{{ .content.sha256 }}</div>
         </div>
         <div class="flex gap-6">
           <div>
             <div class="attestation-label">Generated</div>
-            <div class="attestation-value tabular">{{ $p.content.built_at }}</div>
+            <div class="attestation-value tabular">{{ .content.built_at }}</div>
           </div>
           <div>
             <div class="attestation-label">TUF Signatures</div>
-            <div class="attestation-value tabular">{{ len $p.tuf.signatures }}</div>
+            <div class="attestation-value tabular">{{ len .tuf.signatures }}</div>
           </div>
         </div>
       </div>
     </div>
+    {{ end }}
 
     <div class="text-xs text-[rgb(var(--muted))] flex items-center gap-2">
       <span class="status-dot"></span>

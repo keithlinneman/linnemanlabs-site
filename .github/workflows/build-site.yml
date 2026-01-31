@@ -1,0 +1,48 @@
+name: Build Site
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install tools
+        run: |
+          mkdir -p tools
+          echo "${PWD}/tools" >> $GITHUB_PATH
+
+          # Install hugo pinned version
+          HUGO_VERSION="0.155.1"
+          HUGO_SHA256="6056ac054f7a159c8c95c8d5cf4f5ee255f27c3aada9b302bc3197d94305d8a7"
+          curl -sSL "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_linux-amd64.tar.gz" -o /tmp/hugo.tar.gz
+          echo "${HUGO_SHA256} /tmp/hugo.tar.gz" | sha256sum -c -
+          tar -zxf /tmp/hugo.tar.gz -C tools hugo
+          chmod +x tools/hugo
+
+          # Install tailwindcss pinned version
+          TAILWIND_VERSION="4.1.18"
+          TAILWIND_SHA256="737becf8d4ad1115ea98df69fa94026d402ca8feb91306a035b5b004167da8dd"
+          curl -sSL "https://github.com/tailwindlabs/tailwindcss/releases/download/v${TAILWIND_VERSION}/tailwindcss-linux-x64" -o tools/tailwindcss
+          echo "${TAILWIND_SHA256} tools/tailwindcss" | sha256sum -c -
+          chmod +x tools/tailwindcss
+
+          # Install tidy
+          sudo apt-get -y install tidy
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::682033464915:role/app-linnemanlabs-web-content
+          aws-region: us-east-2
+
+      - name: Build and release site bundle
+        run: |
+          make release

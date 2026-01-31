@@ -10,8 +10,11 @@ if [[ -z "${RELEASE_ID:-}" && -f .release-id ]]; then
 fi
 : "${RELEASE_ID:?RELEASE_ID must be set}"
 
-: "${DEPLOY_ROLE_ARN:?DEPLOY_ROLE_ARN must be set in release.conf}"
+: "${DEPLOY_ROLE_ARN_PARAM:?DEPLOY_ROLE_ARN_PARAM must be set in release.conf}"
 : "${DEPLOY_SSM_PARAM:?DEPLOY_SSM_PARAM must be set in release.conf}"
+
+DEPLOY_ROLE_ARN="$( aws ssm get-parameter --name "${DEPLOY_ROLE_ARN_PARAM}" --query 'Parameter.Value' --output text )"
+: "${DEPLOY_ROLE_ARN:?failed to get DEPLOY_ROLE_ARN from SSM param ${DEPLOY_ROLE_ARN_PARAM}}"
 
 # assume role in workload account in a subshell
 (
