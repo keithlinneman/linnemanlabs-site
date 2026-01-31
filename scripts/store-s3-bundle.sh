@@ -17,9 +17,9 @@ fi
 [[ ! -f "${BUNDLE_FILE}.sha256" ]] && { echo "error: missing ${BUNDLE_FILE}.sha256 - sign the bundle first" >&2; exit 1; }
 
 echo "==> Uploading site bundle to s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${BUNDLE_FILE}"
-aws --profile build-prod s3 cp "${BUNDLE_FILE}" "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${BUNDLE_FILE}"
+aws s3 cp "${BUNDLE_FILE}" "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${BUNDLE_FILE}"
 
 echo "==> Uploading site bundle checksum to s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${BUNDLE_FILE}.sha256"
-aws --profile build-prod s3 cp "${BUNDLE_FILE}.sha256" "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${BUNDLE_FILE}.sha256"
+aws s3 cp "${BUNDLE_FILE}.sha256" "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${BUNDLE_FILE}.sha256"
 
 echo "==> store-s3-bundle done"
