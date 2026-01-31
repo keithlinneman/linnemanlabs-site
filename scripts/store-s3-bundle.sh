@@ -9,9 +9,10 @@ if [[ -z "${RELEASE_ID:-}" && -f .release-id ]]; then
   RELEASE_ID="$( cat .release-id )"
 fi
 : "${RELEASE_ID:?RELEASE_ID must be set}"
+# 65 with newline
 rel_len="$( wc -c <<< "${RELEASE_ID}" )"
-if [[ "${rel_len}" != 64 ]]; then
-  echo "error: RELEASE_ID length is ${rel_len} expected 64" >&2
+if [[ "${rel_len}" != 65 ]]; then
+  echo "error: RELEASE_ID length is ${rel_len} expected 65" >&2
   exit 1
 fi
 
