@@ -5,27 +5,38 @@ SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" && pwd )"
 # shellcheck source=release.conf
 source "${SCRIPT_DIR}/../release.conf"
 
-if [[ -z "${RELEASE_ID:-}" && -f .release-id ]]; then
-  RELEASE_ID="$( cat .release-id )"
-fi
-: "${RELEASE_ID:?RELEASE_ID must be set}"
-# 65 with newline
-rel_len="$( wc -c <<< "${RELEASE_ID}" )"
-if [[ "${rel_len}" != 65 ]]; then
-  echo "error: RELEASE_ID length is ${rel_len} expected 65" >&2
-  exit 1
-fi
-
 : "${RELEASE_BUCKET:?RELEASE_BUCKET must be set in release.conf}"
 : "${RELEASE_PREFIX:?RELEASE_PREFIX must be set in release.conf}"
 
-bundle_file="${RELEASE_ID}.tar.gz"
-
 # sanity checks
-[[ ! -f "${bundle_file}" ]] && { echo "error: bundle file ${bundle_file} does not exist" >&2; exit 1; }
-[[ ! -s "${bundle_file}" ]] && { echo "error: bundle file ${bundle_file} is empty" >&2; exit 1; }
+[[ ! -f "${BUNDLE_FILE}" ]] && { echo "error: bundle file ${BUNDLE_FILE} does not exist" >&2; exit 1; }
+[[ ! -s "${BUNDLE_FILE}" ]] && { echo "error: bundle file ${BUNDLE_FILE} is empty" >&2; exit 1; }
 
-echo "==> Uploading site bundle to s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${bundle_file}"
-aws s3 cp "${bundle_file}" "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${bundle_file}"
+# get sha256sum of the bundle
+bundlesha256sum=$( sha256sum "${BUNDLE_FILE}" | awk '{print $1}' )
+: "${bundlesha256sum:?failed to calculate sha256sum of bundle file ${BUNDLE_FILE}}"
+
+# validate gzip
+gzip -t "${BUNDLE_FILE}" || { echo "error: invalid gzip"; exit 1; }
+# validate tar validity (tests gzip too)
+tar -tzf "${BUNDLE_FILE}" > /dev/null || { echo "error: invalid tar"; exit 1; }
+# todo: check for some expected files inside the tar
+
+# upload the bundle to s3 named by its sha256sum
+bundle_upload_file="${bundlesha256sum}.tar.gz"
+echo "==> Uploading site bundle to s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${bundle_upload_file}"
+aws s3 cp "${BUNDLE_FILE}" "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${bundle_upload_file}"
+
+# verify upload by re-downloading and checking sha256sum
+bundle_temp="$( mktemp -u bundle-verify-XXXXXX.tar.gz )"
+aws s3 cp "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${bundle_upload_file}" "${bundle_temp}"
+download_sha256sum=$( sha256sum "${bundle_temp}" | awk '{print $1}' )
+if [[ "${download_sha256sum}" != "${bundlesha256sum}" ]]; then
+  echo "error: uploaded bundle sha256sum ${download_sha256sum} does not match original ${bundlesha256sum}" >&2
+  exit 1
+fi
+rm -f "${bundle_temp}"
+
+echo "${bundlesha256sum}" > .release-id
 
 echo "==> store-s3-bundle done"

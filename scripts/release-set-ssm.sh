@@ -23,7 +23,8 @@ DEPLOY_ROLE_ARN="$( aws ssm get-parameter --name "${DEPLOY_ROLE_ARN_PARAM}" --qu
 : "${DEPLOY_ROLE_ARN:?failed to get DEPLOY_ROLE_ARN from SSM param ${DEPLOY_ROLE_ARN_PARAM}}"
 
 # validate that the file exists in s3
-aws s3 ls "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${RELEASE_ID}.tar.gz" || { echo "error: bundle file ${RELEASE_ID}.tar.gz does not exist in s3" >&2; exit 1; }
+aws s3 head-object --bucket "${RELEASE_BUCKET}" --key "${RELEASE_PREFIX}/${RELEASE_ID}.tar.gz" > /dev/null \
+    || { echo "error: ${RELEASE_PREFIX}/${RELEASE_ID}.tar.gz not in S3 bucket ${RELEASE_BUCKET}"; exit 1; }
 
 # assume role in workload account in a subshell for cred isolation
 (
@@ -35,7 +36,7 @@ aws s3 ls "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${RELEASE_ID}/${RELEASE_ID}.
   AWS_SECRET_ACCESS_KEY="$(jq -r '.Credentials.SecretAccessKey' <<< "$credentials")"
   AWS_SESSION_TOKEN="$(jq -r '.Credentials.SessionToken' <<< "$credentials")"
 
-  echo "==> setting workload ssm param=${DEPLOY_SSM_PARAM} to ${RELEASE_ID}"
+  echo "==> setting workload ssm param ${DEPLOY_SSM_PARAM} to ${RELEASE_ID}"
   aws ssm put-parameter --name "${DEPLOY_SSM_PARAM}" --type String --value "${RELEASE_ID}" --overwrite
 )
 
