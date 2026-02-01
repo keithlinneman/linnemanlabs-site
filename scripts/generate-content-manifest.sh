@@ -76,7 +76,6 @@ while IFS= read -r -d '' file; do
   esac
   
   # build JSON object for this file
-
   file_json="$( jq -n \
     --arg path "${rel_path}" \
     --arg sha256 "${file_hash}" \
@@ -105,6 +104,8 @@ echo "==> Scanned ${total_files} files (${total_size} bytes)"
 echo "==> Calculating content hash (reproducible)"
 content_hash="$( find "${REPO_ROOT}/${CONTENT_DIR}" -type f ! -name 'manifest.json' ! -name 'release.json' -print0 | sort -z | xargs -0 sha256sum | sha256sum | awk '{ print $1 }' )"
 
+inventory_time="$( date -u +"%Y-%m-%dT%H:%M:%SZ" )"
+
 echo "==> Writing manifest to ${MANIFEST_FILE}"
 # assemble final manifest
 jq -n \
@@ -119,48 +120,13 @@ jq -n \
   --argjson image_files "${image_files}" \
   --argjson other_files "${other_files}" \
   --argjson files "${files_json}" \
+  --arg created_at "${inventory_time}" \
   '{
-    "schema_version": "1.0.0",
+    "schema": "com.linnemanlabs.manifest.site.content.bundle.v1",
     "type": "content-bundle",
     "version": $version,
     "created_at": $created_at,
     "content_hash": $content_hash,
-    
-    "source": {
-      "repository": $git_repo,
-      "commit": $git_commit,
-      "commit_short": $git_commit_short,
-      "commit_date": $git_commit_date,
-      "branch": $git_branch,
-      "dirty": $git_dirty
-    },
-    
-    "tooling": {
-      "hugo": {
-        "version": $hugo_version,
-        "sha256": $hugo_checksum
-      },
-      "tailwindcss": {
-        "version": $tailwind_version,
-        "sha256": $tailwind_checksum
-      },
-      "tidy": {
-        "version": $tidy_version,
-        "sha256": $tidy_checksum
-      },
-      "git": {
-        "version": $git_tool_version
-      },
-      "bash": {
-        "version": $bash_version
-      }
-    },
-    
-    "build": {
-      "host": $build_host,
-      "user": $build_user,
-      "timestamp": $created_at
-    },
     
     "summary": {
       "total_files": $total_files,
