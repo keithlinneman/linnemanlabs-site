@@ -10,11 +10,13 @@ echo "==> Starting generate-release-manifest"
 
 # output file
 RELEASE_FILE="${REPO_ROOT}/${CONTENT_DIR}/release.json"
+# manifest file
+MANIFEST_FILE="${REPO_ROOT}/${CONTENT_DIR}/manifest.json"
 
 # verify content directory exists
 [[ ! -d "${REPO_ROOT}/${CONTENT_DIR}/" ]] && { echo "error: missing ${CONTENT_DIR}/ directory - build the site first" >&2; exit 1; }
 # verify manifest.json exists
-[[ ! -f "${REPO_ROOT}/${CONTENT_DIR}/manifest.json" ]] && { echo "error: missing ${CONTENT_DIR}/manifest.json file - generate content manifest first" >&2; exit 1; }
+[[ ! -f "${MANIFEST_FILE}" ]] && { echo "error: missing ${MANIFEST_FILE} file - generate content manifest first" >&2; exit 1; }
 
 # build metadata
 build_time="$( date -u +"%Y-%m-%dT%H:%M:%SZ" )"
@@ -76,12 +78,16 @@ fi
 # bash version
 bash_version="${BASH_VERSION:-unknown}"
 
-# content release version - sha256sum and short commit
-release_version="$( date "+%Y.%m.%d" ).${git_commit_short:-unknown}"
+# manifest.json data
+manifest_sha256="$( sha256sum "${MANIFEST_FILE}" | awk '{ print $1 }' )"
+manifest_rel="$( basename "${MANIFEST_FILE}" )"
 
 # get content_id from content manifest
-content_hash="$( jq -r '.content_hash' "${REPO_ROOT}/${CONTENT_DIR}/manifest.json" )"
-: "${content_hash:?failed to get content_hash from ${CONTENT_DIR}/manifest.json}"
+content_hash="$( jq -r '.content_hash' "${MANIFEST_FILE}" )"
+: "${content_hash:?failed to get content_hash from ${MANIFEST_FILE}}"
+
+# content release version - sha256sum and short commit
+release_version="$( date "+%Y.%m.%d" ).${git_commit_short:-unknown}"
 
 # assemble final release manifest
 echo "==> Writing release manifest to ${RELEASE_FILE}"
@@ -90,7 +96,6 @@ jq -n \
   --arg version "${release_version:-unknown}" \
   --arg content_id "sha256:${content_hash}" \
   --arg created_at "${build_time}" \
-  --arg content_hash "${content_hash}" \
   --arg git_repo "${git_remote}" \
   --arg git_commit "${git_commit}" \
   --arg git_commit_short "${git_commit_short}" \
@@ -107,13 +112,14 @@ jq -n \
   --arg bash_version "${bash_version}" \
   --arg build_host "${build_host}" \
   --arg build_user "${build_user}" \
+  --arg manifest_rel "${manifest_rel}" \
+  --arg manifest_sha256 "${manifest_sha256}" \
   '{
-    "schema_version": "1.0.0",
+    "schema": "com.linnemanlabs.manifest.site.content.release.v1",
     "type": "content-bundle",
     "version": $version,
     "content_id": $content_id,
     "created_at": $created_at,
-    "content_hash": $content_hash,
       
     "source": {
       "repository": $git_repo,
@@ -149,6 +155,13 @@ jq -n \
       "host": $build_host,
       "user": $build_user,
       "timestamp": $created_at
+    },
+    
+    "artifacts": {
+      "manifest": {
+        "path": $manifest_rel,
+        "sha256": $manifest_sha256
+      }
     }
   }' >  \
 "${RELEASE_FILE}"
@@ -159,7 +172,7 @@ if ! jq empty "${RELEASE_FILE}" 2>/dev/null; then
   exit 1
 fi
 
-release_size="$( stat -c%s "${RELEASE_FILE}" 2>/dev/null || stat -f%z "${RELEASE_FILE}" 2>/dev/null )"
+release_size="$( stat -c%s "${RELEASE_FILE}" 2>/dev/null )"
 echo "==> Release manifest generated: ${RELEASE_FILE} (${release_size} bytes)"
 echo "==> Content hash: sha256:${content_hash}"
 echo "==> generate-release-manifest done"

@@ -149,13 +149,13 @@ jq -n \
         "html": $html_files,
         "css": $css_files,
         "javascript": $js_files,
-        "fonts": $font_files,
-        "images": $image_files,
+        "font": $font_files,
+        "image": $image_files,
         "xml": $xml_files,
         "txt": $txt_files,
         "json": $json_files,
         "other": $other_files
-      }
+      } | map_values(select(. > 0))
     },
       
       "files": $files
@@ -163,14 +163,12 @@ jq -n \
 > "${MANIFEST_FILE}"
 
 # validate JSON
-if command -v jq &>/dev/null; then
-    if ! jq empty "${MANIFEST_FILE}" 2>/dev/null; then
-        echo "error: generated manifest is not valid JSON" >&2
-        exit 1
-    fi
+if ! jq empty "${MANIFEST_FILE}" 2>/dev/null; then
+  echo "error: generated manifest is not valid JSON" >&2
+  exit 1
 fi
 
-manifest_size="$(stat -c%s "${MANIFEST_FILE}" 2>/dev/null || stat -f%z "${MANIFEST_FILE}" 2>/dev/null)"
+manifest_size="$( stat -c%s "${MANIFEST_FILE}" 2>/dev/null )"
 echo "==> Manifest generated: ${MANIFEST_FILE} (${manifest_size} bytes)"
 echo "==> Content hash: sha256:${content_hash}"
 echo "==> generate-manifest done"
