@@ -25,6 +25,8 @@ css_files=0
 js_files=0
 font_files=0
 image_files=0
+xml_files=0
+txt_files=0
 other_files=0
 
 # per-file manifest
@@ -65,9 +67,17 @@ while IFS= read -r -d '' file; do
         file_type="image"
         ((image_files++)) || true
         ;;
-    xml|json|txt|md)
-        file_type="${extension}"
-        ((other_files++)) || true
+    xml) 
+        file_type="xml"
+        ((xml_files++)) || true
+        ;;
+    txt) 
+        file_type="txt"
+        ((txt_files++)) || true
+        ;;
+    json) 
+        file_type="json"
+        ((json_files++)) || true
         ;;
     *)
         file_type="other"
@@ -118,6 +128,9 @@ jq -n \
   --argjson js_files "${js_files}" \
   --argjson font_files "${font_files}" \
   --argjson image_files "${image_files}" \
+  --argjson xml_files "${xml_files}" \
+  --argjson txt_files "${txt_files}" \
+  --argjson json_files "${json_files}" \
   --argjson other_files "${other_files}" \
   --argjson files "${files_json}" \
   --arg created_at "${inventory_time}" \
@@ -131,12 +144,15 @@ jq -n \
     "summary": {
       "total_files": $total_files,
       "total_size": $total_size,
-      "by_type": {
+      "file_types": {
         "html": $html_files,
         "css": $css_files,
         "javascript": $js_files,
         "fonts": $font_files,
         "images": $image_files,
+        "xml": $xml_files,
+        "txt": $txt_files,
+        "json": $json_files,
         "other": $other_files
       }
     },
