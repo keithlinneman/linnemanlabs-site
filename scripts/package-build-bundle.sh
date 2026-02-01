@@ -2,8 +2,11 @@
 set -Eeuo pipefail
 
 SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" && pwd )"
+REPO_ROOT="${SCRIPT_DIR}/.."
 # shellcheck source=release.conf
-source "${SCRIPT_DIR}/../release.conf"
+source "${REPO_ROOT}/release.conf"
+
+echo "==> Starting package-build-bundle"
 
 [[ ! -d "${CONTENT_DIR}/" ]] && { echo "error: missing ${CONTENT_DIR}/ directory - build the site first" >&2; exit 1; }
 
