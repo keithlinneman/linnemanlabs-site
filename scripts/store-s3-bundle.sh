@@ -2,8 +2,11 @@
 set -Eeuo pipefail
 
 SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" && pwd )"
+REPO_ROOT="${SCRIPT_DIR}/.."
 # shellcheck source=release.conf
-source "${SCRIPT_DIR}/../release.conf"
+source "${REPO_ROOT}/release.conf"
+
+echo "==> Starting store-s3-bundle"
 
 : "${RELEASE_BUCKET:?RELEASE_BUCKET must be set in release.conf}"
 : "${RELEASE_PREFIX:?RELEASE_PREFIX must be set in release.conf}"
