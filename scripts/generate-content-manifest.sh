@@ -27,6 +27,7 @@ font_files=0
 image_files=0
 xml_files=0
 txt_files=0
+json_files=0
 other_files=0
 
 # per-file manifest
