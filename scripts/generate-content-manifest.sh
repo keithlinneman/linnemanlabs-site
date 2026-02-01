@@ -114,7 +114,9 @@ echo "==> Scanned ${total_files} files (${total_size} bytes)"
 # calculate bundle hash (content directory, excluding manifest, reproducible hash of file names/hashes)
 echo "==> Calculating content hash (reproducible)"
 content_hash="$( find "${REPO_ROOT}/${CONTENT_DIR}" -type f ! -name 'manifest.json' ! -name 'release.json' -print0 | sort -z | xargs -0 sha256sum | sha256sum | awk '{ print $1 }' )"
+echo "==> Content hash: sha256:${content_hash}"
 
+# inventory time
 inventory_time="$( date -u +"%Y-%m-%dT%H:%M:%SZ" )"
 
 echo "==> Writing manifest to ${MANIFEST_FILE}"
@@ -169,6 +171,6 @@ if ! jq empty "${MANIFEST_FILE}" 2>/dev/null; then
 fi
 
 manifest_size="$( stat -c%s "${MANIFEST_FILE}" 2>/dev/null )"
-echo "==> Manifest generated: ${MANIFEST_FILE} (${manifest_size} bytes)"
-echo "==> Content hash: sha256:${content_hash}"
+manifest_sha256="$( sha256sum "${MANIFEST_FILE}" | awk '{ print $1 }' )"
+echo "==> Manifest generated: ${MANIFEST_FILE} (${manifest_size} bytes) sha256:${manifest_sha256}"
 echo "==> generate-manifest done"
