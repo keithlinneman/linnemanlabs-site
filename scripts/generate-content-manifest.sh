@@ -76,18 +76,24 @@ while IFS= read -r -d '' file; do
   esac
   
   # build JSON object for this file
-  file_json=$( cat <<EOF
-{
-  "path": "${rel_path}",
-  "sha256": "${file_hash}",
-  "size": ${file_size},
-  "type": "${file_type}",
-  "modified": "${file_modified_iso}"
-EOF
-)
-  file_json="${file_json}}"
-  
-  files_json="$(echo "${files_json}" | jq --argjson f "${file_json}" '. + [$f]')"
+
+  file_json="$( jq -n \
+    --arg path "${rel_path}" \
+    --arg sha256 "${file_hash}" \
+    --arg size "${file_size}" \
+    --arg type "${file_type}" \
+    --arg modified "${file_modified_iso}" \
+    '{
+      "path": $path,
+      "sha256": $sha256,
+      "size": ($size | tonumber),
+      "type": $type,
+      "modified": $modified
+    }'
+  )"
+
+  # append to files array
+  files_json="$( jq -n --argjson arr "${files_json}" --argjson newfile "${file_json}" '$arr + [$newfile]' )"
 
   ((total_files++)) || true
   total_size=$((total_size + file_size))
