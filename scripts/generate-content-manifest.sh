@@ -122,7 +122,6 @@ inventory_time="$( date -u +"%Y-%m-%dT%H:%M:%SZ" )"
 echo "==> Writing manifest to ${MANIFEST_FILE}"
 # assemble final manifest
 jq -n \
-  --arg version "sha256:${content_hash}" \
   --arg content_hash "${content_hash}" \
   --argjson total_files "${total_files}" \
   --argjson total_size "${total_size}" \
@@ -140,7 +139,6 @@ jq -n \
   '{
     "schema": "com.linnemanlabs.manifest.site.content.bundle.v1",
     "type": "content-bundle",
-    "version": $version,
     "created_at": $created_at,
     "content_hash": $content_hash,
     
@@ -173,4 +171,4 @@ fi
 manifest_size="$( stat -c%s "${MANIFEST_FILE}" 2>/dev/null )"
 manifest_sha256="$( sha256sum "${MANIFEST_FILE}" | awk '{ print $1 }' )"
 echo "==> Manifest generated: ${MANIFEST_FILE} (${manifest_size} bytes) sha256:${manifest_sha256}"
-echo "==> generate-manifest done"
+echo "==> generate-content-manifest done"

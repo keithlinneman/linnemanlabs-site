@@ -23,6 +23,16 @@ build_time="$( date -u +"%Y-%m-%dT%H:%M:%SZ" )"
 build_host="$( hostname -f 2>/dev/null || hostname )"
 build_user="${USER:-unknown}"
 
+# manifest.json data
+manifest_sha256="$( sha256sum "${MANIFEST_FILE}" | awk '{ print $1 }' )"
+manifest_rel="$( basename "${MANIFEST_FILE}" )"
+echo "==> Manifest file: ${MANIFEST_FILE} sha256:${manifest_sha256}"
+
+# get content_id from content manifest
+content_hash="$( jq -r '.content_hash' "${MANIFEST_FILE}" )"
+: "${content_hash:?failed to get content_hash from ${MANIFEST_FILE}}"
+echo "==> Content hash: sha256:${content_hash}"
+
 # git information
 git_commit="$( git -C "${REPO_ROOT}" rev-parse HEAD )"
 git_commit_short="$( git -C "${REPO_ROOT}" rev-parse --short HEAD )"
@@ -77,14 +87,6 @@ fi
 
 # bash version
 bash_version="${BASH_VERSION:-unknown}"
-
-# manifest.json data
-manifest_sha256="$( sha256sum "${MANIFEST_FILE}" | awk '{ print $1 }' )"
-manifest_rel="$( basename "${MANIFEST_FILE}" )"
-
-# get content_id from content manifest
-content_hash="$( jq -r '.content_hash' "${MANIFEST_FILE}" )"
-: "${content_hash:?failed to get content_hash from ${MANIFEST_FILE}}"
 
 # content release version - sha256sum and short commit
 release_version="$( date "+%Y.%m.%d" ).${git_commit_short:-unknown}"
@@ -156,7 +158,7 @@ jq -n \
       "user": $build_user,
       "timestamp": $created_at
     },
-    
+
     "artifacts": {
       "manifest": {
         "path": $manifest_rel,
@@ -174,5 +176,4 @@ fi
 
 release_size="$( stat -c%s "${RELEASE_FILE}" 2>/dev/null )"
 echo "==> Release manifest generated: ${RELEASE_FILE} (${release_size} bytes)"
-echo "==> Content hash: sha256:${content_hash}"
 echo "==> generate-release-manifest done"
