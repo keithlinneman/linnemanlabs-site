@@ -16,8 +16,6 @@ PROVENANCE_FILE="${REPO_ROOT}/${CONTENT_DIR}/provenance.json"
 
 # verify content directory exists
 [[ ! -d "${REPO_ROOT}/${CONTENT_DIR}/" ]] && { echo "error: missing ${CONTENT_DIR}/ directory - build the site first" >&2; exit 1; }
-# verify manifest.json exists
-[[ ! -f "${MANIFEST_FILE}" ]] && { echo "error: missing ${MANIFEST_FILE} file - generate content manifest first" >&2; exit 1; }
 
 # build metadata
 build_time="$( date -u +"%Y-%m-%dT%H:%M:%SZ" )"
@@ -259,7 +257,7 @@ jq -n \
       } | map_values(select(. > 0))
     },
       
-    "files": $files
+    "files": $files,
     
     "tooling": {
       "hugo": {
