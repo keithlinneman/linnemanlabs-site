@@ -25,7 +25,7 @@ build_user="${USER:-unknown}"
 # git information
 git_commit="$( git -C "${REPO_ROOT}" rev-parse HEAD )"
 git_commit_short="$( git -C "${REPO_ROOT}" rev-parse --short HEAD )"
-git_commit_date="$( TZ=UTC git -C "${REPO_ROOT}" log -1 --format="%cd" --date="format:%Y-%m-%dT%H:%M:%SZ" HEAD )"
+git_commit_date="$( TZ=UTC git -C "${REPO_ROOT}" log -1 --format="%cd" --date="format-local:%Y-%m-%dT%H:%M:%SZ" HEAD )"
 git_branch="$( git -C "${REPO_ROOT}" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached" )"
 git_dirty="false"
 if [[ -n "$( git -C "${REPO_ROOT}" status --porcelain 2>/dev/null )" ]]; then
