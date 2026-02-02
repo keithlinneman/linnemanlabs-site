@@ -1,0 +1,40 @@
+{{ define "main" }}
+<article class="space-y-6">
+  <header class="space-y-2">
+    <h1 class="text-3xl font-semibold tracking-tight text-balance">{{ .Title }}</h1>
+    {{ with .Description }}
+      <p class="text-lg text-[rgb(var(--muted))]">{{ . }}</p>
+    {{ end }}
+  </header>
+
+  {{ with .Content }}
+    <div class="prose max-w-none">
+      {{ . }}
+    </div>
+  {{ end }}
+
+  {{/* Navigation */}}
+  <nav class="flex gap-4 text-sm border-b border-[rgb(var(--border))] pb-4">
+    <span class="text-[rgb(var(--fg))] font-medium">Viewing: All</span>
+    <a href="/about/provenance/app/" class="text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))]">App Only</a>
+    <a href="/about/provenance/content/" class="text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))]">Content Only</a>
+  </nav>
+
+  {{/* App Provenance */}}
+  <div class="mt-8">
+    <h2 class="text-2xl font-semibold tracking-tight mb-6 flex items-center gap-3">
+      Application Provenance
+    </h2>
+    {{ partial "provenance-app.html" . }}
+  </div>
+
+  {{/* Content Provenance */}}
+  <div class="mt-12 pt-8 border-t border-[rgb(var(--border))]">
+    <h2 class="text-2xl font-semibold tracking-tight mb-6 flex items-center gap-3">
+      Content Provenance
+    </h2>
+    {{ partial "provenance-content.html" . }}
+  </div>
+
+</article>
+{{ end }}
