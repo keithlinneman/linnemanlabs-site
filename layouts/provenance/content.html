@@ -1,0 +1,28 @@
+{{ define "main" }}
+<article class="space-y-6">
+  <header class="space-y-2">
+    <h1 class="text-3xl font-semibold tracking-tight text-balance">{{ .Title }}</h1>
+    {{ with .Description }}
+      <p class="text-lg text-[rgb(var(--muted))]">{{ . }}</p>
+    {{ end }}
+  </header>
+
+  {{ with .Content }}
+    <div class="prose max-w-none">
+      {{ . }}
+    </div>
+  {{ end }}
+
+  {{/* Navigation */}}
+  <nav class="flex gap-4 text-sm border-b border-[rgb(var(--border))] pb-4">
+    <a href="/about/provenance/" class="text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))]">All</a>
+    <a href="/about/provenance/app/" class="text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))]">App Only</a>
+    <span class="text-[rgb(var(--fg))] font-medium">Viewing: Content</span>
+  </nav>
+
+  <div class="mt-8">
+    {{ partial "provenance-content.html" . }}
+  </div>
+
+</article>
+{{ end }}

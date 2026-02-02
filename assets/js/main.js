@@ -18,11 +18,12 @@ document.addEventListener("keydown", e => {
 })
 
 // content provenance - with a little help from claude
-// Fetches provenance from API and binds to data-bind attributes
+// Fetches app and content provenance from API and binds to data-bind attributes
 
-const ProvenanceAPI = {
-  summary: '/api/provenance/content/summary',
-  full: '/api/provenance/content'
+const API = {
+  content: '/api/provenance/content',
+  contentSummary: '/api/provenance/content/summary',
+  app: '/api/provenance/app'
 };
 
 // formatters
@@ -45,35 +46,33 @@ const fmt = {
   }
 };
 
-// resolve nested path like "bundle.source.commit"
+// resolve nested path like "content.bundle.version"
 function resolve(obj, path) {
   return path.split('.').reduce((o, k) => (o && o[k] !== undefined) ? o[k] : null, obj);
 }
 
-// Fetch JSON from endpoint
+// fetch JSON
 async function fetchJSON(url) {
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } catch (err) {
-    console.error('Provenance fetch failed:', err);
+    console.error(`Fetch ${url} failed:`, err);
     return null;
   }
 }
 
-// bind data to elements with data-bind attribute
-function bindData(container, data, prefix = '') {
-  if (!data) return;
+// bind data to elements
+function bindData(container, data) {
+  if (!container || !data) return;
 
-  // find all elements with data-bind
+  // data-bind: set text content
   container.querySelectorAll('[data-bind]').forEach(el => {
     const key = el.dataset.bind;
     let value = resolve(data, key);
-
     if (value === null || value === undefined) return;
 
-    // Apply formatters
     const format = el.dataset.format;
     if (format === 'bytes') value = fmt.bytes(value);
     else if (format === 'date') value = fmt.date(value);
@@ -83,25 +82,29 @@ function bindData(container, data, prefix = '') {
     el.textContent = value;
   });
 
-  // handle data-bind-href (for links)
+  // data-bind-href: set href attribute
   container.querySelectorAll('[data-bind-href]').forEach(el => {
-    const key = el.dataset.bindHref;
-    const value = resolve(data, key);
+    const value = resolve(data, el.dataset.bindHref);
     if (value) el.href = value;
   });
 
-  // handle data-bind-show (conditional visibility)
+  // data-bind-show: toggle visibility
   container.querySelectorAll('[data-bind-show]').forEach(el => {
-    const key = el.dataset.bindShow;
-    const value = resolve(data, key);
-    if (value) el.classList.remove('hidden');
-    else el.classList.add('hidden');
+    const value = resolve(data, el.dataset.bindShow);
+    el.classList.toggle('hidden', !value);
   });
 
-  // handle data-bind-list for file types
-  container.querySelectorAll('[data-bind-list]').forEach(el => {
-    const key = el.dataset.bindList;
+  // data-bind-class: conditional classes (key:trueClass:falseClass)
+  container.querySelectorAll('[data-bind-class]').forEach(el => {
+    const [key, trueClass, falseClass] = el.dataset.bindClass.split(':');
     const value = resolve(data, key);
+    if (trueClass) el.classList.toggle(trueClass, !!value);
+    if (falseClass) el.classList.toggle(falseClass, !value);
+  });
+
+  // data-bind-list: render list items
+  container.querySelectorAll('[data-bind-list]').forEach(el => {
+    const value = resolve(data, el.dataset.bindList);
     if (value && typeof value === 'object') {
       el.innerHTML = Object.entries(value).map(([type, count]) => `
         <span class="text-xs px-2 py-1 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]">
@@ -113,12 +116,136 @@ function bindData(container, data, prefix = '') {
   });
 }
 
-// footer provenance card
+// transform raw API response into flat bindable object for content
+function flattenContent(data) {
+  if (!data) return null;
+  const b = data.bundle || {};
+  const r = data.runtime || {};
+  const s = b.source || {};
+  const sum = b.summary || {};
+  const t = b.tooling || {};
+
+  return {
+    'content.status-text': 'Verified',
+    'content.bundle.version': b.version,
+    'content.bundle.content_id': b.content_id,
+    'content.bundle.content_hash': b.content_hash,
+    'content.bundle.schema': b.schema,
+    'content.bundle.type': b.type,
+    'content.bundle.created_at': b.created_at,
+    'content.source.repository': s.repository,
+    'content.source.commit': s.commit,
+    'content.source.branch': s.branch,
+    'content.source.dirty': s.dirty,
+    'content.source.commit_date': s.commit_date,
+    'content.build.host': b.build?.host,
+    'content.build.user': b.build?.user,
+    'content.summary.total_files': sum.total_files,
+    'content.summary.total_size': sum.total_size,
+    'content.summary.type_count': sum.file_types ? Object.keys(sum.file_types).length : 0,
+    'content.summary.file_types': sum.file_types,
+    'content.tooling.hugo.version': t.hugo?.version,
+    'content.tooling.hugo.sha256': t.hugo?.sha256,
+    'content.tooling.tailwindcss.version': t.tailwindcss?.version,
+    'content.tooling.tailwindcss.sha256': t.tailwindcss?.sha256,
+    'content.tooling.tidy.version': t.tidy?.version,
+    'content.tooling.tidy.sha256': t.tidy?.sha256,
+    'content.tooling.git.version': t.git?.version,
+    'content.tooling.bash.version': t.bash?.version,
+    'content.runtime.source': r.source,
+    'content.runtime.loaded_at': r.loaded_at,
+    'content.runtime.server_time': r.server_time,
+    'content.runtime.hash': r.hash,
+    'content.raw-json': JSON.stringify(data, null, 2)
+  };
+}
+
+// transform raw API response into flat bindable object for app
+function flattenApp(data) {
+  if (!data) return null;
+  const s = data.source || {};
+  const att = data.attestations || {};
+  const pol = data.policy?.defaults || {};
+  const vulns = data.vulnerabilities?.summary || {};
+  const container = data.components?.[0]?.index || {};
+
+  return {
+    'app.status-text': 'Verified',
+    'app.version': data.version,
+    'app.build_id': data.build_id,
+    'app.track': data.track,
+    'app.created_at': data.created_at,
+    'app.source.repository': s.repository,
+    'app.source.commit': s.commit,
+    'app.source.commit_short': s.commit_short,
+    'app.source.branch': s.branch,
+    'app.source.dirty': s.dirty,
+    'app.source.commit_date': s.commit_date,
+    'app.attestations.cosign.signed': att.cosign?.signed,
+    'app.attestations.cosign.method': att.cosign?.method,
+    'app.attestations.slsa.verified': att.slsa?.verified,
+    'app.attestations.slsa.level': att.slsa?.level,
+    'app.policy.signing': pol.signing?.require_signature,
+    'app.policy.sbom': pol.evidence?.sbom?.required,
+    'app.policy.scan': pol.evidence?.scan?.required,
+    'app.policy.vuln_gating': pol.vulnerability?.gating?.block_on,
+    'app.vulns.critical': vulns.critical,
+    'app.vulns.high': vulns.high,
+    'app.vulns.medium': vulns.medium,
+    'app.vulns.low': vulns.low,
+    'app.sbom.format': data.sbom?.format,
+    'app.sbom.package_count': data.sbom?.package_count,
+    'app.licenses.compliant': data.licenses?.compliant ? 'Yes' : 'No',
+    'app.container.image': container.registry && container.repository ? `${container.registry}/${container.repository}` : null,
+    'app.container.digest': container.digest,
+    'app.container.tag': container.tag,
+    'app.container.pushed_at': container.pushed_at,
+    'app.raw-json': JSON.stringify(data, null, 2)
+  };
+}
+
+// initialize content provenance section
+async function initContent() {
+  const container = document.getElementById('provenance-content');
+  if (!container) return;
+
+  const data = await fetchJSON(API.content);
+  
+  if (!data) {
+    const dot = container.querySelector('[data-bind="content.status-dot"]');
+    const text = container.querySelector('[data-bind="content.status-text"]');
+    if (dot) dot.classList.add('status-dot--bad');
+    if (text) text.textContent = 'Unavailable';
+    return;
+  }
+
+  bindData(container, flattenContent(data));
+}
+
+// initialize app provenance section
+async function initApp() {
+  const container = document.getElementById('provenance-app');
+  if (!container) return;
+
+  const data = await fetchJSON(API.app);
+  
+  if (!data) {
+    const dot = container.querySelector('[data-bind="app.status-dot"]');
+    const text = container.querySelector('[data-bind="app.status-text"]');
+    if (dot) dot.classList.add('status-dot--bad');
+    if (text) text.textContent = 'Unavailable';
+    return;
+  }
+
+  bindData(container, flattenApp(data));
+}
+
+// initialize footer (uses summary endpoint)
 async function initFooter() {
   const container = document.getElementById('content-provenance-footer');
   if (!container) return;
 
-  const data = await fetchJSON(ProvenanceAPI.summary);
+  const data = await fetchJSON(API.contentSummary);
 
   if (!data) {
     container.innerHTML = `
@@ -167,62 +294,9 @@ async function initFooter() {
   `;
 }
 
-// full provenance page
-async function initPage() {
-  const container = document.getElementById('provenance-full');
-  if (!container) return;
-
-  const data = await fetchJSON(ProvenanceAPI.full);
-
-  if (!data) {
-    // update status to show error
-    const statusDot = container.querySelector('[data-bind="status-dot"]');
-    const statusText = container.querySelector('[data-bind="status-text"]');
-    if (statusDot) statusDot.classList.add('status-dot--bad');
-    if (statusText) statusText.textContent = 'Unavailable';
-    return;
-  }
-
-  // flatten data for easier binding
-  const flat = {
-    'status-text': 'Verified',
-    'bundle.version': data.bundle?.version,
-    'bundle.content_id': data.bundle?.content_id,
-    'bundle.content_hash': data.bundle?.content_hash,
-    'bundle.schema': data.bundle?.schema,
-    'bundle.type': data.bundle?.type,
-    'bundle.created_at': data.bundle?.created_at,
-    'source.repository': data.bundle?.source?.repository,
-    'source.commit': data.bundle?.source?.commit,
-    'source.branch': data.bundle?.source?.branch,
-    'source.dirty': data.bundle?.source?.dirty,
-    'source.commit_date': data.bundle?.source?.commit_date,
-    'build.host': data.bundle?.build?.host,
-    'build.user': data.bundle?.build?.user,
-    'summary.total_files': data.bundle?.summary?.total_files,
-    'summary.total_size': data.bundle?.summary?.total_size,
-    'summary.type_count': data.bundle?.summary?.file_types ? Object.keys(data.bundle.summary.file_types).length : 0,
-    'summary.file_types': data.bundle?.summary?.file_types,
-    'tooling.hugo.version': data.bundle?.tooling?.hugo?.version,
-    'tooling.hugo.sha256': data.bundle?.tooling?.hugo?.sha256,
-    'tooling.tailwindcss.version': data.bundle?.tooling?.tailwindcss?.version,
-    'tooling.tailwindcss.sha256': data.bundle?.tooling?.tailwindcss?.sha256,
-    'tooling.tidy.version': data.bundle?.tooling?.tidy?.version,
-    'tooling.tidy.sha256': data.bundle?.tooling?.tidy?.sha256,
-    'tooling.git.version': data.bundle?.tooling?.git?.version,
-    'tooling.bash.version': data.bundle?.tooling?.bash?.version,
-    'runtime.source': data.runtime?.source,
-    'runtime.loaded_at': data.runtime?.loaded_at,
-    'runtime.server_time': data.runtime?.server_time,
-    'runtime.hash': data.runtime?.hash,
-    'raw-json': JSON.stringify(data, null, 2)
-  };
-
-  bindData(container, flat);
-}
-
-// init on DOM ready
+// initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
   initFooter();
-  initPage();
+  initContent();
+  initApp();
 });
