@@ -46,7 +46,7 @@ const fmt = {
   }
 };
 
-// resolve nested path like "content.bundle.version"
+// traverse nested path like "content.bundle.version"
 function resolve(obj, path) {
   return path.split('.').reduce((o, k) => (o && o[k] !== undefined) ? o[k] : null, obj);
 }
@@ -116,102 +116,14 @@ function bindData(container, data) {
   });
 }
 
-// transform raw API response into flat bindable object for content
-function flattenContent(data) {
-  if (!data) return null;
-  const b = data.bundle || {};
-  const r = data.runtime || {};
-  const s = b.source || {};
-  const sum = b.summary || {};
-  const t = b.tooling || {};
-
-  return {
-    'content.status-text': 'Verified',
-    'content.bundle.version': b.version,
-    'content.bundle.content_id': b.content_id,
-    'content.bundle.content_hash': b.content_hash,
-    'content.bundle.schema': b.schema,
-    'content.bundle.type': b.type,
-    'content.bundle.created_at': b.created_at,
-    'content.source.repository': s.repository,
-    'content.source.commit': s.commit,
-    'content.source.branch': s.branch,
-    'content.source.dirty': s.dirty,
-    'content.source.commit_date': s.commit_date,
-    'content.build.host': b.build?.host,
-    'content.build.user': b.build?.user,
-    'content.summary.total_files': sum.total_files,
-    'content.summary.total_size': sum.total_size,
-    'content.summary.type_count': sum.file_types ? Object.keys(sum.file_types).length : 0,
-    'content.summary.file_types': sum.file_types,
-    'content.tooling.hugo.version': t.hugo?.version,
-    'content.tooling.hugo.sha256': t.hugo?.sha256,
-    'content.tooling.tailwindcss.version': t.tailwindcss?.version,
-    'content.tooling.tailwindcss.sha256': t.tailwindcss?.sha256,
-    'content.tooling.tidy.version': t.tidy?.version,
-    'content.tooling.tidy.sha256': t.tidy?.sha256,
-    'content.tooling.git.version': t.git?.version,
-    'content.tooling.bash.version': t.bash?.version,
-    'content.runtime.source': r.source,
-    'content.runtime.loaded_at': r.loaded_at,
-    'content.runtime.server_time': r.server_time,
-    'content.runtime.hash': r.hash,
-    'content.raw-json': JSON.stringify(data, null, 2)
-  };
-}
-
-// transform raw API response into flat bindable object for app
-function flattenApp(data) {
-  if (!data) return null;
-  const s = data.source || {};
-  const att = data.attestations || {};
-  const pol = data.policy?.defaults || {};
-  const vulns = data.vulnerabilities?.summary || {};
-  const container = data.components?.[0]?.index || {};
-
-  return {
-    'app.status-text': 'Verified',
-    'app.version': data.version,
-    'app.build_id': data.build_id,
-    'app.track': data.track,
-    'app.created_at': data.created_at,
-    'app.source.repository': s.repository,
-    'app.source.commit': s.commit,
-    'app.source.commit_short': s.commit_short,
-    'app.source.branch': s.branch,
-    'app.source.dirty': s.dirty,
-    'app.source.commit_date': s.commit_date,
-    'app.attestations.cosign.signed': att.cosign?.signed,
-    'app.attestations.cosign.method': att.cosign?.method,
-    'app.attestations.slsa.verified': att.slsa?.verified,
-    'app.attestations.slsa.level': att.slsa?.level,
-    'app.policy.signing': pol.signing?.require_signature,
-    'app.policy.sbom': pol.evidence?.sbom?.required,
-    'app.policy.scan': pol.evidence?.scan?.required,
-    'app.policy.vuln_gating': pol.vulnerability?.gating?.block_on,
-    'app.vulns.critical': vulns.critical,
-    'app.vulns.high': vulns.high,
-    'app.vulns.medium': vulns.medium,
-    'app.vulns.low': vulns.low,
-    'app.sbom.format': data.sbom?.format,
-    'app.sbom.package_count': data.sbom?.package_count,
-    'app.licenses.compliant': data.licenses?.compliant ? 'Yes' : 'No',
-    'app.container.image': container.registry && container.repository ? `${container.registry}/${container.repository}` : null,
-    'app.container.digest': container.digest,
-    'app.container.tag': container.tag,
-    'app.container.pushed_at': container.pushed_at,
-    'app.raw-json': JSON.stringify(data, null, 2)
-  };
-}
-
 // initialize content provenance section
 async function initContent() {
   const container = document.getElementById('provenance-content');
   if (!container) return;
 
-  const data = await fetchJSON(API.content);
+  const apiData = await fetchJSON(API.content);
   
-  if (!data) {
+  if (!apiData) {
     const dot = container.querySelector('[data-bind="content.status-dot"]');
     const text = container.querySelector('[data-bind="content.status-text"]');
     if (dot) dot.classList.add('status-dot--bad');
@@ -219,7 +131,25 @@ async function initContent() {
     return;
   }
 
-  bindData(container, flattenContent(data));
+  // namespace under 'content' and add computed fields
+  const data = {
+    content: {
+      ...apiData,
+      'status-text': 'Verified',
+      source: apiData.bundle?.source,
+      build: apiData.bundle?.build,
+      summary: {
+        ...apiData.bundle?.summary,
+        type_count: apiData.bundle?.summary?.file_types 
+          ? Object.keys(apiData.bundle.summary.file_types).length 
+          : 0
+      },
+      tooling: apiData.bundle?.tooling,
+      'raw-json': JSON.stringify(apiData, null, 2)
+    }
+  };
+
+  bindData(container, data);
 }
 
 // initialize app provenance section
@@ -227,9 +157,9 @@ async function initApp() {
   const container = document.getElementById('provenance-app');
   if (!container) return;
 
-  const data = await fetchJSON(API.app);
+  const apiData = await fetchJSON(API.app);
   
-  if (!data) {
+  if (!apiData) {
     const dot = container.querySelector('[data-bind="app.status-dot"]');
     const text = container.querySelector('[data-bind="app.status-text"]');
     if (dot) dot.classList.add('status-dot--bad');
@@ -237,7 +167,35 @@ async function initApp() {
     return;
   }
 
-  bindData(container, flattenApp(data));
+  // namespace under 'app' and add computed fields
+  const container_info = apiData.components?.[0]?.index || {};
+  const data = {
+    app: {
+      ...apiData,
+      'status-text': 'Verified',
+      policy: {
+        signing: apiData.policy?.defaults?.signing?.require_signature,
+        sbom: apiData.policy?.defaults?.evidence?.sbom?.required,
+        scan: apiData.policy?.defaults?.evidence?.scan?.required,
+        vuln_gating: apiData.policy?.defaults?.vulnerability?.gating?.block_on
+      },
+      vulns: apiData.vulnerabilities?.summary,
+      licenses: {
+        compliant: apiData.licenses?.compliant ? 'Yes' : 'No'
+      },
+      container: {
+        image: container_info.registry && container_info.repository 
+          ? `${container_info.registry}/${container_info.repository}` 
+          : null,
+        digest: container_info.digest,
+        tag: container_info.tag,
+        pushed_at: container_info.pushed_at
+      },
+      'raw-json': JSON.stringify(apiData, null, 2)
+    }
+  };
+
+  bindData(container, data);
 }
 
 // initialize footer (uses summary endpoint)
@@ -294,7 +252,7 @@ async function initFooter() {
   `;
 }
 
-// initialize on DOM ready
+// init on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
   initFooter();
   initContent();
