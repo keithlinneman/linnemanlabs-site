@@ -1,0 +1,279 @@
+{{ define "main" }}
+<article class="space-y-6">
+  <header class="space-y-2">
+    <h1 class="text-3xl font-semibold tracking-tight text-balance">{{ .Title }}</h1>
+    {{ with .Description }}
+      <p class="text-lg text-[rgb(var(--muted))]">{{ . }}</p>
+    {{ end }}
+  </header>
+
+  {{ with .Content }}
+    <div class="prose max-w-none">
+      {{ . }}
+    </div>
+  {{ end }}
+
+  <div id="provenance-full" class="mt-8 space-y-8">
+
+    {{/* Status Banner */}}
+    <div class="attestation-card">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="status-dot" data-bind="status-dot"></span>
+          <div>
+            <div class="font-medium">Content Bundle <span data-bind="status-text">Loading...</span></div>
+            <div class="text-xs text-[rgb(var(--muted))]">
+              Loaded from <span data-bind="runtime.source">—</span> at <span data-bind="runtime.loaded_at">—</span>
+            </div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-lg font-medium mono" data-bind="bundle.version">—</div>
+          <div class="text-xs text-[rgb(var(--muted))]">Content Version</div>
+        </div>
+      </div>
+    </div>
+
+    {{/* Bundle Identity */}}
+    <section>
+      <h2 class="text-lg font-semibold mb-4">Bundle Identity</h2>
+      <div class="blueprint-card">
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <div class="attestation-label">Content ID</div>
+            <div class="attestation-value text-xs break-all" data-bind="bundle.content_id">—</div>
+          </div>
+          <div>
+            <div class="attestation-label">Content Hash</div>
+            <div class="attestation-value text-xs break-all" data-bind="bundle.content_hash">—</div>
+          </div>
+          <div>
+            <div class="attestation-label">Schema</div>
+            <div class="attestation-value text-xs" data-bind="bundle.schema">—</div>
+          </div>
+          <div>
+            <div class="attestation-label">Type</div>
+            <div class="attestation-value" data-bind="bundle.type">—</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {{/* Source Information */}}
+    <section>
+      <h2 class="text-lg font-semibold mb-4">Source</h2>
+      <div class="blueprint-card">
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="md:col-span-2">
+            <div class="attestation-label">Repository</div>
+            <div class="attestation-value text-xs">
+              <a data-bind="source.repository" data-bind-href="source.repository" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">—</a>
+            </div>
+          </div>
+          <div>
+            <div class="attestation-label">Commit</div>
+            <div class="attestation-value text-xs break-all" data-bind="source.commit">—</div>
+          </div>
+          <div>
+            <div class="attestation-label">Branch</div>
+            <div class="attestation-value">
+              <span data-bind="source.branch">—</span>
+              <span data-bind-show="source.dirty" class="text-[rgb(var(--warn))] text-xs ml-1 hidden">(dirty)</span>
+            </div>
+          </div>
+          <div>
+            <div class="attestation-label">Commit Date</div>
+            <div class="attestation-value tabular" data-bind="source.commit_date" data-format="datetime">—</div>
+          </div>
+          <div>
+            <div class="attestation-label">Build Time</div>
+            <div class="attestation-value tabular" data-bind="bundle.created_at" data-format="datetime">—</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {{/* Build Environment */}}
+    <section>
+      <h2 class="text-lg font-semibold mb-4">Build Environment</h2>
+      <div class="blueprint-card">
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <div class="attestation-label">Build Host</div>
+            <div class="attestation-value text-xs break-all" data-bind="build.host">—</div>
+          </div>
+          <div>
+            <div class="attestation-label">Build User</div>
+            <div class="attestation-value" data-bind="build.user">—</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {{/* Content Summary */}}
+    <section>
+      <h2 class="text-lg font-semibold mb-4">Content Summary</h2>
+      <div class="blueprint-card">
+        <div class="grid grid-cols-3 gap-4 mb-4">
+          <div class="text-center">
+            <div class="text-2xl font-semibold" data-bind="summary.total_files">—</div>
+            <div class="text-xs text-[rgb(var(--muted))]">Total Files</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-semibold" data-bind="summary.total_size" data-format="bytes">—</div>
+            <div class="text-xs text-[rgb(var(--muted))]">Total Size</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-semibold" data-bind="summary.type_count">—</div>
+            <div class="text-xs text-[rgb(var(--muted))]">File Types</div>
+          </div>
+        </div>
+        <div class="border-t border-[rgb(var(--border))] pt-4">
+          <div class="attestation-label mb-2">File Type Breakdown</div>
+          <div class="flex flex-wrap gap-2" data-bind-list="summary.file_types">
+            {{/* JS will populate file type badges here */}}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {{/* Tooling */}}
+    <section>
+      <h2 class="text-lg font-semibold mb-4">Build Tooling</h2>
+      <div class="space-y-3">
+        {{/* Hugo */}}
+        <div class="blueprint-card">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="font-medium">Hugo</div>
+              <div class="text-xs text-[rgb(var(--muted))]">Static site generator</div>
+            </div>
+            <div class="text-right">
+              <div class="mono text-sm" data-bind="tooling.hugo.version">—</div>
+            </div>
+          </div>
+          <div class="mt-2 pt-2 border-t border-[rgb(var(--border))]">
+            <div class="attestation-label">SHA256</div>
+            <div class="attestation-value text-[10px] break-all" data-bind="tooling.hugo.sha256">—</div>
+          </div>
+        </div>
+
+        {{/* Tailwind */}}
+        <div class="blueprint-card">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="font-medium">Tailwind CSS</div>
+              <div class="text-xs text-[rgb(var(--muted))]">CSS framework</div>
+            </div>
+            <div class="text-right">
+              <div class="mono text-sm" data-bind="tooling.tailwindcss.version">—</div>
+            </div>
+          </div>
+          <div class="mt-2 pt-2 border-t border-[rgb(var(--border))]">
+            <div class="attestation-label">SHA256</div>
+            <div class="attestation-value text-[10px] break-all" data-bind="tooling.tailwindcss.sha256">—</div>
+          </div>
+        </div>
+
+        {{/* Tidy */}}
+        <div class="blueprint-card">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="font-medium">HTML Tidy</div>
+              <div class="text-xs text-[rgb(var(--muted))]">HTML validation</div>
+            </div>
+            <div class="text-right">
+              <div class="mono text-sm" data-bind="tooling.tidy.version">—</div>
+            </div>
+          </div>
+          <div class="mt-2 pt-2 border-t border-[rgb(var(--border))]">
+            <div class="attestation-label">SHA256</div>
+            <div class="attestation-value text-[10px] break-all" data-bind="tooling.tidy.sha256">—</div>
+          </div>
+        </div>
+
+        {{/* Git */}}
+        <div class="blueprint-card">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="font-medium">Git</div>
+              <div class="text-xs text-[rgb(var(--muted))]">Version control</div>
+            </div>
+            <div class="text-right">
+              <div class="mono text-sm" data-bind="tooling.git.version">—</div>
+            </div>
+          </div>
+        </div>
+
+        {{/* Bash */}}
+        <div class="blueprint-card">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="font-medium">Bash</div>
+              <div class="text-xs text-[rgb(var(--muted))]">Build shell</div>
+            </div>
+            <div class="text-right">
+              <div class="mono text-sm" data-bind="tooling.bash.version">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {{/* Runtime */}}
+    <section>
+      <h2 class="text-lg font-semibold mb-4">Runtime</h2>
+      <div class="blueprint-card">
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <div class="attestation-label">Source</div>
+            <div class="attestation-value" data-bind="runtime.source">—</div>
+          </div>
+          <div>
+            <div class="attestation-label">Loaded At</div>
+            <div class="attestation-value tabular" data-bind="runtime.loaded_at" data-format="datetime">—</div>
+          </div>
+          <div>
+            <div class="attestation-label">Server Time</div>
+            <div class="attestation-value tabular" data-bind="runtime.server_time" data-format="datetime">—</div>
+          </div>
+          <div>
+            <div class="attestation-label">Runtime Hash</div>
+            <div class="attestation-value text-xs" data-bind="runtime.hash" data-format="hash">—</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {{/* Attestations */}}
+    <section>
+      <h2 class="text-lg font-semibold mb-4">Attestations</h2>
+      <div class="blueprint-card">
+        <div class="text-sm text-[rgb(var(--muted))]">
+          <p class="mb-2">Future attestations will appear here:</p>
+          <ul class="list-disc list-inside space-y-1 text-xs">
+            <li>GitHub Actions workflow provenance (SLSA)</li>
+            <li>Sigstore signatures (keyless OIDC)</li>
+            <li>Content bundle signatures</li>
+            <li>TUF metadata verification</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    {{/* Raw JSON */}}
+    <section>
+      <details class="group">
+        <summary class="cursor-pointer text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))] transition-colors">
+          <span class="group-open:hidden">Show raw JSON</span>
+          <span class="hidden group-open:inline">Hide raw JSON</span>
+        </summary>
+        <div class="mt-4">
+          <pre class="sig-block text-[10px] overflow-x-auto max-h-96" data-bind="raw-json"></pre>
+        </div>
+      </details>
+    </section>
+
+  </div>
+</article>
+{{ end }}

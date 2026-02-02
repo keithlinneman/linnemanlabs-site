@@ -28,7 +28,7 @@ publishDir = "public"
 
 [params]
   description = "Building systems, breaking systems, observing systems, securing systems, auditing systems... improving systems."
-  githubRepo = "https://github.com/keithlinneman/linnemanlabs_com"
+  githubRepo = "https://github.com/keithlinneman/linnemanlabs-site"
   logo = "/favicon.svg"
 
 [params.author]
@@ -79,10 +79,16 @@ publishDir = "public"
     parent = "about"
     name = "Me"
     pageRef = "/about/me/"
-    weight = 1
+    weight = 2
 
   [[menus.main]]
     parent = "about"
     name = "Infrastructure"
     pageRef = "/about/infrastructure/"
-    weight = 1
+    weight = 3
+
+[[menus.main]]
+    parent = "about"
+    name = "Provenance"
+    pageRef = "/about/provenance/"
+    weight = 4

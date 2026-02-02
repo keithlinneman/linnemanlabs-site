@@ -1,38 +1,22 @@
-{{ $p := .Site.Data.provenance }}
 <footer class="border-t border-[rgb(var(--border))] bg-[rgb(var(--bg))]">
   <div class="mx-auto max-w-3xl px-6 py-10 text-sm space-y-4">
-    {{ with $p }}
-    <div class="attestation-card">
+    {{/* Dynamic Content Provenance - populated by JS */}}
+    <div id="content-provenance-footer" class="attestation-card">
       <div class="text-[rgb(var(--fg))] font-medium mb-1">Content Provenance</div>
-      <div class="text-xs text-[rgb(var(--muted))] mb-3">
-        Content is delivered via TUF (The Update Framework) with cryptographic verification.
-      </div>
-      <div class="grid gap-2">
-        <div>
-          <div class="attestation-label">Content Version</div>
-          <div class="attestation-value tabular">{{ .content.version }}</div>
-        </div>
-        <div>
-          <div class="attestation-label">Bundle SHA256</div>
-          <div class="attestation-value text-xs">{{ .content.sha256 }}</div>
-        </div>
-        <div class="flex gap-6">
-          <div>
-            <div class="attestation-label">Generated</div>
-            <div class="attestation-value tabular">{{ .content.built_at }}</div>
-          </div>
-          <div>
-            <div class="attestation-label">TUF Signatures</div>
-            <div class="attestation-value tabular">{{ len .tuf.signatures }}</div>
-          </div>
-        </div>
+      <div class="flex items-center gap-2 text-xs text-[rgb(var(--muted))]">
+        <span class="status-dot"></span>
+        <span>Loading...</span>
       </div>
     </div>
-    {{ end }}
 
-    <div class="text-xs text-[rgb(var(--muted))] flex items-center gap-2">
-      <span class="status-dot"></span>
-      <span>Status: <span class="text-[rgb(var(--fg))]">OK</span></span>
+    <div class="text-xs text-[rgb(var(--muted))] flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="status-dot"></span>
+        <span>Status: <span class="text-[rgb(var(--fg))]">OK</span></span>
+      </div>
+      <div>
+        © {{ now.Year }} {{ .Site.Title }}
+      </div>
     </div>
   </div>
 </footer>
