@@ -9,7 +9,6 @@ test: build
 	tidy -errors -quiet public/**/*.html; [ $$? -le 1 ]
 
 package: test
-	./scripts/generate-content-manifest.sh
 	./scripts/generate-release-manifest.sh
 	./scripts/package-build-bundle.sh
 
