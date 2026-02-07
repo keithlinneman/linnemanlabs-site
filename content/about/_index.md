@@ -9,7 +9,7 @@ LinnemanLabs is my working infrastructure lab, a multi-account platform running 
 
 This site is largely my public workbench focused on secure-by-default infrastructure, platform engineering, software supply chain security, and red teaming. I publish notes, prototypes, and reference implementations as I learn and build. The goal is to document my process, open-sourcing what I can along the way so others can reuse the same ideas without starting from scratch.
 
-Learn more [about me](/about/me/) or [how it's built](/about/infrastructure/).
+Learn more [about me](/about/me/) or [the infrastructure](/about/infrastructure/).
 
 
 ### Mission

@@ -23,7 +23,8 @@ document.addEventListener("keydown", e => {
 const API = {
   content: '/api/provenance/content',
   contentSummary: '/api/provenance/content/summary',
-  app: '/api/provenance/app'
+  app: '/api/provenance/app/summary',
+  appFull: '/api/provenance/app'
 };
 
 // formatters
@@ -102,10 +103,22 @@ function bindData(container, data) {
     if (falseClass) el.classList.toggle(falseClass, !value);
   });
 
-  // data-bind-list: render list items
+  // data-bind-list: render arrays or object key:value pairs as badges
   container.querySelectorAll('[data-bind-list]').forEach(el => {
     const value = resolve(data, el.dataset.bindList);
-    if (value && typeof value === 'object') {
+    if (!value) return;
+
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        el.innerHTML = '<span class="text-xs text-[rgb(var(--muted))]">None</span>';
+      } else {
+        el.innerHTML = value.map(item => `
+          <span class="text-xs px-2 py-1 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]">
+            <span class="text-[rgb(var(--accent))]">${item}</span>
+          </span>
+        `).join('');
+      }
+    } else if (typeof value === 'object') {
       el.innerHTML = Object.entries(value).map(([type, count]) => `
         <span class="text-xs px-2 py-1 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]">
           <span class="text-[rgb(var(--accent))]">${type}</span>
@@ -114,6 +127,62 @@ function bindData(container, data) {
       `).join('');
     }
   });
+}
+
+// render per-scanner vulnerability breakdown
+function renderScannerBreakdown(container, byScanner) {
+  if (!container || !byScanner) return;
+
+  const severities = ['critical', 'high', 'medium', 'low', 'negligible', 'unknown'];
+  const sevColors = {
+    critical: 'var(--bad)',
+    high: 'var(--warn)',
+    medium: 'var(--accent)',
+    low: 'var(--muted)',
+    negligible: 'var(--muted)',
+    unknown: 'var(--muted)'
+  };
+
+  container.innerHTML = Object.entries(byScanner).map(([scanner, results]) => {
+    let content;
+    if ('findings' in results) {
+      // govulncheck-style: { findings: N, vuln_ids: [] }
+      const ids = results.vuln_ids && results.vuln_ids.length > 0
+        ? results.vuln_ids.map(id => `<span class="text-[rgb(var(--accent))]">${id}</span>`).join(', ')
+        : '';
+      content = `
+        <div class="flex items-center gap-3">
+          <span class="text-sm">${results.findings} finding${results.findings !== 1 ? 's' : ''}</span>
+          ${ids ? `<span class="text-xs">${ids}</span>` : ''}
+        </div>
+      `;
+    } else {
+      // severity-count style: { critical: 0, high: 0, ... }
+      content = `
+        <div class="flex gap-2">
+          ${severities.map(s => {
+            const count = results[s] || 0;
+            return `
+              <div class="text-center">
+                <div class="w-7 h-7 rounded flex items-center justify-center text-xs font-medium"
+                     style="background: rgba(${sevColors[s]}, 0.15); color: rgb(${sevColors[s]})">
+                  ${count}
+                </div>
+                <div class="text-[9px] text-[rgb(var(--muted))] mt-0.5">${s.charAt(0).toUpperCase()}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="flex items-center justify-between p-2 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]">
+        <span class="text-xs font-medium mono w-28">${scanner}</span>
+        ${content}
+      </div>
+    `;
+  }).join('');
 }
 
 // initialize content provenance section
@@ -167,35 +236,43 @@ async function initApp() {
     return;
   }
 
-  // namespace under 'app' and add computed fields
-  const container_info = apiData.components?.[0]?.index || {};
+  // flatten components[0] into binary + container
+  const comp = apiData.components?.[0] || {};
   const data = {
     app: {
       ...apiData,
-      'status-text': 'Verified',
-      policy: {
-        signing: apiData.policy?.defaults?.signing?.require_signature,
-        sbom: apiData.policy?.defaults?.evidence?.sbom?.required,
-        scan: apiData.policy?.defaults?.evidence?.scan?.required,
-        vuln_gating: apiData.policy?.defaults?.vulnerability?.gating?.block_on
-      },
-      vulns: apiData.vulnerabilities?.summary,
-      licenses: {
-        compliant: apiData.licenses?.compliant ? 'Yes' : 'No'
-      },
+      'status-text': apiData.vulnerabilities?.gate_result === 'pass' ? 'Verified' : 'Warning',
+      binary: comp.binary || {},
       container: {
-        image: container_info.registry && container_info.repository 
-          ? `${container_info.registry}/${container_info.repository}` 
-          : null,
-        digest: container_info.digest,
-        tag: container_info.tag,
-        pushed_at: container_info.pushed_at
+        ...comp.oci,
+        os: comp.os,
+        arch: comp.arch,
+        platform: comp.os && comp.arch ? `${comp.os}/${comp.arch}` : '—'
+      },
+      computed: {
+        license_status: apiData.licenses?.compliant ? 'Compliant' : 'Non-Compliant',
+        allow_vex_text: apiData.policy?.vulnerability?.allow_if_vex ? 'Yes' : 'No',
+        allow_unknown_text: apiData.policy?.license?.allow_unknown ? 'Allowed' : 'Denied'
       },
       'raw-json': JSON.stringify(apiData, null, 2)
     }
   };
 
   bindData(container, data);
+
+  // render per-scanner breakdown
+  const scannerEl = document.getElementById('vuln-scanner-breakdown');
+  if (scannerEl && apiData.vulnerabilities?.by_scanner) {
+    renderScannerBreakdown(scannerEl, apiData.vulnerabilities.by_scanner);
+  }
+
+  // handle denied_found display
+  const deniedEl = document.getElementById('denied-found-list');
+  if (deniedEl && apiData.licenses?.denied_found?.length > 0) {
+    deniedEl.innerHTML = apiData.licenses.denied_found.map(lic => `
+      <span class="text-xs px-2 py-1 rounded border border-[rgb(var(--bad))]/50 bg-[rgb(var(--bad))]/10 text-[rgb(var(--bad))]">${lic}</span>
+    `).join('');
+  }
 }
 
 // initialize footer (uses summary endpoint)

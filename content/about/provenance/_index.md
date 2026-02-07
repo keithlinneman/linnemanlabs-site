@@ -21,7 +21,6 @@ The content bundle is a signed artifact containing all static HTML, CSS, JavaScr
 
 You can view the full content source code for [linnemanlabs-site on Github](https://github.com/keithlinneman/linnemanlabs-site)
 
-
 ## Future plans
 
-In the future, this page will expand to include attestations across the full trust hierarchy, from Layer 7 application self-verification down through OS-enforced signed execution (IMA/EVM), dm-verity verified filesystems on golden images, kernel lockdown mode, UEFI Secure Boot, and TPM-based hardware attestation. The goal is a verifiable chain from the hardware root of trust to the running application establishing cryptographic proof from silicon to application with all of the code open-sourced along the way.
+In the future, this page will expand to include attestations across the full trust hierarchy, from Layer 7 application self-verification down through OS-enforced signed execution (IMA/EVM), dm-verity verified filesystems on golden images, kernel lockdown mode, UEFI Secure Boot, and TPM-based hardware attestation. The goal is a verifiable chain from the hardware root of trust to the running application establishing cryptographic proof from silicon to application.
