@@ -1,49 +1,37 @@
 ---
 title: "About Me"
-description: "Keith Linneman - cybersecurity and infrastructure engineer with 20+ years building, breaking and securing production systems."
+description: "Keith Linneman - infrastructure and security engineer with 25+ years building, breaking, and securing production systems."
 ---
 
 ## Keith Linneman
 
-I am a cybersecurity and infrastructure engineer with 20+ years of experience designing, operating, red-teaming, and securing production systems. My career spans from early internet infrastructure to modern cloud-native platforms.
+I've been doing this since the mid-90s - over 25 years of building, breaking, and operating systems. I started by breaking into them as a kid, living on IRC, learning how networks and operating systems actually worked by taking them apart. That offensive background shaped everything that came after. I moved into infrastructure and operations, bringing an attacker's perspective to how I design, harden, and monitor production systems. Now I'm circling back to offensive security with deep infrastructure and operations experience behind it.
 
-I run LinnemanLabs to document what I am building and learning, and to open-source some of it as I go.
+I run LinnemanLabs as a working lab for security research and infrastructure engineering - documenting what I build and learn, and open-sourcing what I can.
 
-### Areas of expertise
-- Platform engineering and developer experience (paved roads, golden paths)
-- Security architecture, threat modeling, and secure system design
-- IaC and automation (repeatability, drift control, auditability)
-- Observability, reliability, and incident response (MTTR reduction, learning-driven postmortems)
-- Software supply chain security and attestation
+My roots are in offensive security, and that's where the work is heading again. I'm researching how production infrastructure - especially observability pipelines - can be subverted from within, and I'm building systems where security properties are cryptographically provable rather than assumed. I want to bring that same rigor to ML systems and model supply chains as those problems mature.
 
-### Current focus (2026)
-- Secure-by-default platforms and workflows (policy, CI/CD guardrails, paved roads)
-- Software supply chain security (SBOM, provenance, signing, verification, SLSA, Sigstore, TUF)
-- Zero-trust networking and identity-first design
-- AI/ML security (model provenance, supply chain integrity, adversarial robustness)
-- Applying infrastructure and security rigor to ML systems and pipelines
-- Infrastructure automation at scale
+---
 
-### How I like to work
+### How I work
 
-- Full-stack ownership. I want to know how the system behaves from top-to-bottom (protocol -> code -> infrastructure -> operations)
-- First principles over cargo culting. Understand the primitives end-to-end before abstracting or automating
-- “Move fast and own things” - ship quickly with guardrails and then own reliability, security, and maintenance not just the proof of concept
-- I trust what I can explain. If I can't reason about it, I won't trust it in production
-- Prefer small, composable systems over big frameworks
-- Automate controls and guardrails so security is the default
-- Treat operability (telemetry, rollback, recovery) as a primary feature
-- Challenge defaults and continuous redesign. When I learn a better model, I refactor and simplify rather than layering on more complexity
-- Apply existing disciplines to new domains. Security and infrastructure principles don't change just because the system is an ML model
+I'd rather understand one system completely than be passingly familiar with ten. Full-stack ownership means knowing how the system behaves from protocol to code to infrastructure to operations - not just the layer I'm responsible for on the org chart.
 
-### Connect
+First principles over cargo culting. I understand the primitives end to end before I abstract or automate, and I trust what I can explain. If I can't reason about how something works, I won't trust it in production.
 
-I am particularly interested in connecting with teams working on:
-- AI/ML security and model integrity
-- Software supply chain security
-- Platform engineering with security as a first-class concern
-- Red teaming (traditional or AI systems)
+I prefer small, composable systems over big frameworks. When I learn a better model, I refactor and simplify rather than layering on complexity. I'd rather own fewer things well than accumulate technical debt across many.
+
+I think security should be the default path, not a gate at the end. That means building guardrails into CI/CD, treating operability - telemetry, rollback, recovery - as a primary feature, and designing systems where the easy thing and the secure thing are the same thing.
+
+These principles don't change just because the system is an ML model instead of a web server. Provenance, integrity, and verification matter regardless of what the artifact is.
+
+---
+
+### What I'm looking for
+
+I'm interested in connecting with teams working on offensive security and red teaming, AI/ML security and model integrity, software supply chain security, or platform engineering where security is a first-class concern.
 
 For the right problem, I go deep.
+
 - GitHub: [keithlinneman](https://github.com/keithlinneman)
-- Email:
+- Email: [hello@linnemanlabs.com](mailto:hello@linnemanlabs.com)

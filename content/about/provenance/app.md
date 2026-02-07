@@ -5,10 +5,10 @@ type: "provenance"
 layout: "app"
 ---
 
-The application server is a custom Go binary built with security and observability as first-class concerns.
+Provenance for the currently running server binary - source information, build attestations, vulnerability scans, SBOMs, licensing, and container metadata. The application is a custom Go binary built with security and observability as primary concerns.
 
-You can view the full application source code for [linnemanlabs-web on Github](https://github.com/keithlinneman/linnemanlabs-web)
+Source: [linnemanlabs-web on GitHub](https://github.com/keithlinneman/linnemanlabs-web)
 
-This page displays provenance information for the currently running server binary, including source information, build attestations, vulnerability scans, SBOMs, licensing and container metadata.
+Source: [build-system on GitHub](https://github.com/keithlinneman/build-system)
 
-In the future, this page will expand to include attestations across the full trust hierarchy, from Layer 7 application self-verification down through OS-enforced signed execution (IMA/EVM), dm-verity verified filesystems on golden images, kernel lockdown mode, UEFI Secure Boot, and TPM-based hardware attestation. The goal is a verifiable chain from the hardware root of trust to the running application establishing cryptographic proof from silicon to application.
+This page currently covers application-level provenance. I'm working toward extending attestations down through the full trust hierarchy - OS-level integrity (IMA/EVM), dm-verity verified filesystems, kernel lockdown, UEFI Secure Boot, and TPM-based hardware attestation - so that every layer is cryptographically anchored to the one below it.

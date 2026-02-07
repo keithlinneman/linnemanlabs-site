@@ -33,7 +33,7 @@ publishDir = "public"
 
 [params.author]
   name = "Keith Linneman"
-  bio = "20 years of cybersecurity, infrastructure, and platform engineering."
+  bio = "Building, breaking, and securing infrastructure since the mid-90s"
   github = "keithlinneman"
 
 [build]
