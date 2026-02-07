@@ -52,16 +52,23 @@ function resolve(obj, path) {
   return path.split('.').reduce((o, k) => (o && o[k] !== undefined) ? o[k] : null, obj);
 }
 
-// fetch JSON
+// fetch JSON (memoized per page load - deduplicates concurrent calls to same URL)
+const _cache = new Map();
+
 async function fetchJSON(url) {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch (err) {
-    console.error(`Fetch ${url} failed:`, err);
-    return null;
-  }
+  if (_cache.has(url)) return _cache.get(url);
+  const promise = fetch(url)
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
+    .catch(err => {
+      console.error(`Fetch ${url} failed:`, err);
+      _cache.delete(url);
+      return null;
+    });
+  _cache.set(url, promise);
+  return promise;
 }
 
 // bind data to elements
@@ -183,6 +190,124 @@ function renderScannerBreakdown(container, byScanner) {
       </div>
     `;
   }).join('');
+}
+
+// initialize header provenance dropdown
+async function initHeader() {
+  const container = document.getElementById('header-provenance');
+  if (!container) return;
+
+  const dot = document.getElementById('hdr-status-dot');
+  const versionEl = document.getElementById('hdr-version');
+  const commitEl = document.getElementById('hdr-commit');
+
+  const [appData, contentData] = await Promise.all([
+    fetchJSON(API.app),
+    fetchJSON(API.contentSummary)
+  ]);
+
+  // handle total failure
+  if (!appData && !contentData) {
+    if (dot) dot.classList.add('status-dot--bad');
+    if (versionEl) versionEl.textContent = '—';
+    if (commitEl) commitEl.textContent = 'unavailable';
+    return;
+  }
+
+  // populate button
+  if (appData) {
+    if (versionEl) versionEl.textContent = appData.version ? `v${appData.version}` : '—';
+    if (commitEl) commitEl.textContent = appData.source?.commit_short || '—';
+
+    // status dot: green if gate passes and no criticals, red if criticals, warn otherwise
+    const vulns = appData.vulnerabilities || {};
+    const critCount = vulns.counts?.critical ?? 0;
+    if (dot) {
+      if (critCount > 0) {
+        dot.classList.add('status-dot--bad');
+      } else if (vulns.gate_result && vulns.gate_result !== 'pass') {
+        dot.classList.add('status-dot--warn');
+      }
+      // default green (no class needed)
+    }
+  }
+
+  // build the data object for binding
+  const comp = appData?.components?.[0] || {};
+  const oci = comp.oci || {};
+  const vulns = appData?.vulnerabilities || {};
+  const signing = appData?.signing || {};
+  const attestations = appData?.attestations || {};
+  const policy = appData?.policy || {};
+
+  const data = {
+    hdr: {
+      app: {
+        version: appData?.version || '—',
+        track: appData?.track || '—',
+        build_id: appData?.build_id || '—',
+        created_at: appData?.created_at || '—',
+        source: {
+          commit_short: appData?.source?.commit_short || '—',
+          commit_date: appData?.source?.commit_date || '—',
+          dirty: appData?.source?.dirty || false
+        },
+        vulns: {
+          critical: vulns.counts?.critical ?? '—',
+          high: vulns.counts?.high ?? '—',
+          medium: vulns.counts?.medium ?? '—',
+          low: vulns.counts?.low ?? '—',
+          gate_result: vulns.gate_result || '—'
+        },
+        signing: {
+          cosign: signing.artifacts_attested || false,
+          inventory: signing.inventory_signed || false,
+          release: signing.release_signed || false
+        },
+        attestations: {
+          sbom: attestations.sbom_attested || false,
+          scan: attestations.scan_attested || false,
+          license: attestations.license_attested || false
+        },
+        policy: {
+          signing_required: policy.signing?.require_inventory_signature || policy.signing?.require_subject_signatures || false,
+          sbom_required: policy.evidence?.sbom_required || false,
+          scan_required: policy.evidence?.scan_required || false,
+          vuln_gating: (policy.vulnerability?.block_on && policy.vulnerability.block_on.length > 0) || false
+        },
+        container: {
+          ref: oci.registry && oci.repository && oci.tag
+            ? `${oci.registry}/${oci.repository}:${oci.tag}`
+            : '—',
+          digest_short: oci.digest
+            ? oci.digest.substring(0, 24) + '...'
+            : '—',
+          pushed_at: oci.pushed_at || '—'
+        }
+      },
+      content: {
+        version: contentData?.version || '—',
+        created_at: contentData?.created_at || '—',
+        total_files: contentData?.total_files ?? '—',
+        total_size: contentData?.total_size ?? 0,
+        content_hash_short: contentData?.content_hash
+          ? 'sha256:' + contentData.content_hash.substring(0, 16) + '...'
+          : '—'
+      }
+    }
+  };
+
+  bindData(container, data);
+
+  // color the gate result text
+  const gateEl = document.getElementById('hdr-gate-result');
+  if (gateEl && vulns.gate_result) {
+    if (vulns.gate_result === 'pass') {
+      gateEl.classList.add('text-[rgb(var(--good))]');
+    } else {
+      gateEl.classList.add('text-[rgb(var(--bad))]');
+    }
+  }
 }
 
 // initialize content provenance section
@@ -331,6 +456,7 @@ async function initFooter() {
 
 // init on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
+  initHeader();
   initFooter();
   initContent();
   initApp();

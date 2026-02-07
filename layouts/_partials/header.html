@@ -39,160 +39,184 @@
         {{ end }}
       </nav>
 
-      {{/* App Provenance Badge with Dropdown */}}
-      {{ $rel := .Site.Data.release }}
-      {{ $container := index $rel.components 0 }}
-      <div class="relative" data-dropdown>
+      {{/* Provenance Badge with Dropdown - populated by main.js */}}
+      <div class="relative" data-dropdown id="header-provenance">
         <button data-dropdown-toggle class="text-xs rounded-full border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-3 py-1.5 flex items-center gap-2 hover:border-[rgb(var(--accent))] transition-colors cursor-pointer">
-          {{ if eq $rel.vulnerabilities.summary.critical 0 }}
-            <span class="status-dot"></span>
-          {{ else }}
-            <span class="status-dot status-dot--bad"></span>
-          {{ end }}
-          <span class="font-medium">v{{ $rel.version }}</span>
-          <span class="text-[rgb(var(--muted))] mono text-[10px]">{{ $rel.source.commit_short }}</span>
+          <span class="status-dot" id="hdr-status-dot"></span>
+          <span class="font-medium" id="hdr-version">···</span>
+          <span class="text-[rgb(var(--muted))] mono text-[10px]" id="hdr-commit">···</span>
           <svg class="w-3 h-3 text-[rgb(var(--muted))] transition-transform [.open_&]:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
           </svg>
         </button>
 
         {{/* Dropdown Panel */}}
-        <div class="absolute right-0 mt-2 w-80 rounded-lg border border-[rgb(var(--border))] bg-[rgb(var(--panel))] shadow-lg z-50 hidden [.open_&]:block">
+        <div class="absolute right-0 mt-2 w-96 rounded-lg border border-[rgb(var(--border))] bg-[rgb(var(--panel))] shadow-lg z-50 hidden [.open_&]:block overflow-y-auto max-h-[80vh]">
           <div class="p-4 space-y-4">
-            <div class="text-xs font-medium text-[rgb(var(--fg))] uppercase tracking-wide">App Provenance</div>
+
+            {{/* Application Provenance */}}
+            <div class="text-xs font-medium text-[rgb(var(--fg))] uppercase tracking-wide">Application</div>
 
             {{/* Build Info */}}
             <div class="grid grid-cols-2 gap-2 text-xs">
               <div>
                 <div class="text-[rgb(var(--muted))]">Version</div>
-                <div class="mono">{{ $rel.version }}</div>
-              </div>
-              <div>
-                <div class="text-[rgb(var(--muted))]">Build ID</div>
-                <div class="mono text-[10px]">{{ $rel.build_id }}</div>
+                <div class="mono" data-bind="hdr.app.version">···</div>
               </div>
               <div>
                 <div class="text-[rgb(var(--muted))]">Track</div>
-                <div class="mono">{{ $rel.track }}</div>
+                <div class="mono" data-bind="hdr.app.track">···</div>
+              </div>
+              <div>
+                <div class="text-[rgb(var(--muted))]">Build ID</div>
+                <div class="mono text-[10px]" data-bind="hdr.app.build_id">···</div>
               </div>
               <div>
                 <div class="text-[rgb(var(--muted))]">Built</div>
-                <div class="mono text-[10px]">{{ $rel.created_at | time.Format "2006-01-02" }}</div>
+                <div class="mono text-[10px]" data-bind="hdr.app.created_at" data-format="date">···</div>
               </div>
             </div>
 
-            {{/* Source Info */}}
+            {{/* Source */}}
             <div class="border-t border-[rgb(var(--border))] pt-3">
               <div class="text-[10px] font-medium text-[rgb(var(--muted))] uppercase tracking-wide mb-2">Source</div>
               <div class="grid grid-cols-2 gap-2 text-xs">
                 <div>
                   <div class="text-[rgb(var(--muted))]">Commit</div>
                   <div class="mono flex items-center gap-1">
-                    {{ $rel.source.commit_short }}
-                    {{ if $rel.source.dirty }}
-                      <span class="text-[rgb(var(--warn))]">*</span>
-                    {{ end }}
+                    <span data-bind="hdr.app.source.commit_short">···</span>
+                    <span data-bind-show="hdr.app.source.dirty" class="text-[rgb(var(--warn))] hidden">*</span>
                   </div>
                 </div>
                 <div>
                   <div class="text-[rgb(var(--muted))]">Date</div>
-                  <div class="mono text-[10px]">{{ $rel.source.commit_date | time.Format "2006-01-02" }}</div>
+                  <div class="mono text-[10px]" data-bind="hdr.app.source.commit_date" data-format="date">···</div>
                 </div>
               </div>
             </div>
 
-            {{/* Attestations */}}
+            {{/* Security Status */}}
             <div class="border-t border-[rgb(var(--border))] pt-3">
-              <div class="text-[10px] font-medium text-[rgb(var(--muted))] uppercase tracking-wide mb-2">Attestations</div>
-              <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="text-[10px] font-medium text-[rgb(var(--muted))] uppercase tracking-wide mb-2">Security</div>
+
+              {{/* Vulnerability Counts */}}
+              <div class="flex gap-3 text-xs mb-3">
+                <div class="flex items-center gap-1">
+                  <span class="w-5 h-5 rounded flex items-center justify-center bg-[rgb(var(--bad))]/20 text-[rgb(var(--bad))] font-medium" data-bind="hdr.app.vulns.critical">·</span>
+                  <span class="text-[rgb(var(--muted))]">C</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="w-5 h-5 rounded flex items-center justify-center bg-[rgb(var(--warn))]/20 text-[rgb(var(--warn))] font-medium" data-bind="hdr.app.vulns.high">·</span>
+                  <span class="text-[rgb(var(--muted))]">H</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="w-5 h-5 rounded flex items-center justify-center bg-[rgb(var(--accent))]/20 text-[rgb(var(--accent))] font-medium" data-bind="hdr.app.vulns.medium">·</span>
+                  <span class="text-[rgb(var(--muted))]">M</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="w-5 h-5 rounded flex items-center justify-center bg-[rgb(var(--muted))]/20 text-[rgb(var(--muted))] font-medium" data-bind="hdr.app.vulns.low">·</span>
+                  <span class="text-[rgb(var(--muted))]">L</span>
+                </div>
+                <div class="flex items-center gap-1 ml-auto">
+                  <span class="text-[rgb(var(--muted))]">Gate:</span>
+                  <span class="font-medium" id="hdr-gate-result" data-bind="hdr.app.vulns.gate_result">···</span>
+                </div>
+              </div>
+
+              {{/* Signing & Attestation Indicators */}}
+              <div class="grid grid-cols-3 gap-1.5 text-[10px]">
                 <div class="flex items-center gap-1.5">
-                  {{ if $rel.attestations.cosign.signed }}
-                    <span class="w-2 h-2 rounded-full bg-[rgb(var(--good))]"></span>
-                  {{ else }}
-                    <span class="w-2 h-2 rounded-full bg-[rgb(var(--bad))]"></span>
-                  {{ end }}
-                  <span>Cosign Signature</span>
+                  <span class="w-1.5 h-1.5 rounded-full" data-bind-class="hdr.app.signing.cosign:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
+                  <span>Cosign</span>
                 </div>
                 <div class="flex items-center gap-1.5">
-                  {{ if $rel.attestations.slsa.verified }}
-                    <span class="w-2 h-2 rounded-full bg-[rgb(var(--good))]"></span>
-                  {{ else }}
-                    <span class="w-2 h-2 rounded-full bg-[rgb(var(--bad))]"></span>
-                  {{ end }}
-                  <span>SLSA L{{ $rel.attestations.slsa.level }}</span>
+                  <span class="w-1.5 h-1.5 rounded-full" data-bind-class="hdr.app.signing.inventory:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
+                  <span>Inventory</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full" data-bind-class="hdr.app.signing.release:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>
+                  <span>Release</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full" data-bind-class="hdr.app.attestations.sbom:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
+                  <span>SBOM</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full" data-bind-class="hdr.app.attestations.scan:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
+                  <span>Scanned</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full" data-bind-class="hdr.app.attestations.license:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
+                  <span>Licensed</span>
                 </div>
               </div>
             </div>
 
-            {{/* Policy Requirements */}}
+            {{/* Policy */}}
             <div class="border-t border-[rgb(var(--border))] pt-3">
               <div class="text-[10px] font-medium text-[rgb(var(--muted))] uppercase tracking-wide mb-2">Policy</div>
               <div class="grid grid-cols-2 gap-1.5 text-[10px]">
                 <div class="flex items-center gap-1.5">
-                  {{ if $rel.policy.defaults.signing.require_signature }}
-                    <span class="w-1.5 h-1.5 rounded-full bg-[rgb(var(--good))]"></span>
-                  {{ else }}
-                    <span class="w-1.5 h-1.5 rounded-full bg-[rgb(var(--muted))]"></span>
-                  {{ end }}
+                  <span class="w-1.5 h-1.5 rounded-full" data-bind-class="hdr.app.policy.signing_required:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>
                   <span>Signing required</span>
                 </div>
                 <div class="flex items-center gap-1.5">
-                  {{ if $rel.policy.defaults.evidence.sbom.required }}
-                    <span class="w-1.5 h-1.5 rounded-full bg-[rgb(var(--good))]"></span>
-                  {{ else }}
-                    <span class="w-1.5 h-1.5 rounded-full bg-[rgb(var(--muted))]"></span>
-                  {{ end }}
+                  <span class="w-1.5 h-1.5 rounded-full" data-bind-class="hdr.app.policy.sbom_required:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>
                   <span>SBOM required</span>
                 </div>
                 <div class="flex items-center gap-1.5">
-                  {{ if $rel.policy.defaults.evidence.scan.required }}
-                    <span class="w-1.5 h-1.5 rounded-full bg-[rgb(var(--good))]"></span>
-                  {{ else }}
-                    <span class="w-1.5 h-1.5 rounded-full bg-[rgb(var(--muted))]"></span>
-                  {{ end }}
+                  <span class="w-1.5 h-1.5 rounded-full" data-bind-class="hdr.app.policy.scan_required:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>
                   <span>Scan required</span>
                 </div>
                 <div class="flex items-center gap-1.5">
-                  {{ if $rel.policy.defaults.vulnerability.gating.block_on }}
-                    <span class="w-1.5 h-1.5 rounded-full bg-[rgb(var(--good))]"></span>
-                  {{ else }}
-                    <span class="w-1.5 h-1.5 rounded-full bg-[rgb(var(--muted))]"></span>
-                  {{ end }}
+                  <span class="w-1.5 h-1.5 rounded-full" data-bind-class="hdr.app.policy.vuln_gating:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>
                   <span>Vuln gating</span>
                 </div>
               </div>
             </div>
 
-            {{/* Vulnerability Summary */}}
+            {{/* Container */}}
             <div class="border-t border-[rgb(var(--border))] pt-3">
-              <div class="text-[10px] font-medium text-[rgb(var(--muted))] uppercase tracking-wide mb-2">Vulnerabilities</div>
-              <div class="flex gap-3 text-xs">
-                <div class="flex items-center gap-1">
-                  <span class="w-5 h-5 rounded flex items-center justify-center bg-[rgb(var(--bad))]/20 text-[rgb(var(--bad))] font-medium">{{ $rel.vulnerabilities.summary.critical }}</span>
-                  <span class="text-[rgb(var(--muted))]">C</span>
+              <div class="text-[10px] font-medium text-[rgb(var(--muted))] uppercase tracking-wide mb-2">Container</div>
+              <div class="mono text-[10px] break-all" data-bind="hdr.app.container.ref">···</div>
+              <div class="mono text-[10px] text-[rgb(var(--muted))] break-all mt-1" data-bind="hdr.app.container.digest_short">···</div>
+              <div class="text-[rgb(var(--muted))] text-[10px] mt-1">Pushed: <span data-bind="hdr.app.container.pushed_at" data-format="date">···</span></div>
+            </div>
+
+            {{/* Content Provenance */}}
+            <div class="border-t border-[rgb(var(--border))] pt-3">
+              <div class="text-xs font-medium text-[rgb(var(--fg))] uppercase tracking-wide mb-2">Content</div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <div class="text-[rgb(var(--muted))]">Version</div>
+                  <div class="mono" data-bind="hdr.content.version">···</div>
                 </div>
-                <div class="flex items-center gap-1">
-                  <span class="w-5 h-5 rounded flex items-center justify-center bg-[rgb(var(--warn))]/20 text-[rgb(var(--warn))] font-medium">{{ $rel.vulnerabilities.summary.high }}</span>
-                  <span class="text-[rgb(var(--muted))]">H</span>
+                <div>
+                  <div class="text-[rgb(var(--muted))]">Built</div>
+                  <div class="mono text-[10px]" data-bind="hdr.content.created_at" data-format="date">···</div>
                 </div>
-                <div class="flex items-center gap-1">
-                  <span class="w-5 h-5 rounded flex items-center justify-center bg-[rgb(var(--accent))]/20 text-[rgb(var(--accent))] font-medium">{{ $rel.vulnerabilities.summary.medium }}</span>
-                  <span class="text-[rgb(var(--muted))]">M</span>
+                <div>
+                  <div class="text-[rgb(var(--muted))]">Files</div>
+                  <div class="mono" data-bind="hdr.content.total_files">···</div>
                 </div>
-                <div class="flex items-center gap-1">
-                  <span class="w-5 h-5 rounded flex items-center justify-center bg-[rgb(var(--muted))]/20 text-[rgb(var(--muted))] font-medium">{{ $rel.vulnerabilities.summary.low }}</span>
-                  <span class="text-[rgb(var(--muted))]">L</span>
+                <div>
+                  <div class="text-[rgb(var(--muted))]">Size</div>
+                  <div class="mono" data-bind="hdr.content.total_size" data-format="bytes">···</div>
                 </div>
+              </div>
+              <div class="mt-2">
+                <div class="text-[rgb(var(--muted))] text-[10px]">Hash</div>
+                <div class="mono text-[10px] text-[rgb(var(--muted))] break-all" data-bind="hdr.content.content_hash_short">···</div>
               </div>
             </div>
 
-            {{/* Container Info */}}
-            <div class="border-t border-[rgb(var(--border))] pt-3 text-xs">
-              <div class="text-[rgb(var(--muted))]">Container</div>
-              <div class="mono text-[10px] break-all">{{ $container.index.registry }}/{{ $container.index.repository }}:{{ $container.index.tag }}</div>
-              <div class="mono text-[10px] text-[rgb(var(--muted))] break-all mt-1">{{ printf "%.24s" $container.index.digest }}...</div>
-              <div class="text-[rgb(var(--muted))] mt-1">Pushed: {{ $container.index.pushed_at | time.Format "2006-01-02 15:04" }}</div>
+            {{/* Full Provenance Link */}}
+            <div class="border-t border-[rgb(var(--border))] pt-3">
+              <a href="/about/provenance/" class="text-xs text-[rgb(var(--accent))] hover:underline">
+                View full provenance details →
+              </a>
             </div>
+
           </div>
         </div>
       </div>
