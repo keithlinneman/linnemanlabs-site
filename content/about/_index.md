@@ -15,7 +15,9 @@ Learn more [about me](/about/me/) or [the infrastructure](/about/infrastructure/
 
 ### What I'm working on
 
-**Observability as attack surface** - I'm researching how the monitoring and telemetry infrastructure we rely on can be turned against us. eBPF, collector pipelines, metric/log/trace data paths - these are deeply trusted components that most security models treat as safely internal. I think that's wrong, and I want to demonstrate why.
+**Observability as attack surface** - I'm researching how the monitoring and telemetry infrastructure we rely on can be turned against us. eBPF, collector pipelines, metric/log/trace data paths are deeply trusted components that most security models treat as safely internal. I think that's wrong, and I want to demonstrate why.
+
+**ML performance and systems engineering** — the same instrumentation and profiling fundamentals I use for security, performance, and monitoring - eBPF, continuous profiling, kernel-level visibility - are increasingly relevant to understanding what's actually happening when machine learning (ML) training and inference workloads run. That's a direction I'm actively exploring.
 
 **Trust and verification** - I care about systems where security properties are provable, not just documented. That means the full chain: hardware roots of trust, signed and attested builds, deploy-time cryptographic verification, runtime integrity, transparency logs. Not as a checklist but as a coherent architecture where each layer actually depends on the one below it. This site is a working implementation of that thinking - every release is signed, attested, and verifiable from source to what's running in production.
 
@@ -25,7 +27,7 @@ Learn more [about me](/about/me/) or [the infrastructure](/about/infrastructure/
 
 I'd rather understand one system top to bottom than skim ten. Depth is the thing. First principles over cargo culting, understand the primitives end to end before you abstract or automate. I write my own CloudFormation stacks and Ansible roles because I want to know exactly what's happening and why, and because that's where you find the gaps that matter.
 
-I think offense and defense are the same skillset applied in different directions. The best security work I've seen comes from people who've built the thing they're trying to break. That's what I'm trying to demonstrate here.
+I think offense and defense are the same skillset applied in different directions. What matters is depth - you have to understand how a system actually works before you can secure it or break it. Building and implementing the thing yourself is one way to get that understanding, and it has a particular advantage: it forces you to understand the whole system end to end. You can't ship something that works if you only understand one layer. That breadth of context is what keeps individual deep dives honest.
 
 Provenance and integrity matter regardless of what the artifact is - application code, container images, ML models, infrastructure definitions, policy, dependencies, firmware. If you can't verify where it came from, what happened to it along the way, and that nothing changed between there and here, you're trusting. I'd rather verify.
 
@@ -41,6 +43,6 @@ This site is one project on the larger LinnemanLabs platform. It's static-first,
 - **Infrastructure:** AWS, defined as code, deployed across a multi-account Organizations layout
 - **Observability:** Grafana stack (metrics, logs, traces, profiles) with OpenTelemetry-based collection
 
-The implementation evolves as the lab evolves. The design stays auditable and repeatable.
-
-[Learn more about LinnemanLabs infrastructure →](/about/infrastructure)
+The implementation evolves as the lab evolves. The design stays auditable and repeatable. Most of the stack is open source:
+ - explore the full platform details on the [infrastructure page](/about/infrastructure)
+ - explore the [repos on GitHub](https://github.com/keithlinneman)
