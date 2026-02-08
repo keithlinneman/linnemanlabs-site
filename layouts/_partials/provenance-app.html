@@ -365,6 +365,22 @@
         </div>
       </div>
 
+      {{/* Individual Findings */}}
+      <div class="border-t border-[rgb(var(--border))] pt-3">
+        <details class="group">
+          <summary class="cursor-pointer text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))] transition-colors flex items-center gap-2">
+            <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+            <span class="group-open:hidden">Show findings</span>
+            <span class="hidden group-open:inline">Hide findings</span>
+          </summary>
+          <div class="mt-3 space-y-2 max-h-96 overflow-y-auto" id="vuln-findings-list">
+            {{/* JS will populate findings */}}
+          </div>
+        </details>
+      </div>
+
     </div>
   </section>
 
