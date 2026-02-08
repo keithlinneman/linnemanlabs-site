@@ -96,6 +96,12 @@ function bindData(container, data) {
     if (value) el.href = value;
   });
 
+  // data-bind-title: set title attribute (for tooltips)
+  container.querySelectorAll('[data-bind-title]').forEach(el => {
+    const value = resolve(data, el.dataset.bindTitle);
+    if (value) el.title = value;
+  });
+
   // data-bind-show: toggle visibility
   container.querySelectorAll('[data-bind-show]').forEach(el => {
     const value = resolve(data, el.dataset.bindShow);
@@ -153,7 +159,6 @@ function renderScannerBreakdown(container, byScanner) {
   container.innerHTML = Object.entries(byScanner).map(([scanner, results]) => {
     let content;
     if ('findings' in results) {
-      // govulncheck-style: { findings: N, vuln_ids: [] }
       const ids = results.vuln_ids && results.vuln_ids.length > 0
         ? results.vuln_ids.map(id => `<span class="text-[rgb(var(--accent))]">${id}</span>`).join(', ')
         : '';
@@ -164,7 +169,6 @@ function renderScannerBreakdown(container, byScanner) {
         </div>
       `;
     } else {
-      // severity-count style: { critical: 0, high: 0, ... }
       content = `
         <div class="flex gap-2">
           ${severities.map(s => {
@@ -259,12 +263,12 @@ async function initHeader() {
     return;
   }
 
-  // populate button
+  // populate button - no 'v' prefix, version string already includes it if needed
   if (appData) {
-    if (versionEl) versionEl.textContent = appData.version ? `v${appData.version}` : '—';
+    if (versionEl) versionEl.textContent = appData.version || '—';
     if (commitEl) commitEl.textContent = appData.source?.commit_short || '—';
 
-    // status dot: green if gate passes and no criticals, red if criticals, warn otherwise
+    // status dot: green if no criticals, red if criticals, warn if gate fails
     const vulns = appData.vulnerabilities || {};
     const critCount = vulns.counts?.critical ?? 0;
     if (dot) {
@@ -273,17 +277,17 @@ async function initHeader() {
       } else if (vulns.gate_result && vulns.gate_result !== 'pass') {
         dot.classList.add('status-dot--warn');
       }
-      // default green (no class needed)
     }
   }
 
   // build the data object for binding
-  const comp = appData?.components?.[0] || {};
-  const oci = comp.oci || {};
   const vulns = appData?.vulnerabilities || {};
   const signing = appData?.signing || {};
   const attestations = appData?.attestations || {};
   const policy = appData?.policy || {};
+
+  // try multiple paths for OCI data - summary endpoint may structure differently
+  const oci = appData?.oci || appData?.release?.oci || appData?.components?.[0]?.oci || {};
 
   const data = {
     hdr: {
@@ -318,12 +322,16 @@ async function initHeader() {
           signing_required: policy.signing?.require_inventory_signature || policy.signing?.require_subject_signatures || false,
           sbom_required: policy.evidence?.sbom_required || false,
           scan_required: policy.evidence?.scan_required || false,
-          vuln_gating: (policy.vulnerability?.block_on && policy.vulnerability.block_on.length > 0) || false
+          vuln_gating: (policy.vulnerability?.block_on && policy.vulnerability.block_on.length > 0) || false,
+          license_gating: (policy.license?.denied && policy.license.denied.length > 0) || !policy.license?.allow_unknown || false,
+          provenance_required: policy.evidence?.provenance_required || false
         },
         container: {
           ref: oci.registry && oci.repository && oci.tag
             ? `${oci.registry}/${oci.repository}:${oci.tag}`
-            : '—',
+            : oci.repository && oci.tag
+              ? `${oci.repository}:${oci.tag}`
+              : '—',
           digest_short: oci.digest
             ? oci.digest.substring(0, 24) + '...'
             : '—',
@@ -343,16 +351,6 @@ async function initHeader() {
   };
 
   bindData(container, data);
-
-  // color the gate result text
-  const gateEl = document.getElementById('hdr-gate-result');
-  if (gateEl && vulns.gate_result) {
-    if (vulns.gate_result === 'pass') {
-      gateEl.classList.add('text-[rgb(var(--good))]');
-    } else {
-      gateEl.classList.add('text-[rgb(var(--bad))]');
-    }
-  }
 }
 
 // initialize content provenance section
