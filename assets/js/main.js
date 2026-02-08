@@ -141,13 +141,13 @@ function renderScannerBreakdown(container, byScanner) {
   if (!container || !byScanner) return;
 
   const severities = ['critical', 'high', 'medium', 'low', 'negligible', 'unknown'];
-  const sevColors = {
-    critical: 'var(--bad)',
-    high: 'var(--warn)',
-    medium: 'var(--accent)',
-    low: 'var(--muted)',
-    negligible: 'var(--muted)',
-    unknown: 'var(--muted)'
+  const sevClass = {
+    critical: 'bg-[rgb(var(--bad))]/20 text-[rgb(var(--bad))]',
+    high: 'bg-[rgb(var(--warn))]/20 text-[rgb(var(--warn))]',
+    medium: 'bg-[rgb(var(--accent))]/20 text-[rgb(var(--accent))]',
+    low: 'bg-[rgb(var(--muted))]/20 text-[rgb(var(--muted))]',
+    negligible: 'bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))]',
+    unknown: 'bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))]'
   };
 
   container.innerHTML = Object.entries(byScanner).map(([scanner, results]) => {
@@ -171,8 +171,7 @@ function renderScannerBreakdown(container, byScanner) {
             const count = results[s] || 0;
             return `
               <div class="text-center">
-                <div class="w-7 h-7 rounded flex items-center justify-center text-xs font-medium"
-                     style="background: rgba(${sevColors[s]}, 0.15); color: rgb(${sevColors[s]})">
+                <div class="w-7 h-7 rounded flex items-center justify-center text-xs font-medium ${sevClass[s]}">
                   ${count}
                 </div>
                 <div class="text-[9px] text-[rgb(var(--muted))] mt-0.5">${s.charAt(0).toUpperCase()}</div>
@@ -199,24 +198,23 @@ function renderFindings(container, findings) {
     return;
   }
 
-  const sevColor = {
-    critical: '--bad',
-    high: '--warn',
-    medium: '--accent',
-    low: '--muted',
-    negligible: '--muted',
-    unknown: '--muted'
+  const sevClass = {
+    critical: 'bg-[rgb(var(--bad))]/20 text-[rgb(var(--bad))]',
+    high: 'bg-[rgb(var(--warn))]/20 text-[rgb(var(--warn))]',
+    medium: 'bg-[rgb(var(--accent))]/20 text-[rgb(var(--accent))]',
+    low: 'bg-[rgb(var(--muted))]/20 text-[rgb(var(--muted))]',
+    negligible: 'bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))]',
+    unknown: 'bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))]'
   };
 
   container.innerHTML = findings.map(f => {
-    const color = sevColor[f.severity] || '--muted';
+    const cls = sevClass[f.severity] || sevClass.unknown;
     const title = f.title ? f.title.substring(0, 120) + (f.title.length > 120 ? '...' : '') : '';
     return `
       <div class="p-3 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]">
         <div class="flex items-start justify-between gap-3">
           <div class="flex items-center gap-2 min-w-0">
-            <span class="shrink-0 text-[10px] font-medium uppercase px-1.5 py-0.5 rounded"
-                  style="background: rgba(var(${color}), 0.15); color: rgb(var(${color}))">
+            <span class="shrink-0 text-[10px] font-medium uppercase px-1.5 py-0.5 rounded ${cls}">
               ${f.severity}
             </span>
             ${f.source_url
