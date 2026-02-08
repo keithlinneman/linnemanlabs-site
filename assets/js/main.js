@@ -192,6 +192,53 @@ function renderScannerBreakdown(container, byScanner) {
   }).join('');
 }
 
+// render vulnerability findings list
+function renderFindings(container, findings) {
+  if (!container || !findings || findings.length === 0) {
+    container.innerHTML = '<span class="text-xs text-[rgb(var(--good))]">No findings</span>';
+    return;
+  }
+
+  const sevColor = {
+    critical: '--bad',
+    high: '--warn',
+    medium: '--accent',
+    low: '--muted',
+    negligible: '--muted',
+    unknown: '--muted'
+  };
+
+  container.innerHTML = findings.map(f => {
+    const color = sevColor[f.severity] || '--muted';
+    const title = f.title ? f.title.substring(0, 120) + (f.title.length > 120 ? '...' : '') : '';
+    return `
+      <div class="p-3 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="shrink-0 text-[10px] font-medium uppercase px-1.5 py-0.5 rounded"
+                  style="background: rgba(var(${color}), 0.15); color: rgb(var(${color}))">
+              ${f.severity}
+            </span>
+            ${f.source_url
+              ? `<a href="${f.source_url}" target="_blank" rel="noopener" class="mono text-sm font-medium text-[rgb(var(--accent))] hover:underline truncate">${f.id}</a>`
+              : `<span class="mono text-sm font-medium truncate">${f.id}</span>`
+            }
+          </div>
+          <div class="flex gap-1 shrink-0">
+            ${f.scanners.map(s => `<span class="text-[10px] px-1.5 py-0.5 rounded border border-[rgb(var(--border))] text-[rgb(var(--muted))]">${s}</span>`).join('')}
+          </div>
+        </div>
+        ${title ? `<div class="text-xs text-[rgb(var(--muted))] mt-1.5 line-clamp-2">${title}</div>` : ''}
+        <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px]">
+          <div><span class="text-[rgb(var(--muted))]">Package:</span> <span class="mono">${f.package || '—'}</span></div>
+          <div><span class="text-[rgb(var(--muted))]">Installed:</span> <span class="mono">${f.installed_version || '—'}</span></div>
+          ${f.fixed_version ? `<div><span class="text-[rgb(var(--muted))]">Fixed:</span> <span class="mono text-[rgb(var(--good))]">${f.fixed_version}</span></div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 // initialize header provenance dropdown
 async function initHeader() {
   const container = document.getElementById('header-provenance');
@@ -443,6 +490,12 @@ async function initApp() {
   const scannerEl = document.getElementById('vuln-scanner-breakdown');
   if (scannerEl && vulns.by_scanner) {
     renderScannerBreakdown(scannerEl, vulns.by_scanner);
+  }
+
+  // render individual findings
+  const findingsEl = document.getElementById('vuln-findings-list');
+  if (findingsEl && vulns.findings) {
+    renderFindings(findingsEl, vulns.findings);
   }
 
   // render denied_found
