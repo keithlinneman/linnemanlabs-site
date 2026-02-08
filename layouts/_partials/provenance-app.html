@@ -1,4 +1,4 @@
-{{/* App Provenance Partial - populated by main.js from /api/provenance/app/summary */}}
+{{/* App Provenance Partial - populated by main.js from /api/provenance/app */}}
 <div id="provenance-app" class="space-y-8">
 
   {{/* Status Banner */}}
@@ -173,11 +173,11 @@
           <div class="text-xs text-[rgb(var(--muted))]">Total</div>
         </div>
         <div class="text-center">
-          <div class="text-2xl font-semibold" data-bind="app.attestations.source_attestations">—</div>
+          <div class="text-2xl font-semibold" data-bind="app.attestations.source">—</div>
           <div class="text-xs text-[rgb(var(--muted))]">Source</div>
         </div>
         <div class="text-center">
-          <div class="text-2xl font-semibold" data-bind="app.attestations.artifact_attestations">—</div>
+          <div class="text-2xl font-semibold" data-bind="app.attestations.artifact">—</div>
           <div class="text-xs text-[rgb(var(--muted))]">Artifact</div>
         </div>
       </div>
@@ -392,9 +392,25 @@
           <div class="flex flex-wrap gap-1 mt-1" data-bind-list="app.sbom.formats_produced"></div>
         </div>
       </div>
-      <div class="border-t border-[rgb(var(--border))] pt-3">
+      <div class="border-t border-[rgb(var(--border))] pt-3 mb-4">
         <div class="attestation-label">Generated At</div>
         <div class="attestation-value tabular" data-bind="app.sbom.generated_at" data-format="datetime">—</div>
+      </div>
+
+      {{/* Expandable Package List */}}
+      <div class="border-t border-[rgb(var(--border))] pt-3">
+        <details class="group">
+          <summary class="cursor-pointer text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))] transition-colors flex items-center gap-2">
+            <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+            <span class="group-open:hidden">Show all packages</span>
+            <span class="hidden group-open:inline">Hide packages</span>
+          </summary>
+          <div class="mt-3 max-h-96 overflow-y-auto" id="sbom-package-list">
+            {{/* JS will populate package list */}}
+          </div>
+        </details>
       </div>
     </div>
   </section>
@@ -409,8 +425,8 @@
       </div>
       <div class="space-y-3">
         <div>
-          <div class="attestation-label">Licenses Found in Packages</div>
-          <div class="flex flex-wrap gap-1 mt-1" data-bind-list="app.licenses.unique_licenses"></div>
+          <div class="attestation-label">Licenses Found</div>
+          <div class="flex flex-wrap gap-1 mt-1" data-bind-list="app.licenses.license_counts"></div>
         </div>
         <div>
           <div class="attestation-label">Denied Licenses Found</div>
@@ -423,6 +439,22 @@
             <div class="attestation-label">Packages Without License</div>
             <div class="attestation-value" data-bind="app.licenses.without_license_count">—</div>
           </div>
+        </div>
+
+        {{/* Expandable License Package Breakdown */}}
+        <div class="border-t border-[rgb(var(--border))] pt-3">
+          <details class="group">
+            <summary class="cursor-pointer text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))] transition-colors flex items-center gap-2">
+              <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+              <span class="group-open:hidden">Show packages by license</span>
+              <span class="hidden group-open:inline">Hide packages by license</span>
+            </summary>
+            <div class="mt-3 space-y-2 max-h-96 overflow-y-auto" id="license-package-list">
+              {{/* JS will populate license breakdown */}}
+            </div>
+          </details>
         </div>
       </div>
     </div>

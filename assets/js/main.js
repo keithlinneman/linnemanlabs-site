@@ -23,8 +23,8 @@ document.addEventListener("keydown", e => {
 const API = {
   content: '/api/provenance/content',
   contentSummary: '/api/provenance/content/summary',
-  app: '/api/provenance/app/summary',
-  appFull: '/api/provenance/app'
+  appSummary: '/api/provenance/app/summary',
+  app: '/api/provenance/app'
 };
 
 // formatters
@@ -202,7 +202,7 @@ async function initHeader() {
   const commitEl = document.getElementById('hdr-commit');
 
   const [appData, contentData] = await Promise.all([
-    fetchJSON(API.app),
+    fetchJSON(API.appSummary),
     fetchJSON(API.contentSummary)
   ]);
 
@@ -361,18 +361,72 @@ async function initApp() {
     return;
   }
 
-  // flatten components[0] into binary + container
-  const comp = apiData.components?.[0] || {};
+  // normalize full endpoint structure to match what templates expect
+  const rel = apiData.release || {};
+  const summary = rel.summary || {};
+  const vulns = summary.vulnerabilities || {};
+  const signing = summary.signing || {};
+  const artifact = rel.artifacts?.[0] || {};
+
   const data = {
     app: {
-      ...apiData,
-      'status-text': apiData.vulnerabilities?.gate_result === 'pass' ? 'Verified' : 'Warning',
-      binary: comp.binary || {},
+      version: rel.version || apiData.build?.version,
+      track: rel.track,
+      build_id: rel.build_id,
+      release_id: rel.release_id,
+      created_at: rel.created_at,
+      fetched_at: apiData.fetched_at,
+      build_actor: apiData.build?.build_actor,
+      build_system: apiData.build?.build_system,
+      build_run_url: apiData.build?.build_run_url,
+      builder_identity: apiData.build?.builder_identity,
+      go_version: apiData.build?.go_version,
+      'status-text': vulns.gate_result === 'pass' ? 'Verified' : 'Warning',
+      source: {
+        repository: rel.source?.repo,
+        commit: rel.source?.commit,
+        commit_short: rel.source?.commit_short,
+        commit_date: rel.source?.commit_date,
+        tag: rel.source?.base_tag,
+        dirty: rel.source?.dirty
+      },
+      builder: {
+        repository: rel.builder?.repo,
+        branch: rel.builder?.branch,
+        commit: rel.builder?.commit,
+        commit_short: rel.builder?.commit_short,
+        commit_date: rel.builder?.commit_date,
+        dirty: rel.builder?.dirty
+      },
+      signing: signing,
+      attestations: apiData.attestations || {},
+      policy: apiData.policy || {},
+      vulnerabilities: {
+        ...vulns,
+        counts: vulns.counts || {}
+      },
+      sbom: summary.sbom || {},
+      licenses: apiData.licenses || {},
+      evidence: {
+        file_count: apiData.evidence?.file_count,
+        categories: apiData.evidence?.categories,
+        completeness: summary.evidence_completeness || {}
+      },
+      binary: {
+        sha256: artifact.binary?.sha256,
+        size: artifact.binary?.size
+      },
       container: {
-        ...comp.oci,
-        os: comp.os,
-        arch: comp.arch,
-        platform: comp.os && comp.arch ? `${comp.os}/${comp.arch}` : '—'
+        repository: rel.oci?.repository,
+        tag: rel.oci?.tag,
+        digest: rel.oci?.digest,
+        digest_ref: rel.oci?.digest_ref,
+        media_type: rel.oci?.mediaType,
+        artifact_type: rel.oci?.artifactType,
+        pushed_at: rel.oci?.pushed_at,
+        os: artifact.os,
+        arch: artifact.arch,
+        platform: artifact.os && artifact.arch ? `${artifact.os}/${artifact.arch}` : '—'
       },
       computed: {
         license_status: apiData.licenses?.compliant ? 'Compliant' : 'Non-Compliant',
@@ -387,16 +441,117 @@ async function initApp() {
 
   // render per-scanner breakdown
   const scannerEl = document.getElementById('vuln-scanner-breakdown');
-  if (scannerEl && apiData.vulnerabilities?.by_scanner) {
-    renderScannerBreakdown(scannerEl, apiData.vulnerabilities.by_scanner);
+  if (scannerEl && vulns.by_scanner) {
+    renderScannerBreakdown(scannerEl, vulns.by_scanner);
   }
 
-  // handle denied_found display
+  // render denied_found
   const deniedEl = document.getElementById('denied-found-list');
   if (deniedEl && apiData.licenses?.denied_found?.length > 0) {
     deniedEl.innerHTML = apiData.licenses.denied_found.map(lic => `
       <span class="text-xs px-2 py-1 rounded border border-[rgb(var(--bad))]/50 bg-[rgb(var(--bad))]/10 text-[rgb(var(--bad))]">${lic}</span>
     `).join('');
+  }
+
+  // render package list
+  const pkgList = document.getElementById('sbom-package-list');
+  if (pkgList && apiData.packages) {
+    renderPackageList(pkgList, apiData.packages);
+  }
+
+  // render license package breakdown
+  const licPkgList = document.getElementById('license-package-list');
+  if (licPkgList && apiData.packages) {
+    renderLicensePackages(licPkgList, apiData.packages, apiData.policy?.license);
+  }
+}
+
+// render expandable package list for SBOM section
+function renderPackageList(container, packages) {
+  if (!packages || packages.length === 0) {
+    container.innerHTML = '<span class="text-xs text-[rgb(var(--muted))]">No packages</span>';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="space-y-1">
+      ${packages.map(pkg => `
+        <div class="flex items-center justify-between py-1.5 px-2 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))] text-xs">
+          <div class="flex-1 min-w-0">
+            <span class="mono text-[rgb(var(--fg))] break-all">${pkg.name}</span>
+          </div>
+          <div class="flex items-center gap-3 ml-3 shrink-0">
+            <span class="mono text-[rgb(var(--muted))]">${pkg.version}</span>
+            <span class="w-16 text-right ${statusColor(pkg.license_status)}">${pkg.license || 'none'}</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// render license breakdown with per-package detail
+function renderLicensePackages(container, packages, licensePolicy) {
+  if (!packages || packages.length === 0) {
+    container.innerHTML = '<span class="text-xs text-[rgb(var(--muted))]">No packages</span>';
+    return;
+  }
+
+  // group by license
+  const byLicense = {};
+  packages.forEach(pkg => {
+    const lic = pkg.license || '(no license)';
+    if (!byLicense[lic]) byLicense[lic] = { packages: [], status: pkg.license_status };
+    byLicense[lic].packages.push(pkg);
+  });
+
+  // sort: denied first, then unknown, then allowed
+  const statusOrder = { denied: 0, unknown: 1, allowed: 2 };
+  const sorted = Object.entries(byLicense).sort((a, b) => {
+    const oa = statusOrder[a[1].status] ?? 1;
+    const ob = statusOrder[b[1].status] ?? 1;
+    return oa !== ob ? oa - ob : a[0].localeCompare(b[0]);
+  });
+
+  container.innerHTML = sorted.map(([license, info]) => `
+    <details class="group border border-[rgb(var(--border))] rounded bg-[rgb(var(--bg))]">
+      <summary class="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-[rgb(var(--panel))] transition-colors">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full ${statusDot(info.status)}"></span>
+          <span class="text-sm font-medium mono">${license}</span>
+          <span class="text-xs text-[rgb(var(--muted))]">${info.packages.length} package${info.packages.length !== 1 ? 's' : ''}</span>
+        </div>
+        <svg class="w-3 h-3 text-[rgb(var(--muted))] transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </summary>
+      <div class="border-t border-[rgb(var(--border))] px-3 py-2 space-y-1">
+        ${info.packages.map(pkg => `
+          <div class="flex items-center justify-between text-xs py-0.5">
+            <span class="mono text-[rgb(var(--fg))] break-all">${pkg.name}</span>
+            <span class="mono text-[rgb(var(--muted))] ml-2 shrink-0">${pkg.version}</span>
+          </div>
+        `).join('')}
+      </div>
+    </details>
+  `).join('');
+}
+
+// helper: status color for license text
+function statusColor(status) {
+  switch (status) {
+    case 'allowed': return 'text-[rgb(var(--good))]';
+    case 'denied': return 'text-[rgb(var(--bad))]';
+    default: return 'text-[rgb(var(--warn))]';
+  }
+}
+
+// helper: status dot class for license grouping
+function statusDot(status) {
+  switch (status) {
+    case 'allowed': return 'bg-[rgb(var(--good))]';
+    case 'denied': return 'bg-[rgb(var(--bad))]';
+    default: return 'bg-[rgb(var(--warn))]';
   }
 }
 

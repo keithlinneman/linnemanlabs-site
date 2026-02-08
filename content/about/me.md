@@ -27,9 +27,7 @@ These principles don't change just because the system is an ML model instead of 
 
 ---
 
-### What I'm looking for
-
-I'm interested in connecting with teams working on offensive security and red teaming, AI/ML security and model integrity, ML performance and infrastructure engineering, software supply chain security, or platform engineering where security is a first-class concern.
+### Get in touch
 
 For the right problem, I go deep.
 
