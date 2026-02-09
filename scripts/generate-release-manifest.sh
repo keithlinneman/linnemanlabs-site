@@ -36,7 +36,7 @@ git_remote="$( git -C "${REPO_ROOT}" remote get-url origin 2>/dev/null || echo "
 # tool versions and checksum (content SBOM) - use PATH same as build does
 # hugo (static html generation)
 if command -v hugo &>/dev/null; then
-  hugo_version="$( hugo version 2>/dev/null | head -1 | awk '{ print $2 }' || echo "unknown" )"
+  hugo_version="$( hugo version 2>/dev/null | head -1 | awk '{ print $2 }' | awk -F '-' '{ print $1 }' || echo "unknown" )"
   # hugo_verbose="$( hugo version 2>/dev/null || echo "" )"
   hugo_path="$( command -v hugo )"
   hugo_checksum="$( sha256sum "${hugo_path}" 2>/dev/null | awk '{ print $1 }' || echo "unknown" )"
