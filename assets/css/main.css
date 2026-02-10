@@ -2,6 +2,7 @@
 
 /* Make Tailwind see classes Hugo generates */
 @source "hugo_stats.json";
+@source "../js/main.js";
 
 /* dark mode default */
 @layer base {
