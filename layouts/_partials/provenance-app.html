@@ -293,29 +293,29 @@
     <div class="blueprint-card">
 
       {{/* Severity Grid */}}
-      <div class="flex gap-3 mb-4">
+      <div class="grid grid-cols-6 gap-2 mb-4">
         <div class="text-center">
-          <div class="w-10 h-10 rounded flex items-center justify-center bg-[rgb(var(--bad))]/20 text-[rgb(var(--bad))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.critical">—</div>
+          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--bad))]/20 text-[rgb(var(--bad))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.critical">—</div>
           <div class="text-[10px] text-[rgb(var(--muted))] mt-1">Critical</div>
         </div>
         <div class="text-center">
-          <div class="w-10 h-10 rounded flex items-center justify-center bg-[rgb(var(--warn))]/20 text-[rgb(var(--warn))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.high">—</div>
+          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--warn))]/20 text-[rgb(var(--warn))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.high">—</div>
           <div class="text-[10px] text-[rgb(var(--muted))] mt-1">High</div>
         </div>
         <div class="text-center">
-          <div class="w-10 h-10 rounded flex items-center justify-center bg-[rgb(var(--accent))]/20 text-[rgb(var(--accent))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.medium">—</div>
+          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--accent))]/20 text-[rgb(var(--accent))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.medium">—</div>
           <div class="text-[10px] text-[rgb(var(--muted))] mt-1">Medium</div>
         </div>
         <div class="text-center">
-          <div class="w-10 h-10 rounded flex items-center justify-center bg-[rgb(var(--muted))]/20 text-[rgb(var(--muted))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.low">—</div>
+          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--muted))]/20 text-[rgb(var(--muted))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.low">—</div>
           <div class="text-[10px] text-[rgb(var(--muted))] mt-1">Low</div>
         </div>
         <div class="text-center">
-          <div class="w-10 h-10 rounded flex items-center justify-center bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.negligible">—</div>
+          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.negligible">—</div>
           <div class="text-[10px] text-[rgb(var(--muted))] mt-1">Negligible</div>
         </div>
         <div class="text-center">
-          <div class="w-10 h-10 rounded flex items-center justify-center bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.unknown">—</div>
+          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.unknown">—</div>
           <div class="text-[10px] text-[rgb(var(--muted))] mt-1">Unknown</div>
         </div>
       </div>
