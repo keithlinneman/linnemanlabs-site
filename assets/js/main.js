@@ -606,56 +606,16 @@ function statusDot(status) {
 
 // initialize footer (uses summary endpoint)
 async function initFooter() {
-  const container = document.getElementById('content-provenance-footer');
-  if (!container) return;
+  const [appData, contentData] = await Promise.all([
+    fetchJSON(API.appSummary),
+    fetchJSON(API.contentSummary)
+  ]);
 
-  const data = await fetchJSON(API.contentSummary);
+  const appEl = document.getElementById('footer-app-version');
+  const contentEl = document.getElementById('footer-content-version');
 
-  if (!data) {
-    container.innerHTML = `
-      <div class="flex items-center gap-2">
-        <span class="status-dot status-dot--warn"></span>
-        <span class="text-xs text-[rgb(var(--muted))]">Content provenance unavailable</span>
-      </div>
-    `;
-    return;
-  }
-
-  container.innerHTML = `
-    <div class="text-[rgb(var(--fg))] font-medium mb-1">Content Provenance</div>
-    <div class="text-xs text-[rgb(var(--muted))] mb-3">
-      Content bundle verified from ${data.source || 'unknown'} source.
-    </div>
-    <div class="grid gap-2">
-      <div>
-        <div class="attestation-label">Content Version</div>
-        <div class="attestation-value tabular">${data.version || '—'}</div>
-      </div>
-      <div>
-        <div class="attestation-label">Bundle SHA256</div>
-        <div class="attestation-value text-xs">${data.content_hash || '—'}</div>
-      </div>
-      <div class="flex gap-6">
-        <div>
-          <div class="attestation-label">Generated</div>
-          <div class="attestation-value tabular">${fmt.date(data.created_at)}</div>
-        </div>
-        <div>
-          <div class="attestation-label">Files</div>
-          <div class="attestation-value tabular">${data.total_files || '—'}</div>
-        </div>
-        <div>
-          <div class="attestation-label">Size</div>
-          <div class="attestation-value tabular">${fmt.bytes(data.total_size)}</div>
-        </div>
-      </div>
-    </div>
-    <div class="mt-3 pt-3 border-t border-[rgb(var(--border))]">
-      <a href="/about/provenance/" class="text-xs text-[rgb(var(--accent))] hover:underline">
-        View full provenance details →
-      </a>
-    </div>
-  `;
+  if (appEl) appEl.textContent = appData?.version || '—';
+  if (contentEl) contentEl.textContent = contentData?.version || '—';
 }
 
 // init on DOM ready
