@@ -1,6 +1,6 @@
 ---
-date: '2026-02-06T00:00:00Z'
-title: 'Hello world'
+date: '2026-02-09T00:00:00Z'
+title: 'hello, world'
 summary: 'Introducing LinnemanLabs - 20+ years of breaking and building systems, now writing it down.'
 author: 'Keith Linneman'
 tags: ["intro"]
