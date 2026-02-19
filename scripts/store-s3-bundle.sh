@@ -53,7 +53,7 @@ echo "==> Verifying uploaded bundle by re-downloading and checking sha384sum"
 verifys3hash "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${bundle_upload_file}" "${bundlesha384sum}"
 
 # copy the sigstore bundle to s3
-bundle_sig_upload_file="sha384/${bundlesha384sum}.sigstore.json"
+bundle_sig_upload_file="${bundle_upload_file}.sigstore.json"
 echo "==> Uploading sigstore bundle to s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${bundle_sig_upload_file}"
 aws s3 cp "${BUNDLE_SIG_FILE}" "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${bundle_sig_upload_file}"
 
