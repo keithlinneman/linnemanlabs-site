@@ -37,7 +37,7 @@ echo "==> Bundle created file=${BUNDLE_FILE} size=${bundle_size}"
 
 BUNDLE_KMS_KEYID="$( aws ssm get-parameter --name "${BUNDLE_KMS_KEYID_PARAM}" --query 'Parameter.Value' --output text )"
 : "${BUNDLE_KMS_KEYID:?failed to get BUNDLE_KMS_KEYID from SSM param ${BUNDLE_KMS_KEYID_PARAM}}"
-COSIGN_KEY="kms://${BUNDLE_KMS_KEYID}"
+COSIGN_KEY="awskms:///${BUNDLE_KMS_KEYID}"
 
 echo "==> Signing bundle with cosign using KMS key ${BUNDLE_KMS_KEYID}"
 cosign sign-blob --yes --key "${COSIGN_KEY}" --bundle "${BUNDLE_SIG_FILE}" --signing-config <( echo '{"mediaType":"application/vnd.dev.sigstore.signingconfig.v0.2+json","rekorTlogConfig":{},"tsaConfig":{}}' ) "${BUNDLE_FILE}"
