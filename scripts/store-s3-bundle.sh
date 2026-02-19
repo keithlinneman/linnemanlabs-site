@@ -44,7 +44,7 @@ gzip -t "${BUNDLE_FILE}" || { echo "error: invalid gzip"; exit 1; }
 tar -tzf "${BUNDLE_FILE}" > /dev/null || { echo "error: invalid tar"; exit 1; }
 
 # upload the bundle to s3 named by its sha384sum
-bundle_upload_file="${bundlesha384sum}.tar.gz"
+bundle_upload_file="sha384/${bundlesha384sum}.tar.gz"
 echo "==> Uploading site bundle to s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${bundle_upload_file}"
 aws s3 cp "${BUNDLE_FILE}" "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${bundle_upload_file}"
 
@@ -53,7 +53,7 @@ echo "==> Verifying uploaded bundle by re-downloading and checking sha384sum"
 verifys3hash "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${bundle_upload_file}" "${bundlesha384sum}"
 
 # copy the sigstore bundle to s3
-bundle_sig_upload_file="${bundlesha384sum}.sigstore.json"
+bundle_sig_upload_file="sha384/${bundlesha384sum}.sigstore.json"
 echo "==> Uploading sigstore bundle to s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${bundle_sig_upload_file}"
 aws s3 cp "${BUNDLE_SIG_FILE}" "s3://${RELEASE_BUCKET}/${RELEASE_PREFIX}/${bundle_sig_upload_file}"
 
