@@ -46,8 +46,10 @@ s3_contenttype="$( jq -r '.ContentType' <<< "${s3_metadata}" )"
   AWS_SECRET_ACCESS_KEY="$(jq -r '.Credentials.SecretAccessKey' <<< "$credentials")"
   AWS_SESSION_TOKEN="$(jq -r '.Credentials.SessionToken' <<< "$credentials")"
 
-  echo "==> setting workload ssm param ${DEPLOY_SSM_PARAM} to ${RELEASE_ID}"
-  aws ssm put-parameter --name "${DEPLOY_SSM_PARAM}" --type String --value "${RELEASE_ID}" --overwrite
+  ssm_value="sha384:${RELEASE_ID}"
+
+  echo "==> setting workload ssm param ${DEPLOY_SSM_PARAM} to ${ssm_value}"
+  aws ssm put-parameter --name "${DEPLOY_SSM_PARAM}" --type String --value "${ssm_value}" --overwrite
 )
 
 echo "==> release-set-ssm done"
