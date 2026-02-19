@@ -176,10 +176,10 @@ echo "==> Scanned ${total_files} files (${total_size} bytes)"
 
 # calculate bundle hash (content directory, excluding manifest, reproducible hash of file names/hashes)
 echo "==> Calculating content hash (reproducible)"
-content_hash="$( find "${REPO_ROOT}/${CONTENT_DIR}" -type f ! -name 'manifest.json' ! -name 'release.json' -print0 | sort -z | xargs -0 sha256sum | sha256sum | awk '{ print $1 }' )"
-echo "==> Content hash: sha256:${content_hash}"
+content_hash="$( find "${REPO_ROOT}/${CONTENT_DIR}" -type f ! -name 'manifest.json' ! -name 'release.json' -print0 | sort -z | xargs -0 sha384sum | sha384sum | awk '{ print $1 }' )"
+echo "==> Content hash: sha384:${content_hash}"
 
-# content release version - sha256sum and short commit
+# content release version - date and short commit
 release_version="$( date "+%Y.%m.%d" ).${git_commit_short:-unknown}"
 
 # assemble final release manifest
@@ -187,7 +187,7 @@ echo "==> Writing provenance manifest to ${PROVENANCE_FILE}"
 
 jq -n \
   --arg version "${release_version:-unknown}" \
-  --arg content_id "sha256:${content_hash}" \
+  --arg content_id "sha384:${content_hash}" \
   --arg content_hash "${content_hash}" \
   --arg created_at "${build_time}" \
   --arg git_repo "${git_remote}" \
