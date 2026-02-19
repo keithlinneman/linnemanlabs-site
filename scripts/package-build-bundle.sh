@@ -32,4 +32,22 @@ tar -tzf "${BUNDLE_FILE}" > /dev/null || { echo "error: invalid tar"; exit 1; }
 bundle_size=$( stat -c%s "${BUNDLE_FILE}" || stat -f%z "${BUNDLE_FILE}" )
 echo "==> Bundle created file=${BUNDLE_FILE} size=${bundle_size}"
 
+# sign the bundle with cosign
+: "${BUNDLE_KMS_KEYID_PARAM:?BUNDLE_KMS_KEYID_PARAM must be set in release.conf}"
+
+BUNDLE_KMS_KEYID="$( aws ssm get-parameter --name "${BUNDLE_KMS_KEYID_PARAM}" --query 'Parameter.Value' --output text )"
+: "${BUNDLE_KMS_KEYID:?failed to get BUNDLE_KMS_KEYID from SSM param ${BUNDLE_KMS_KEYID_PARAM}}"
+COSIGN_KEY="kms://${BUNDLE_KMS_KEYID}"
+
+echo "==> Signing bundle with cosign using KMS key ${BUNDLE_KMS_KEYID}"
+cosign sign-blob --yes --key "${COSIGN_KEY}" --bundle "${BUNDLE_SIG_FILE}" --signing-config <( echo '{"mediaType":"application/vnd.dev.sigstore.signingconfig.v0.2+json","rekorTlogConfig":{},"tsaConfig":{}}' ) "${BUNDLE_FILE}"
+if [[ ! -f "${BUNDLE_SIG_FILE}" ]]; then
+  echo "error: failed to create signature file ${BUNDLE_SIG_FILE}" >&2
+  exit 1
+fi
+
+# verify the signature by checking the bundle with cosign
+echo "==> Verifying bundle signature with cosign"
+cosign verify-blob --key "${COSIGN_KEY}" --bundle "${BUNDLE_SIG_FILE}" "${BUNDLE_FILE}" || { echo "error: failed to verify bundle signature with cosign" >&2; exit 1; }
+
 echo "==> package-build-bundle done"
