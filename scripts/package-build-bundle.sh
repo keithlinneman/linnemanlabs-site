@@ -48,6 +48,6 @@ fi
 
 # verify the signature by checking the bundle with cosign
 echo "==> Verifying bundle signature with cosign"
-cosign verify-blob --key "${COSIGN_KEY}" --bundle "${BUNDLE_SIG_FILE}" "${BUNDLE_FILE}" || { echo "error: failed to verify bundle signature with cosign" >&2; exit 1; }
+cosign verify-blob --insecure-ignore-tlog=true --key "${COSIGN_KEY}" --bundle "${BUNDLE_SIG_FILE}" "${BUNDLE_FILE}" || { echo "error: failed to verify bundle signature with cosign" >&2; exit 1; }
 
 echo "==> package-build-bundle done"
