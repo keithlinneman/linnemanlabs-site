@@ -716,8 +716,17 @@ async function initFooter() {
   const container = document.getElementById('content-provenance-footer');
   if (!container) return;
 
-  const data = await fetchJSON(API.contentSummary);
+  const [data, appData] = await Promise.all([
+    fetchJSON(API.contentSummary),
+    fetchJSON(API.appSummary)
+  ]);
 
+  // populate footer version spans
+  const appVer = document.getElementById('footer-app-version');
+  const contentVer = document.getElementById('footer-content-version');
+  if (appVer) appVer.textContent = appData?.version || '—';
+  if (contentVer) contentVer.textContent = data?.version || '—';
+  
   if (!data) {
     container.replaceChildren(
       h('div', { class: 'flex items-center gap-2' },
