@@ -71,7 +71,50 @@ async function fetchJSON(url) {
   return promise;
 }
 
-// bind data to elements
+// DOM helpers
+// All dynamic content is built with DOM APIs instead of innerHTML so the
+// page can run under a strict TrustedTypes CSP with no policy exceptions.
+
+// h(tag, props, ...children) - create an element
+//   props.class  -> className
+//   props.text   -> textContent (use instead of children for text-only nodes)
+//   all other props -> setAttribute
+//   children: strings become text nodes, null/false are skipped
+function h(tag, props, ...children) {
+  const el = document.createElement(tag);
+  if (props) {
+    for (const [k, v] of Object.entries(props)) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else el.setAttribute(k, v);
+    }
+  }
+  for (const c of children) {
+    if (c != null && c !== false) el.append(c);
+  }
+  return el;
+}
+
+// SVG chevron (needs createElementNS) - used in expandable license groups
+function chevronSvg(cls) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('class', cls);
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('stroke', 'currentColor');
+  const p = document.createElementNS(ns, 'path');
+  p.setAttribute('stroke-linecap', 'round');
+  p.setAttribute('stroke-linejoin', 'round');
+  p.setAttribute('stroke-width', '2');
+  p.setAttribute('d', 'M19 9l-7 7-7-7');
+  svg.append(p);
+  return svg;
+}
+
+// Data binding 
+
 function bindData(container, data) {
   if (!container || !data) return;
 
@@ -121,127 +164,273 @@ function bindData(container, data) {
     const value = resolve(data, el.dataset.bindList);
     if (!value) return;
 
+    el.replaceChildren();
+
     if (Array.isArray(value)) {
       if (value.length === 0) {
-        el.innerHTML = '<span class="text-xs text-[rgb(var(--muted))]">None</span>';
+        el.append(h('span', { class: 'text-xs text-[rgb(var(--muted))]', text: 'None' }));
       } else {
-        el.innerHTML = value.map(item => `
-          <span class="text-xs px-2 py-1 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]">
-            <span class="text-[rgb(var(--accent))]">${item}</span>
-          </span>
-        `).join('');
+        value.forEach(item => {
+          el.append(
+            h('span', { class: 'text-xs px-2 py-1 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]' },
+              h('span', { class: 'text-[rgb(var(--accent))]', text: String(item) })
+            )
+          );
+        });
       }
     } else if (typeof value === 'object') {
-      el.innerHTML = Object.entries(value).map(([type, count]) => `
-        <span class="text-xs px-2 py-1 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]">
-          <span class="text-[rgb(var(--accent))]">${type}</span>
-          <span class="text-[rgb(var(--muted))] ml-1">${count}</span>
-        </span>
-      `).join('');
+      for (const [type, count] of Object.entries(value)) {
+        el.append(
+          h('span', { class: 'text-xs px-2 py-1 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]' },
+            h('span', { class: 'text-[rgb(var(--accent))]', text: type }),
+            h('span', { class: 'text-[rgb(var(--muted))] ml-1', text: String(count) })
+          )
+        );
+      }
     }
   });
 }
 
+// Vulnerability rendering - severity badges, scanner breakdown, findings list
+
+const SEV_CLASSES = {
+  critical:   'bg-[rgb(var(--bad))]/20 text-[rgb(var(--bad))]',
+  high:       'bg-[rgb(var(--warn))]/20 text-[rgb(var(--warn))]',
+  medium:     'bg-[rgb(var(--accent))]/20 text-[rgb(var(--accent))]',
+  low:        'bg-[rgb(var(--muted))]/20 text-[rgb(var(--muted))]',
+  negligible: 'bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))]',
+  unknown:    'bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))]'
+};
+
+const SEV_ORDER = ['critical', 'high', 'medium', 'low', 'negligible', 'unknown'];
+
 // render per-scanner vulnerability breakdown
 function renderScannerBreakdown(container, byScanner) {
   if (!container || !byScanner) return;
+  container.replaceChildren();
 
-  const severities = ['critical', 'high', 'medium', 'low', 'negligible', 'unknown'];
-  const sevClass = {
-    critical: 'bg-[rgb(var(--bad))]/20 text-[rgb(var(--bad))]',
-    high: 'bg-[rgb(var(--warn))]/20 text-[rgb(var(--warn))]',
-    medium: 'bg-[rgb(var(--accent))]/20 text-[rgb(var(--accent))]',
-    low: 'bg-[rgb(var(--muted))]/20 text-[rgb(var(--muted))]',
-    negligible: 'bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))]',
-    unknown: 'bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))]'
-  };
+  for (const [scanner, results] of Object.entries(byScanner)) {
+    const row = h('div', { class: 'flex items-center justify-between p-2 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]' },
+      h('span', { class: 'text-xs font-medium mono w-28', text: scanner })
+    );
 
-  container.innerHTML = Object.entries(byScanner).map(([scanner, results]) => {
-    let content;
     if ('findings' in results) {
-      const ids = results.vuln_ids && results.vuln_ids.length > 0
-        ? results.vuln_ids.map(id => `<span class="text-[rgb(var(--accent))]">${id}</span>`).join(', ')
-        : '';
-      content = `
-        <div class="flex items-center gap-3">
-          <span class="text-sm">${results.findings} finding${results.findings !== 1 ? 's' : ''}</span>
-          ${ids ? `<span class="text-xs">${ids}</span>` : ''}
-        </div>
-      `;
+      const content = h('div', { class: 'flex items-center gap-3' },
+        h('span', { class: 'text-sm', text: results.findings + ' finding' + (results.findings !== 1 ? 's' : '') })
+      );
+
+      if (results.vuln_ids && results.vuln_ids.length > 0) {
+        const ids = h('span', { class: 'text-xs' });
+        results.vuln_ids.forEach((id, i) => {
+          if (i > 0) ids.append(', ');
+          ids.append(h('span', { class: 'text-[rgb(var(--accent))]', text: id }));
+        });
+        content.append(ids);
+      }
+      row.append(content);
     } else {
-      content = `
-        <div class="flex gap-2">
-          ${severities.map(s => {
-            const count = results[s] || 0;
-            return `
-              <div class="text-center">
-                <div class="w-7 h-7 rounded flex items-center justify-center text-xs font-medium ${sevClass[s]}">
-                  ${count}
-                </div>
-                <div class="text-[9px] text-[rgb(var(--muted))] mt-0.5">${s.charAt(0).toUpperCase()}</div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      `;
+      const grid = h('div', { class: 'flex gap-2' });
+      for (const s of SEV_ORDER) {
+        grid.append(
+          h('div', { class: 'text-center' },
+            h('div', { class: 'w-7 h-7 rounded flex items-center justify-center text-xs font-medium ' + SEV_CLASSES[s], text: String(results[s] || 0) }),
+            h('div', { class: 'text-[9px] text-[rgb(var(--muted))] mt-0.5', text: s.charAt(0).toUpperCase() })
+          )
+        );
+      }
+      row.append(grid);
     }
 
-    return `
-      <div class="flex items-center justify-between p-2 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]">
-        <span class="text-xs font-medium mono w-28">${scanner}</span>
-        ${content}
-      </div>
-    `;
-  }).join('');
+    container.append(row);
+  }
 }
 
 // render vulnerability findings list
 function renderFindings(container, findings) {
-  if (!container || !findings || findings.length === 0) {
-    container.innerHTML = '<span class="text-xs text-[rgb(var(--good))]">No findings</span>';
+  if (!container) return;
+
+  if (!findings || findings.length === 0) {
+    container.replaceChildren(
+      h('span', { class: 'text-xs text-[rgb(var(--good))]', text: 'No findings' })
+    );
     return;
   }
 
-  const sevClass = {
-    critical: 'bg-[rgb(var(--bad))]/20 text-[rgb(var(--bad))]',
-    high: 'bg-[rgb(var(--warn))]/20 text-[rgb(var(--warn))]',
-    medium: 'bg-[rgb(var(--accent))]/20 text-[rgb(var(--accent))]',
-    low: 'bg-[rgb(var(--muted))]/20 text-[rgb(var(--muted))]',
-    negligible: 'bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))]',
-    unknown: 'bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))]'
-  };
+  container.replaceChildren();
 
-  container.innerHTML = findings.map(f => {
-    const cls = sevClass[f.severity] || sevClass.unknown;
-    const title = f.title ? f.title.substring(0, 120) + (f.title.length > 120 ? '...' : '') : '';
-    return `
-      <div class="p-3 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]">
-        <div class="flex items-start justify-between gap-3">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="shrink-0 text-[10px] font-medium uppercase px-1.5 py-0.5 rounded ${cls}">
-              ${f.severity}
-            </span>
-            ${f.source_url
-              ? `<a href="${f.source_url}" target="_blank" rel="noopener" class="mono text-sm font-medium text-[rgb(var(--accent))] hover:underline truncate">${f.id}</a>`
-              : `<span class="mono text-sm font-medium truncate">${f.id}</span>`
-            }
-          </div>
-          <div class="flex gap-1 shrink-0">
-            ${f.scanners.map(s => `<span class="text-[10px] px-1.5 py-0.5 rounded border border-[rgb(var(--border))] text-[rgb(var(--muted))]">${s}</span>`).join('')}
-          </div>
-        </div>
-        ${title ? `<div class="text-xs text-[rgb(var(--muted))] mt-1.5 line-clamp-2">${title}</div>` : ''}
-        <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px]">
-          <div><span class="text-[rgb(var(--muted))]">Package:</span> <span class="mono">${f.package || '—'}</span></div>
-          <div><span class="text-[rgb(var(--muted))]">Installed:</span> <span class="mono">${f.installed_version || '—'}</span></div>
-          ${f.fixed_version ? `<div><span class="text-[rgb(var(--muted))]">Fixed:</span> <span class="mono text-[rgb(var(--good))]">${f.fixed_version}</span></div>` : ''}
-        </div>
-      </div>
-    `;
-  }).join('');
+  for (const f of findings) {
+    const cls = SEV_CLASSES[f.severity] || SEV_CLASSES.unknown;
+
+    // header row: severity badge + id (left), scanner badges (right)
+    const left = h('div', { class: 'flex items-center gap-2 min-w-0' },
+      h('span', { class: 'shrink-0 text-[10px] font-medium uppercase px-1.5 py-0.5 rounded ' + cls, text: f.severity })
+    );
+
+    if (f.source_url) {
+      left.append(h('a', {
+        class: 'mono text-sm font-medium text-[rgb(var(--accent))] hover:underline truncate',
+        href: f.source_url, target: '_blank', rel: 'noopener', text: f.id
+      }));
+    } else {
+      left.append(h('span', { class: 'mono text-sm font-medium truncate', text: f.id }));
+    }
+
+    const right = h('div', { class: 'flex gap-1 shrink-0' });
+    for (const s of f.scanners) {
+      right.append(h('span', {
+        class: 'text-[10px] px-1.5 py-0.5 rounded border border-[rgb(var(--border))] text-[rgb(var(--muted))]',
+        text: s
+      }));
+    }
+
+    const card = h('div', { class: 'p-3 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]' },
+      h('div', { class: 'flex items-start justify-between gap-3' }, left, right)
+    );
+
+    // optional title
+    if (f.title) {
+      const truncated = f.title.length > 120 ? f.title.substring(0, 120) + '...' : f.title;
+      card.append(h('div', { class: 'text-xs text-[rgb(var(--muted))] mt-1.5 line-clamp-2', text: truncated }));
+    }
+
+    // metadata: package, installed, fixed
+    const meta = h('div', { class: 'flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px]' },
+      h('div', null,
+        h('span', { class: 'text-[rgb(var(--muted))]', text: 'Package: ' }),
+        h('span', { class: 'mono', text: f.package || '—' })
+      ),
+      h('div', null,
+        h('span', { class: 'text-[rgb(var(--muted))]', text: 'Installed: ' }),
+        h('span', { class: 'mono', text: f.installed_version || '—' })
+      )
+    );
+
+    if (f.fixed_version) {
+      meta.append(
+        h('div', null,
+          h('span', { class: 'text-[rgb(var(--muted))]', text: 'Fixed: ' }),
+          h('span', { class: 'mono text-[rgb(var(--good))]', text: f.fixed_version })
+        )
+      );
+    }
+
+    card.append(meta);
+    container.append(card);
+  }
 }
 
-// initialize header provenance dropdown
+// SBOM package list
+
+function renderPackageList(container, packages) {
+  if (!container) return;
+
+  if (!packages || packages.length === 0) {
+    container.replaceChildren(
+      h('span', { class: 'text-xs text-[rgb(var(--muted))]', text: 'No packages' })
+    );
+    return;
+  }
+
+  const list = h('div', { class: 'space-y-1' });
+
+  for (const pkg of packages) {
+    list.append(
+      h('div', { class: 'flex items-center justify-between py-1.5 px-2 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))] text-xs' },
+        h('div', { class: 'flex-1 min-w-0' },
+          h('span', { class: 'mono text-[rgb(var(--fg))] break-all', text: pkg.name })
+        ),
+        h('div', { class: 'flex items-center gap-3 ml-3 shrink-0' },
+          h('span', { class: 'mono text-[rgb(var(--muted))]', text: pkg.version }),
+          h('span', { class: 'w-16 text-right ' + statusColor(pkg.license_status), text: pkg.license || 'none' })
+        )
+      )
+    );
+  }
+
+  container.replaceChildren(list);
+}
+
+// License package breakdown
+
+function renderLicensePackages(container, packages, licensePolicy) {
+  if (!container) return;
+
+  if (!packages || packages.length === 0) {
+    container.replaceChildren(
+      h('span', { class: 'text-xs text-[rgb(var(--muted))]', text: 'No packages' })
+    );
+    return;
+  }
+
+  // group by license
+  const byLicense = {};
+  packages.forEach(pkg => {
+    const lic = pkg.license || '(no license)';
+    if (!byLicense[lic]) byLicense[lic] = { packages: [], status: pkg.license_status };
+    byLicense[lic].packages.push(pkg);
+  });
+
+  // sort: denied first, then unknown, then allowed
+  const statusOrder = { denied: 0, unknown: 1, allowed: 2 };
+  const sorted = Object.entries(byLicense).sort((a, b) => {
+    const oa = statusOrder[a[1].status] ?? 1;
+    const ob = statusOrder[b[1].status] ?? 1;
+    return oa !== ob ? oa - ob : a[0].localeCompare(b[0]);
+  });
+
+  container.replaceChildren();
+
+  for (const [license, info] of sorted) {
+    const details = h('details', { class: 'group border border-[rgb(var(--border))] rounded bg-[rgb(var(--bg))]' });
+
+    // summary row
+    const summary = h('summary', { class: 'flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-[rgb(var(--panel))] transition-colors' },
+      h('div', { class: 'flex items-center gap-2' },
+        h('span', { class: 'w-2 h-2 rounded-full ' + statusDot(info.status) }),
+        h('span', { class: 'text-sm font-medium mono', text: license }),
+        h('span', { class: 'text-xs text-[rgb(var(--muted))]', text: info.packages.length + ' package' + (info.packages.length !== 1 ? 's' : '') })
+      ),
+      chevronSvg('w-3 h-3 text-[rgb(var(--muted))] transition-transform group-open:rotate-180')
+    );
+
+    details.append(summary);
+
+    // package rows inside the details
+    const pkgList = h('div', { class: 'border-t border-[rgb(var(--border))] px-3 py-2 space-y-1' });
+    for (const pkg of info.packages) {
+      pkgList.append(
+        h('div', { class: 'flex items-center justify-between text-xs py-0.5' },
+          h('span', { class: 'mono text-[rgb(var(--fg))] break-all', text: pkg.name }),
+          h('span', { class: 'mono text-[rgb(var(--muted))] ml-2 shrink-0', text: pkg.version })
+        )
+      );
+    }
+    details.append(pkgList);
+
+    container.append(details);
+  }
+}
+
+// helper: status color for license text
+function statusColor(status) {
+  switch (status) {
+    case 'allowed': return 'text-[rgb(var(--good))]';
+    case 'denied': return 'text-[rgb(var(--bad))]';
+    default: return 'text-[rgb(var(--warn))]';
+  }
+}
+
+// helper: status dot class for license grouping
+function statusDot(status) {
+  switch (status) {
+    case 'allowed': return 'bg-[rgb(var(--good))]';
+    case 'denied': return 'bg-[rgb(var(--bad))]';
+    default: return 'bg-[rgb(var(--warn))]';
+  }
+}
+
+// Header provenance dropdown
+
 async function initHeader() {
   const container = document.getElementById('header-provenance');
   if (!container) return;
@@ -328,9 +517,9 @@ async function initHeader() {
         },
         container: {
           ref: oci.registry && oci.repository && oci.tag
-            ? `${oci.registry}/${oci.repository}:${oci.tag}`
+            ? oci.registry + '/' + oci.repository + ':' + oci.tag
             : oci.repository && oci.tag
-              ? `${oci.repository}:${oci.tag}`
+              ? oci.repository + ':' + oci.tag
               : '—',
           digest_short: oci.digest
             ? oci.digest.substring(0, 24) + '...'
@@ -353,7 +542,8 @@ async function initHeader() {
   bindData(container, data);
 }
 
-// initialize content provenance section
+// Content provenance section
+
 async function initContent() {
   const container = document.getElementById('provenance-content');
   if (!container) return;
@@ -389,7 +579,8 @@ async function initContent() {
   bindData(container, data);
 }
 
-// initialize app provenance section
+// App provenance section
+
 async function initApp() {
   const container = document.getElementById('provenance-app');
   if (!container) return;
@@ -469,7 +660,7 @@ async function initApp() {
         pushed_at: rel.oci?.pushed_at,
         os: artifact.os,
         arch: artifact.arch,
-        platform: artifact.os && artifact.arch ? `${artifact.os}/${artifact.arch}` : '—'
+        platform: artifact.os && artifact.arch ? artifact.os + '/' + artifact.arch : '—'
       },
       computed: {
         license_status: apiData.licenses?.compliant ? 'Compliant' : 'Non-Compliant',
@@ -497,9 +688,13 @@ async function initApp() {
   // render denied_found
   const deniedEl = document.getElementById('denied-found-list');
   if (deniedEl && apiData.licenses?.denied_found?.length > 0) {
-    deniedEl.innerHTML = apiData.licenses.denied_found.map(lic => `
-      <span class="text-xs px-2 py-1 rounded border border-[rgb(var(--bad))]/50 bg-[rgb(var(--bad))]/10 text-[rgb(var(--bad))]">${lic}</span>
-    `).join('');
+    deniedEl.replaceChildren();
+    for (const lic of apiData.licenses.denied_found) {
+      deniedEl.append(h('span', {
+        class: 'text-xs px-2 py-1 rounded border border-[rgb(var(--bad))]/50 bg-[rgb(var(--bad))]/10 text-[rgb(var(--bad))]',
+        text: lic
+      }));
+    }
   }
 
   // render package list
@@ -515,107 +710,57 @@ async function initApp() {
   }
 }
 
-// render expandable package list for SBOM section
-function renderPackageList(container, packages) {
-  if (!packages || packages.length === 0) {
-    container.innerHTML = '<span class="text-xs text-[rgb(var(--muted))]">No packages</span>';
-    return;
-  }
+// Footer
 
-  container.innerHTML = `
-    <div class="space-y-1">
-      ${packages.map(pkg => `
-        <div class="flex items-center justify-between py-1.5 px-2 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))] text-xs">
-          <div class="flex-1 min-w-0">
-            <span class="mono text-[rgb(var(--fg))] break-all">${pkg.name}</span>
-          </div>
-          <div class="flex items-center gap-3 ml-3 shrink-0">
-            <span class="mono text-[rgb(var(--muted))]">${pkg.version}</span>
-            <span class="w-16 text-right ${statusColor(pkg.license_status)}">${pkg.license || 'none'}</span>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-}
-
-// render license breakdown with per-package detail
-function renderLicensePackages(container, packages, licensePolicy) {
-  if (!packages || packages.length === 0) {
-    container.innerHTML = '<span class="text-xs text-[rgb(var(--muted))]">No packages</span>';
-    return;
-  }
-
-  // group by license
-  const byLicense = {};
-  packages.forEach(pkg => {
-    const lic = pkg.license || '(no license)';
-    if (!byLicense[lic]) byLicense[lic] = { packages: [], status: pkg.license_status };
-    byLicense[lic].packages.push(pkg);
-  });
-
-  // sort: denied first, then unknown, then allowed
-  const statusOrder = { denied: 0, unknown: 1, allowed: 2 };
-  const sorted = Object.entries(byLicense).sort((a, b) => {
-    const oa = statusOrder[a[1].status] ?? 1;
-    const ob = statusOrder[b[1].status] ?? 1;
-    return oa !== ob ? oa - ob : a[0].localeCompare(b[0]);
-  });
-
-  container.innerHTML = sorted.map(([license, info]) => `
-    <details class="group border border-[rgb(var(--border))] rounded bg-[rgb(var(--bg))]">
-      <summary class="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-[rgb(var(--panel))] transition-colors">
-        <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full ${statusDot(info.status)}"></span>
-          <span class="text-sm font-medium mono">${license}</span>
-          <span class="text-xs text-[rgb(var(--muted))]">${info.packages.length} package${info.packages.length !== 1 ? 's' : ''}</span>
-        </div>
-        <svg class="w-3 h-3 text-[rgb(var(--muted))] transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-        </svg>
-      </summary>
-      <div class="border-t border-[rgb(var(--border))] px-3 py-2 space-y-1">
-        ${info.packages.map(pkg => `
-          <div class="flex items-center justify-between text-xs py-0.5">
-            <span class="mono text-[rgb(var(--fg))] break-all">${pkg.name}</span>
-            <span class="mono text-[rgb(var(--muted))] ml-2 shrink-0">${pkg.version}</span>
-          </div>
-        `).join('')}
-      </div>
-    </details>
-  `).join('');
-}
-
-// helper: status color for license text
-function statusColor(status) {
-  switch (status) {
-    case 'allowed': return 'text-[rgb(var(--good))]';
-    case 'denied': return 'text-[rgb(var(--bad))]';
-    default: return 'text-[rgb(var(--warn))]';
-  }
-}
-
-// helper: status dot class for license grouping
-function statusDot(status) {
-  switch (status) {
-    case 'allowed': return 'bg-[rgb(var(--good))]';
-    case 'denied': return 'bg-[rgb(var(--bad))]';
-    default: return 'bg-[rgb(var(--warn))]';
-  }
-}
-
-// initialize footer (uses summary endpoint)
 async function initFooter() {
-  const [appData, contentData] = await Promise.all([
-    fetchJSON(API.appSummary),
-    fetchJSON(API.contentSummary)
-  ]);
+  const container = document.getElementById('content-provenance-footer');
+  if (!container) return;
 
-  const appEl = document.getElementById('footer-app-version');
-  const contentEl = document.getElementById('footer-content-version');
+  const data = await fetchJSON(API.contentSummary);
 
-  if (appEl) appEl.textContent = appData?.version || '—';
-  if (contentEl) contentEl.textContent = contentData?.version || '—';
+  if (!data) {
+    container.replaceChildren(
+      h('div', { class: 'flex items-center gap-2' },
+        h('span', { class: 'status-dot status-dot--warn' }),
+        h('span', { class: 'text-xs text-[rgb(var(--muted))]', text: 'Content provenance unavailable' })
+      )
+    );
+    return;
+  }
+
+  const grid = h('div', { class: 'grid gap-2' },
+    h('div', null,
+      h('div', { class: 'attestation-label', text: 'Content Version' }),
+      h('div', { class: 'attestation-value tabular', text: data.version || '—' })
+    ),
+    h('div', null,
+      h('div', { class: 'attestation-label', text: 'Bundle SHA256' }),
+      h('div', { class: 'attestation-value text-xs', text: data.content_hash || '—' })
+    ),
+    h('div', { class: 'flex gap-6' },
+      h('div', null,
+        h('div', { class: 'attestation-label', text: 'Generated' }),
+        h('div', { class: 'attestation-value tabular', text: fmt.date(data.created_at) })
+      ),
+      h('div', null,
+        h('div', { class: 'attestation-label', text: 'Files' }),
+        h('div', { class: 'attestation-value tabular', text: String(data.total_files || '—') })
+      ),
+      h('div', null,
+        h('div', { class: 'attestation-label', text: 'Size' }),
+        h('div', { class: 'attestation-value tabular', text: fmt.bytes(data.total_size) })
+      )
+    )
+  );
+
+  container.replaceChildren(
+    h('div', { class: 'text-[rgb(var(--fg))] font-medium mb-1', text: 'Content Provenance' }),
+    h('div', { class: 'text-xs text-[rgb(var(--muted))] mb-3', text: 'Content bundle verified from ' + (data.source || 'unknown') + ' source.' }),
+    grid,
+    h('div', { class: 'mt-3 pt-3 border-t border-[rgb(var(--border))]' },
+      h('a', { class: 'text-xs text-[rgb(var(--accent))] hover:underline', href: '/about/provenance/', text: 'View full provenance details →' })
+    )
+  );
 }
 
 // init on DOM ready
