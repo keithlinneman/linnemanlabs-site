@@ -713,9 +713,6 @@ async function initApp() {
 // Footer
 
 async function initFooter() {
-  const container = document.getElementById('content-provenance-footer');
-  if (!container) return;
-
   const [data, appData] = await Promise.all([
     fetchJSON(API.contentSummary),
     fetchJSON(API.appSummary)
@@ -726,50 +723,6 @@ async function initFooter() {
   const contentVer = document.getElementById('footer-content-version');
   if (appVer) appVer.textContent = appData?.version || '—';
   if (contentVer) contentVer.textContent = data?.version || '—';
-  
-  if (!data) {
-    container.replaceChildren(
-      h('div', { class: 'flex items-center gap-2' },
-        h('span', { class: 'status-dot status-dot--warn' }),
-        h('span', { class: 'text-xs text-[rgb(var(--muted))]', text: 'Content provenance unavailable' })
-      )
-    );
-    return;
-  }
-
-  const grid = h('div', { class: 'grid gap-2' },
-    h('div', null,
-      h('div', { class: 'attestation-label', text: 'Content Version' }),
-      h('div', { class: 'attestation-value tabular', text: data.version || '—' })
-    ),
-    h('div', null,
-      h('div', { class: 'attestation-label', text: 'Bundle SHA256' }),
-      h('div', { class: 'attestation-value text-xs', text: data.content_hash || '—' })
-    ),
-    h('div', { class: 'flex gap-6' },
-      h('div', null,
-        h('div', { class: 'attestation-label', text: 'Generated' }),
-        h('div', { class: 'attestation-value tabular', text: fmt.date(data.created_at) })
-      ),
-      h('div', null,
-        h('div', { class: 'attestation-label', text: 'Files' }),
-        h('div', { class: 'attestation-value tabular', text: String(data.total_files || '—') })
-      ),
-      h('div', null,
-        h('div', { class: 'attestation-label', text: 'Size' }),
-        h('div', { class: 'attestation-value tabular', text: fmt.bytes(data.total_size) })
-      )
-    )
-  );
-
-  container.replaceChildren(
-    h('div', { class: 'text-[rgb(var(--fg))] font-medium mb-1', text: 'Content Provenance' }),
-    h('div', { class: 'text-xs text-[rgb(var(--muted))] mb-3', text: 'Content bundle verified from ' + (data.source || 'unknown') + ' source.' }),
-    grid,
-    h('div', { class: 'mt-3 pt-3 border-t border-[rgb(var(--border))]' },
-      h('a', { class: 'text-xs text-[rgb(var(--accent))] hover:underline', href: '/about/provenance/', text: 'View full provenance details →' })
-    )
-  );
 }
 
 // init on DOM ready
