@@ -1,23 +1,21 @@
 {{ if eq (.Get "mode") "crop" }}
-<figure style="margin-bottom:1em;">
+<figure class="mb-4">
 <img src="{{ .Get "src" }}" 
-     onclick="this.nextElementSibling.showModal()" 
-     style="cursor:pointer; max-height:400px; width:100%; object-fit:cover; object-position:top; border:1px solid #333; border-radius:4px;"
+     class="img-lightbox cursor-pointer max-h-[400px] w-full object-cover object-top border border-neutral-700 rounded"
      alt="{{ .Get "alt" }}">
-<dialog onclick="this.close()" style="padding:0; border:none; margin:auto; max-width:95vw; max-height:95vh; overflow:auto;">
-    <img src="{{ .Get "src" }}" style="width:auto; height:auto; display:block;">
+<dialog class="img-lightbox-dialog fixed inset-0 p-0 border-none m-auto max-w-[95vw] max-h-[95vh] overflow-auto backdrop:bg-black/80">
+    <img src="{{ .Get "src" }}" class="w-auto h-auto block">
 </dialog>
 {{ else }}
-<figure style="margin-bottom:1em;">
+<figure class="mb-4">
 <img src="{{ .Get "src" }}" 
-     onclick="this.nextElementSibling.showModal()" 
-     style="cursor:pointer; max-height:400px; object-fit:contain; border:1px solid #333; border-radius:4px; display:block; margin:0 auto;"
+     class="img-lightbox cursor-pointer max-h-[400px] object-contain border border-neutral-700 rounded block mx-auto"
      alt="{{ .Get "alt" }}">
-<dialog onclick="this.close()" style="padding:0; border:none; margin:auto; max-width:95vw; max-height:95vh; overflow:auto;">
-    <img src="{{ .Get "src" }}" style="width:auto; height:auto; display:block;">
+<dialog class="img-lightbox-dialog fixed inset-0 p-0 border-none m-auto max-w-[95vw] max-h-[95vh] overflow-auto backdrop:bg-black/80">
+    <img src="{{ .Get "src" }}" class="w-auto h-auto block">
 </dialog>
 {{ end }}
 {{ with .Get "caption" }}
-<figcaption style="text-align:center; font-style:italic; color:#888; margin-top:8px; font-size:0.9em;">{{ . }}</figcaption>
+<figcaption class="text-center italic text-neutral-400 mt-2 text-sm">{{ . }}</figcaption>
 {{ end }}
 </figure>
