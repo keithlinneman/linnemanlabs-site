@@ -17,7 +17,7 @@ Learn more [about me](/about/me/) or [the infrastructure](/about/infrastructure/
 
 **Observability as attack surface** - I'm researching how the monitoring and telemetry infrastructure we rely on can be turned against us. eBPF, collector pipelines, metric/log/trace data paths are deeply trusted components that most security models treat as safely internal. I think that's wrong, and I want to demonstrate why.
 
-**ML performance and systems engineering** — the same instrumentation and profiling fundamentals I use for security, performance, and monitoring - eBPF, continuous profiling, kernel-level visibility - are increasingly relevant to understanding what's actually happening when machine learning (ML) training and inference workloads run. That's a direction I'm actively exploring.
+**ML performance and systems engineering** - the same instrumentation and profiling fundamentals I use for security, performance, and monitoring - eBPF, continuous profiling, kernel-level visibility - are increasingly relevant to understanding what's actually happening when machine learning (ML) training and inference workloads run. That's a direction I'm actively exploring.
 
 **Trust and verification** - I care about systems where security properties are provable, not just documented. That means the full chain: hardware roots of trust, signed and attested builds, deploy-time cryptographic verification, runtime integrity, transparency logs. Not as a checklist but as a coherent architecture where each layer actually depends on the one below it. This site is a working implementation of that thinking - every release is signed, attested, and verifiable from source to what's running in production.
 
