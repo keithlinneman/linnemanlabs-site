@@ -1,0 +1,23 @@
+{{ if eq (.Get "mode") "crop" }}
+<figure style="margin-bottom:1em;">
+<img src="{{ .Get "src" }}" 
+     onclick="this.nextElementSibling.showModal()" 
+     style="cursor:pointer; max-height:400px; width:100%; object-fit:cover; object-position:top; border:1px solid #333; border-radius:4px;"
+     alt="{{ .Get "alt" }}">
+<dialog onclick="this.close()" style="padding:0; border:none; margin:auto; max-width:95vw; max-height:95vh; overflow:auto;">
+    <img src="{{ .Get "src" }}" style="width:auto; height:auto; display:block;">
+</dialog>
+{{ else }}
+<figure style="margin-bottom:1em;">
+<img src="{{ .Get "src" }}" 
+     onclick="this.nextElementSibling.showModal()" 
+     style="cursor:pointer; max-height:400px; object-fit:contain; border:1px solid #333; border-radius:4px; display:block; margin:0 auto;"
+     alt="{{ .Get "alt" }}">
+<dialog onclick="this.close()" style="padding:0; border:none; margin:auto; max-width:95vw; max-height:95vh; overflow:auto;">
+    <img src="{{ .Get "src" }}" style="width:auto; height:auto; display:block;">
+</dialog>
+{{ end }}
+{{ with .Get "caption" }}
+<figcaption style="text-align:center; font-style:italic; color:#888; margin-top:8px; font-size:0.9em;">{{ . }}</figcaption>
+{{ end }}
+</figure>

@@ -275,3 +275,9 @@
   font-weight: 600;
   src: url('/fonts/source-sans-3-v19-latin-600.woff2') format('woff2');
 }
+
+/* Dialog backdrop */
+dialog::backdrop {
+    background: rgba(0,0,0,0.85);
+}
+
