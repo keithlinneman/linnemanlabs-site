@@ -728,7 +728,11 @@ async function initFooter() {
 // Image shortcode
 document.addEventListener('click', (e) => {
   const img = e.target.closest('.img-lightbox');
-  if (img) img.nextElementSibling.showModal();
+  if (img) {
+    const dialog = img.nextElementSibling;
+    dialog.showModal();
+    dialog.scrollTop = 0;
+  }
 
   const dialog = e.target.closest('.img-lightbox-dialog');
   if (dialog) dialog.close();

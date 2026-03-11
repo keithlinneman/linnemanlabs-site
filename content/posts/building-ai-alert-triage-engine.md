@@ -3,7 +3,7 @@ date: '2026-03-02T00:00:00Z'
 title: "Building an AI-Powered Alert Triage Engine with Go, Claude, and the Grafana LGTM Stack"
 summary: "How I built Vigil - a Go service that receives Alertmanager webhooks, investigates alerts using Claude's tool-calling API against Mimir and Loki, persists full conversation histories to PostgreSQL, and traces the entire triage lifecycle through Tempo."
 author: 'Keith Linneman'
-tags: ["Go","AI","LLM","Observability","Prometheus","Grafana","Mimir","Loki","Tempo","Pyroscope","OpenTelemetry","Claude","Anthropic","Alertmanager","Infrastructure","PostgreSQL"]
+tags: ["Go","AI","LLM","Observability","Prometheus","Grafana","Mimir","Loki","Tempo","Pyroscope","OpenTelemetry","Claude","Anthropic","Alertmanager","Infrastructure","PostgreSQL","Vigil"]
 categories: ["Engineering"]
 ---
 
@@ -13,7 +13,7 @@ Vigil receives alerts from Alertmanager, hands them to Claude with access to my 
 
 Here's what a real triage looks like:
 
-{{< imgmodal src="/img/vigil/vigil-triage-claude-slack.png" alt="Vigil triage analysis in Slack" mode="shrink" caption="Claude's root cause analysis for a disk space alert" >}}
+{{< imgmodal src="/img/vigil/vigil-triage-claude-slack.webp" alt="Vigil triage analysis in Slack" mode="shrink" caption="Claude's root cause analysis for a disk space alert" >}}
 
 The alert said disk space was low. Claude found the real problem using the provided tools - an eBPF exporter in a crash loop generating thousands of log entries per hour. This kind of root cause analysis would normally take an engineer ten minutes of digging. Vigil did it in 54 seconds.
 
@@ -27,15 +27,19 @@ Budget limits keep costs in check - 15 tool calls max, 200K input token ceiling,
 
 Every triage is fully instrumented with OpenTelemetry. Each LLM call, tool execution, and database interaction is a separate span with GenAI semantic attributes - model, token counts, stop reason, tool names, durations. The entire investigation is visible as a single trace in Tempo.
 
-{{< imgmodal src="/img/vigil/vigil-triage-tempo-trace.png" alt="Vigil triage trace in Tempo" mode="shrink" caption="Full triage lifecycle in Tempo - LLM calls, tool executions, and database writes as spans with GenAI semantic attributes." >}}
+{{< imgmodal src="/img/vigil/vigil-triage-tempo-trace.webp" alt="Vigil triage trace in Tempo" mode="shrink" caption="Full triage lifecycle in Tempo - LLM calls, tool executions, and database writes as spans with GenAI semantic attributes." >}}
 
 Pyroscope continuous profiling is correlated to traces, so clicking a slow span shows the CPU flame graph for exactly that time window. Prometheus histograms track triage duration, token usage, tool call counts, and per-tool latency distributions.
+
+{{< imgmodal src="/img/vigil/vigil-triage-pyroscope-profile.webp" alt="Pyroscope profiling Vigil application" mode="shrink" caption="Pyroscope flamegraph showing CPU time across Vigil's triage execution path." >}}
+
+Vigil runs on my [self-hosted observability platform]({{< relref "/posts/building-self-hosted-observability-platform/" >}}) built on the Grafana LGTM stack.
 
 ## An unexpected finding
 
 During testing, I sent a synthetic alert. Claude ignored the test label, queried the actual system health on the underlying host, and flagged a real issue - the same eBPF exporter permission error that had been silently failing across multiple nodes. A test alert found an actual issue.
 
-{{< imgmodal src="/img/vigil/vigil-test-alert-claude-finding.png" alt="Vigil test alert finding" mode="shrink" caption="A test alert - Claude investigated the system and found an actual issue." >}}
+{{< imgmodal src="/img/vigil/vigil-test-alert-claude-finding.webp" alt="Vigil test alert finding" mode="shrink" caption="A test alert - Claude investigated the system and found an actual issue." >}}
 
 ## What's next
 
