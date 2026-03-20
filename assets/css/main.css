@@ -29,7 +29,9 @@
 }
 
 @layer utilities {
-  .text-balance { text-wrap: balance; }
+  .text-balance {
+    text-wrap: balance;
+  }
 
   /* Line clamp for post summaries */
   .line-clamp-2 {
@@ -53,9 +55,22 @@
 
 /* Technical typography */
 @layer base {
-  h1, h2, h3 { letter-spacing: -0.02em; }
-  code, pre, .mono { font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-  .tabular { font-variant-numeric: tabular-nums; }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+
+  code,
+  pre,
+  .mono {
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 /* Attestation card component */
@@ -137,12 +152,25 @@
     animation: pulse 2s ease-in-out infinite;
   }
 
-  .status-dot--warn { background: rgb(var(--warn)); }
-  .status-dot--bad { background: rgb(var(--bad)); animation: none; }
+  .status-dot--warn {
+    background: rgb(var(--warn));
+  }
+
+  .status-dot--bad {
+    background: rgb(var(--bad));
+    animation: none;
+  }
 
   @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.5;
+    }
   }
 }
 
@@ -154,42 +182,54 @@
     font-size: 1.5rem;
     font-weight: 600;
   }
+
   .prose h3 {
     margin-top: 1.5rem;
     margin-bottom: 0.75rem;
     font-size: 1.25rem;
     font-weight: 600;
   }
+
   .prose p {
     margin-bottom: 1rem;
     line-height: 1.75;
   }
-  .prose ul, .prose ol {
+
+  .prose ul,
+  .prose ol {
     margin-bottom: 1rem;
     padding-left: 1.5rem;
   }
+
   .prose ul {
     list-style-type: disc;
   }
+
   .prose ol {
     list-style-type: decimal;
   }
+
   .prose li {
     margin-bottom: 0.5rem;
   }
+
   .prose strong {
     font-weight: 600;
   }
+
   .prose hr {
     margin: 2rem 0;
     border-color: rgb(var(--border));
   }
+
   .prose a {
     color: rgb(var(--accent));
   }
+
   .prose a:hover {
     text-decoration: underline;
   }
+
   .prose blockquote {
     border-left: 3px solid rgb(var(--accent));
     padding-left: 1rem;
@@ -197,12 +237,14 @@
     color: rgb(var(--muted));
     font-style: italic;
   }
+
   .prose code {
     background: rgb(var(--panel));
     padding: 0.125rem 0.375rem;
     border-radius: 0.25rem;
     font-size: 0.875em;
   }
+
   .prose pre {
     background: rgb(var(--panel));
     padding: 1rem;
@@ -210,9 +252,19 @@
     overflow-x: auto;
     margin: 1.5rem 0;
   }
+
   .prose pre code {
     background: transparent;
     padding: 0;
+  }
+
+  .prose table {
+    @apply w-full;
+  }
+
+  .prose th,
+  .prose td {
+    @apply px-4 py-3 ;
   }
 }
 
@@ -259,6 +311,7 @@
   font-weight: 400;
   src: url('/fonts/source-sans-3-v19-latin-regular.woff2') format('woff2');
 }
+
 /* source-sans-3-500 - latin */
 @font-face {
   font-display: swap;
@@ -267,6 +320,7 @@
   font-weight: 500;
   src: url('/fonts/source-sans-3-v19-latin-500.woff2') format('woff2');
 }
+
 /* source-sans-3-600 - latin */
 @font-face {
   font-display: swap;
@@ -278,6 +332,5 @@
 
 /* Dialog backdrop */
 dialog::backdrop {
-    background: rgba(0,0,0,0.85);
+  background: rgba(0, 0, 0, 0.85);
 }
-

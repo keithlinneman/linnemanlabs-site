@@ -1,0 +1,24 @@
+graph TD
+    subgraph "Offline Root"
+        YK["🔐 YubiKey Root CA<br/>ECCP384 · Slot 9c · 10yr"]
+    end
+
+    subgraph "Certificate Chain"
+        FC["Fulcio CA<br/>ECC_NIST_P384 · KMS"]
+        TSA["TSA Signing Key<br/>ECC_NIST_P384 · KMS"]
+    end
+
+    subgraph "Standalone KMS Keys"
+        REKOR["Rekor Checkpoint Signing<br/>ECC_NIST_P256 · KMS"]
+        TESS["TesseraCT Signing<br/>ECC_NIST_P256 · KMS"]
+    end
+
+    subgraph "Per-Application Build Keys"
+        APP1["trust-portal<br/>ECC_NIST_P384 · KMS"]
+        APP2["vigil<br/>ECC_NIST_P384 · KMS"]
+        APPN["...<br/>ECC_NIST_P384 · KMS"]
+    end
+
+    YK -->|signs| FC
+    YK -->|signs| TSA
+    FC -->|issues| EPHEMERAL["Ephemeral Signing Certs<br/>10min validity"]

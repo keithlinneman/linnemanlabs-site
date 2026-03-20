@@ -1,0 +1,35 @@
+``` mermaid
+graph LR
+    subgraph "Build & Sign"
+        A[GitHub Push] --> B[GitHub Actions]
+        
+        B -->|"Keyless Path"| M[Fulcio]
+        M -->|Ephemeral Cert| CS1[Cosign Sign]
+        M -->|Certificate Log| CT[TesseraCT]
+        CS1 -->|Request Timestamp| N[Timestamp Authority]
+        CS1 -->|Inclusion| D[Rekor]
+
+        B -->|"KMS Path"| CS2[Cosign Sign via KMS]
+        CS2 -->|Request Timestamp| N
+        CS2 -->|Inclusion| D
+        
+        CS1 -->|Bundle| S3[S3 / ECR]
+        CS2 -->|Bundle| S3
+        B -->|Binary| S3
+    end
+
+    subgraph "Deploy & Verify"
+        F[Node Bootstrap] <-->|Fetch| S3
+        F --> G[Cosign Verify + SHA256]
+        G --> H[Atomic Deploy]
+        H --> R[Running Workload]
+    end
+
+    subgraph "Node Identity"
+        J[SPIRE Server] <-->|Upstream CA| SM[AWS Secrets Manager]
+        J[SPIRE Server] <-->|Leaf Signing| L[AWS KMS]
+        K[SPIRE Agent] -->|Attest + Fetch SVID| J
+        J -->|SVID + Registrations| K
+        K -->|Workload SVID| R
+    end
+```
