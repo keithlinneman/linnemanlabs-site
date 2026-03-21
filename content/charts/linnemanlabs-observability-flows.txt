@@ -1,0 +1,83 @@
+flowchart LR
+
+    subgraph Workloads["Workloads"]
+            SYS["System / Host"]
+            APP["Application"]
+    end
+    subgraph Collection["Collection"]
+            NE["Node Exporter"]
+            EB["eBPF Exporter"]
+            OT["OTel Collector"]
+            AL["Alloy"]
+    end
+    subgraph Node["Node"]
+            Workloads
+            Collection
+    end
+    subgraph Aggregation["Aggregation"]
+            P["Prometheus"]
+    end
+    subgraph Storage["Storage & Query"]
+            MI["Mimir"]
+            LO["Loki"]
+            TE["Tempo"]
+            PY["Pyroscope"]
+    end
+    subgraph Viz["Visualization & Alerting"]
+            GR["Grafana"]
+            AM["Alertmanager"]
+            VI["Vigil"]
+            AI["AI Triage"]
+            SL["Slack"]
+    end
+
+    SYS <-. metrics .-> NE & EB
+    SYS -- journald --> OT
+    SYS -- profiles --> AL
+    APP -- logs/traces --> OT
+    APP -- profiles --> AL
+    APP <-. metrics .-> P
+    NE <--> P
+    EB <--> P
+    P -- remote write --> MI
+    OT -- logs --> LO
+    OT -- traces --> TE
+    AL -- profiles --> PY
+    TE -- "metrics-generator" --> MI
+    GR <--> MI & LO & TE & PY
+    P --> AM
+    AM --> VI & SL
+    VI -- Claude API --> AI
+    AI --> SL
+
+    classDef source fill:#f8f9fa,stroke:#5f6368,color:#3c4043
+    classDef metrics fill:#e8f0fe,stroke:#4285f4,color:#1a73e8
+    classDef logs fill:#fef7e0,stroke:#f9ab00,color:#e37400
+    classDef traces fill:#fce8e6,stroke:#ea4335,color:#c5221f
+    classDef profiles fill:#e6f4ea,stroke:#34a853,color:#1e8e3e
+    classDef alert fill:#f3e8fd,stroke:#9334e6,color:#7627bb
+    classDef multi fill:#f1f3f4,stroke:#80868b,color:#3c4043
+
+    SYS:::source
+    APP:::source
+    NE:::metrics
+    EB:::metrics
+    P:::metrics
+    MI:::metrics
+    LO:::logs
+    TE:::traces
+    AL:::profiles
+    PY:::profiles
+    OT:::multi
+    GR:::multi
+    AM:::alert
+    VI:::alert
+    AI:::alert
+    SL:::alert
+
+    style Node fill:none,stroke:#dadce0,stroke-width:1px
+    style Workloads fill:#fafafa,stroke:#dadce0,stroke-width:1px
+    style Collection fill:#fafafa,stroke:#dadce0,stroke-width:1px
+    style Aggregation fill:none,stroke:#dadce0,stroke-width:1px
+    style Storage fill:none,stroke:#dadce0,stroke-width:1px
+    style Viz fill:none,stroke:#dadce0,stroke-width:1px
