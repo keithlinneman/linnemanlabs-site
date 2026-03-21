@@ -203,6 +203,8 @@ From GitHub's network, fulcio, rekor, and timestamp-authority are all reachable 
 
 This layer is planned but would not have helped here regardless. The attacker request is a valid request coming from a GitHub workflow running in my repository, which means the signed JWT from GitHub will be valid and accepted. So this layer is bypassed entirely by this specific attack.
 
+What this would do is prevent the attacker from stealing the OIDC_TOKEN and re-using it from their own repo as described in layer 2. This forces them into the noiser, more auditable path of attacking through code they expose in the pull request. They will probably just download an external script/binary to hide their specific actions, which leads to the same reason for restricting egress from runners - force the attacker to operate entirely within the pull request contents, also prevent the OIDC_TOKEN from being exfiltrated.
+
 This load balancer only fronts fulcio, rekor, and timestamp-authority. Traffic flows through an ALB in the ingress VPC to an NLB in the trust account, with per-application security groups restricting ingress to only the specific ports each service needs. There is no path from this load balancer to anything else in my infrastructure.
 
 ### Layer 4: Fulcio Certificate Issuance
@@ -480,7 +482,7 @@ The workflow name check holds. Last, let's remove that protection. Now we get:
 Verified OK
 ```
 
-Game over. At this point the binary would be configured and executed.
+Game over. At this point the binary would be configured and executed. In TLS terms, this is the difference between “the certificate chains to a trusted CA” and “the certificate chains to a trusted CA and its SAN matches the identity I intended”. Keyless signing needs that same second step.
 
 There is no lateral surface here. Verification is a read-only operation against locally stored public keys and a remotely fetched bundle from a pre-defined artifact store with the only variable input being the artifact hash. A failed verification produces a log entry and the node does not become operational.
 
@@ -551,9 +553,7 @@ Each layer has intentional holes - the firewall has a hole for GitHub, IAM inten
 
 IAM, cosign, keyless signature, as well as KMS-backed signatures are each capable of strong security enforcement here, each with independent strengths, each with independent intentional holes and potential weaknesses if misconfigured. They combine for a pretty strong security story. By using the dual-signing approach I can hedge and build redundant protections against a misconfiguration or compromise of fulcio or KMS, or a mistake in the OIDC implementation in either the AWS to GitHub OIDC integration or the fulcio to GitHub OIDC integration that results in certificate issuance or signing. This also provides additional gates at the build/release time and not just at deployment verification time.
 
-I see the 'zero-trust' concept mentioned frequently in terms of pushing trust somewhere other than a network perimeter. But I think the concept needs to be taken more literally - trust nothing before validating everything. For example, if moving to keyless identity-based signing, you need to be mindful of what you are trusting and why. If you run verify-blob without pinning the specific certificate attributes you expect, you are trusting any bundle that chains to the Fulcio roots you accept and matches whatever minimal identity constraints you supplied. If that is a public-good service offering access to certificates signed by their CA root like sigstore.dev, that is much broader trust than many people intend, because it is not tied tightly enough to a workflow identity you uniquely control.
-
-In TLS terms, this is the difference between “the certificate chains to a trusted CA” and “the certificate chains to a trusted CA and its SAN matches the identity I intended”. Keyless signing needs that same second step.
+I see the 'zero-trust' concept mentioned frequently in terms of pushing trust somewhere other than a network perimeter. I think it needs to be taken more literally. Every boundary and interaction in a system should validate and verify everything it needs to make a secure decision - and if it doesn't have enough context to make that decision, that's a design problem to solve.
 
 ## tl;dr
 
@@ -563,3 +563,4 @@ In TLS terms, this is the difference between “the certificate chains to a trus
  - Do use tightly-scoped claims
  - Do enforce every piece of context that is understood at each boundary
  - Do validate fulcio certificate attributes (workflow-trigger, certificate-identity-regexp, certificate-github-workflow-sha, certificate-github-workflow-ref, certificate-github-workflow-name) at verify time, not just issuer and repository
+ - Do question if the available context is sufficient
