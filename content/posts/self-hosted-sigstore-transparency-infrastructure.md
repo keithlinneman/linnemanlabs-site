@@ -10,6 +10,8 @@ categories: ["Engineering"]
 
 Like most of my infrastructure projects, this started off with researching a new tool (cosign) that closes an existing gap in a robust, elegant way. That turned into researching Rekor, then Timestamp-Authority, then Fulcio, then TesseraCT. The end result is 4 new production services in my infrastructure.
 
+The trust material is publicly available at [trust.linnemanlabs.com](https://trust.linnemanlabs.com/)
+
 ## System Architecture
 
 Fulcio is a certificate authority that issues short-lived code-signing certificates based on OIDC identity. Rekor is a transparency log that records signed artifacts and provides tamper-evident inclusion proofs. TesseraCT is a certificate transparency log that records every certificate Fulcio issues. Timestamp-Authority provides RFC 3161 signed timestamps that let verifiers confirm the signature happened during the certificate’s validity window, even after the certificate itself has expired.
