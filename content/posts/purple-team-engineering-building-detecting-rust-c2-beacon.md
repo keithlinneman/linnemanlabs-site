@@ -28,6 +28,8 @@ The **bootstrap** phase establishes the root secret through a full ephemeral ECD
 
 The result: an analyst looking at network traffic sees the outer layer - time-encrypted blobs that change every time bucket. They can't see the inner ECIES layer, and even if they break the time-based key, each message has its own ephemeral encryption that requires the server's private key.
 
+The initial check-in and beacon channel (HTTP POST) is intentionally simple and easy to fingerprint. We need a starting point for the cat-and-mouse game alternating between attacker and defender hats. This is a relatively straightforward simple implant, from here we will write detection rules and then iterate on Glimmer's stealth abilities.
+
 ## Binary Hardening
 
 This is where the purple team loop gets interesting. Every hardening step is motivated by running detection tools against my own binary and seeing what they find.
@@ -135,6 +137,35 @@ The YARA rules are deployed through Wazuh's active response pipeline. The detect
 
 This runs automatically with zero analyst intervention. A binary matching the Glimmer profile lands on any monitored system, and within seconds five YARA alerts fire in the SIEM. The entire pipeline - from file creation to indexed alert - takes under 10 seconds.
 
+### Network Detection with Suricata
+
+While YARA catches the binary on disk and auditd monitors syscalls at runtime, neither inspects the actual network traffic. Suricata watches the wire and matches against protocol-level signatures.
+
+Five Suricata rules target different aspects of the beacon's HTTP profile:
+
+- **POST with data/token form pattern** — the specific body format of 
+  `data=<base64>&token=<hex>` is unusual for legitimate form submissions
+
+- **Session cookie with hex node ID** — a 16-character hex value in 
+  `Cookie: sid=` is distinctive
+
+- **POST to root with Connection: close** — modern browsers use keep-alive; 
+  posting to `/` with `Connection: close` and no `Referer` is uncommon
+
+- **Empty nginx response** — a 200 OK with `Content-Length: 0` from nginx 
+  suggests a C2 server responding with no tasking
+
+- **Repeated POST without Referer** — five POSTs to the same destination 
+  within 10 minutes with no Referer header indicates automated beaconing
+
+Suricata alerts flow into Wazuh through an eve json log, appearing alongside YARA and auditd alerts in the same dashboard. Custom Wazuh rules elevate Glimmer-specific Suricata signatures to appropriate severity levels.
+
+{{< imgmodal src="/img/security/glimmer-wazuh-yara-suricata-combined-alerts.png" alt="Wazuh Dashboard showing Suricata network detection alerts" mode="shrink" caption="Suricata network detection alerts in Wazuh" >}}
+
+Combined with FIM and YARA's static analysis, auditd's syscall monitoring, and Suricata's network inspection, the detection pipeline covers four independent layers, each catching different aspects of the same beacon from file creation through network communication.
+
+In the screenshot above, the full detection timeline is shown, new binary is placed on disk triggering FIM to run the YARA rules that alert, then auditd catches a network connection attempt, then Suricata sees the network traffic and flags the suspicious activity. Glimmer's initial check-in triggers 2 rules, the first beacon triggers an additional 'empty nginx response' rule. These are all straightforward things to clean up in round 2 on Glimmer.
+
 ## Behavioral Analysis
 
 Static detection is one layer. The behavioral profile reveals more.
@@ -169,6 +200,14 @@ Glimmer intentionally uses syscalls for all networking to bypass anything hookin
 I added an auditd rule to log all syscalls for `connect`:
 ```
 sudo auditctl -a always,exit -F arch=b64 -S connect -k network_connect
+```
+
+This causes auditd to log events:
+```
+time->Fri Apr 10 22:28:57 2026
+type=PROCTITLE msg=audit(1775874537.292:844931): proctitle="target/x86_64-unknown-linux-gnu/release/beacon"
+type=SOCKADDR msg=audit(1775874537.292:844931): saddr=02001F907F0000010000000000000000
+type=SYSCALL msg=audit(1775874537.292:844931): arch=c000003e syscall=42 success=yes exit=0 a0=3 a1=7ffd909049e0 a2=10 a3=7f084c989ac0 items=0 ppid=989545 pid=2718865 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=pts14 ses=3 comm="beacon" exe="/home/k/projects/security/glimmer/target/x86_64-unknown-linux-gnu/release/beacon" subj=unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023 key="network_connect"
 ```
 
 Combining these audit events with the YARA rules from earlier that flag binaries that are not linked against libc networking libraries, I can look for any binary making network connections through direct syscalls.
@@ -244,16 +283,15 @@ Our Glimmer binary was flagged by YARA and then went on to make outbound network
 
 {{< imgmodal src="/img/security/glimmer-wazuh-yara-correlation-query.png" alt="Wazuh Dashboard correlating YARA and auditd events" mode="shrink" caption="Wazuh Dashboard correlating YARA and auditd events" >}}
 
-
 ### What's Still Detectable
 
-The HTTP channel has several fingerprintable characteristics that detection rules can target:
+After an initial HTTP hardening pass, several original fingerprints were mitigated - User-Agent headers were added, the server response now includes Date, Server, and X-Request-Id headers. The HTTP channel has several remaining fingerprintable characteristics that detection rules can target:
 
-- **No User-Agent header** - extremely unusual for legitimate HTTP traffic
-- **Bare server response** - `HTTP/1.1 200 OK` with only `Content-Length`, no `Date` or `Server` headers
-- **POST body format** - 8 hex characters followed by base64, a very specific pattern
-- **Same destination, same path** - every beacon is `POST /` to the same host:port
-- **Connection: close** on every request - most modern HTTP clients use keep-alive
+- **Static session cookie** — `Cookie: sid=` with the same 16-character hex value (node-id) on every request from the same node
+- **POST to root with Connection: close** — modern browsers use keep-alive
+- **No Referer header** — legitimate browser POSTs almost always have one
+- **Form body with data/token pattern** — the specific `data=<base64>&token=<hex>` structure is unusual
+- **Empty response body** — 200 OK with Content-Length: 0 suggests no tasking
 
 A Suricata rule matching `POST` with no `User-Agent` and a cookie containing `sid=` would catch every beacon with near-zero false positives. These network-layer signatures are the focus of the next hardening round.
 
@@ -273,11 +311,11 @@ The first purple team loop is complete: build, detect, analyze. The next round f
 
 **Network steganography** - encoding data in TCP initial sequence numbers, timing channels, and other protocol fields that aren't typically logged or inspected. These are low-bandwidth but nearly invisible to standard network monitoring.
 
-**Deeper detection** - deploying Suricata for network-level detection, Zeek for traffic analysis, and auditd rules for kernel-level syscall monitoring. Auditd is particularly interesting because it operates at the kernel boundary - there's no userspace evasion for it. The beacon's raw syscalls are visible to auditd regardless of how they're invoked.
+**Deeper detection** - deploying Zeek for traffic analysis, and additional auditd rules for kernel-level syscall monitoring. Auditd is particularly interesting because it operates at the kernel boundary - there's no userspace evasion for it. The beacon's raw syscalls are visible to auditd regardless of how they're invoked.
 
 **The direct syscall detection rule** - a concept I want to implement with eBPF: correlating libc `connect()` calls with raw `sys_enter_connect` events. A process that makes connect syscalls without hitting libc's connect wrapper is almost certainly doing raw syscall networking - a strong signal of offensive tooling. Very few legitimate applications would trigger this. I considered having Glimmer link against libc networking libraries specifically to avoid flagging the YARA rule marking binaries that don't link them but then go on to open network connections. This would be a good way to catch that scenario.
 
-**Anti-Debugger** - Glimmer is currently trivial to attach a debugger and step through to interesting places. Similarly trivial to trace.
+**Anti-Debugger** - Glimmer is currently trivial to attach a debugger and step through to interesting places. Similarly trivial to trace. Behavior is the same on bare-metal as a restrictive VM, etc.
 
 The code is open source on [GitHub](https://github.com/linnemanlabs/glimmer). This is a research tool for authorized security testing - see the repository for the full legal disclaimer and usage policy.
 
