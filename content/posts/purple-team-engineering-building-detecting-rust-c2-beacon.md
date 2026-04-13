@@ -2,7 +2,7 @@
 date: '2026-04-09T00:00:00Z'
 title: "Purple Team Engineering: Building and Detecting a Rust C2 Beacon"
 summary: "Building an offensive tool and the detection rules to catch it. The architecture behind Glimmer's dual-layer encryption, binary hardening from 1.4MB to 388K, and real-time YARA detection through Wazuh."
-tags: ["Purple Team", "Detection Engineering", "YARA", "Wazuh", "Rust", "C2", "Binary Analysis", "Offensive Security", "SIEM"]
+tags: ["Purple Team", "Detection Engineering", "YARA", "Wazuh", "Rust", "C2", "Binary Analysis", "Offensive Security", "SIEM", "Glimmer"]
 categories: ["Security Research"]
 ---
 
@@ -96,7 +96,7 @@ I wrote five YARA rules at different confidence levels, each targeting a differe
 
 **`glimmer_crypto_profile`** (medium confidence) - Matches the combination of P-256 ECDH and AES-GCM string artifacts (`Pkcs8`, `PointEncoding`, `StreamCipherError`) in a small ELF binary. Catches any Rust binary using this specific crypto stack.
 
-**`glimmer_syscall_pattern`** (medium-high confidence) — Matches a binary that imports `syscall` but does NOT import `socket` or `connect`, combined with Rust standard library artifacts. The absence of network-specific imports in a binary that has the generic `syscall` entry point suggests either raw syscall networking or non-network syscall usage. Combined with other indicators, it's a useful signal though on its own it would require additional context like observed network connections to confirm network capability.
+**`glimmer_syscall_pattern`** (medium-high confidence) - Matches a binary that imports `syscall` but does NOT import `socket` or `connect`, combined with Rust standard library artifacts. The absence of network-specific imports in a binary that has the generic `syscall` entry point suggests either raw syscall networking or non-network syscall usage. Combined with other indicators, it's a useful signal though on its own it would require additional context like observed network connections to confirm network capability.
 
 **`glimmer_serde_config`** (low confidence) - Matches serde's `struct Config` error messages combined with crypto artifacts in a small binary. Broad but useful as a triage signal.
 
@@ -143,20 +143,15 @@ While YARA catches the binary on disk and auditd monitors syscalls at runtime, n
 
 Five Suricata rules target different aspects of the beacon's HTTP profile:
 
-- **POST with data/token form pattern** — the specific body format of 
-  `data=<base64>&token=<hex>` is unusual for legitimate form submissions
+- **POST with data/token form pattern** - the specific body format of `data=<base64>&token=<hex>` is unusual for legitimate form submissions
 
-- **Session cookie with hex node ID** — a 16-character hex value in 
-  `Cookie: sid=` is distinctive
+- **Session cookie with hex node ID** - a 16-character hex value in `Cookie: sid=` is distinctive
 
-- **POST to root with Connection: close** — modern browsers use keep-alive; 
-  posting to `/` with `Connection: close` and no `Referer` is uncommon
+- **POST to root with Connection: close** - modern browsers use keep-alive, posting to `/` with `Connection: close` and no `Referer` is uncommon
 
-- **Empty nginx response** — a 200 OK with `Content-Length: 0` from nginx 
-  suggests a C2 server responding with no tasking
+- **Empty nginx response** - a 200 OK with `Content-Length: 0` from nginx suggests a C2 server responding with no tasking
 
-- **Repeated POST without Referer** — five POSTs to the same destination 
-  within 10 minutes with no Referer header indicates automated beaconing
+- **Repeated POST without Referer** - five POSTs to the same destination within 10 minutes with no Referer header indicates automated beaconing
 
 Suricata alerts flow into Wazuh through an eve json log, appearing alongside YARA and auditd alerts in the same dashboard. Custom Wazuh rules elevate Glimmer-specific Suricata signatures to appropriate severity levels.
 
@@ -287,11 +282,11 @@ Our Glimmer binary was flagged by YARA and then went on to make outbound network
 
 After an initial HTTP hardening pass, several original fingerprints were mitigated - User-Agent headers were added, the server response now includes Date, Server, and X-Request-Id headers. The HTTP channel has several remaining fingerprintable characteristics that detection rules can target:
 
-- **Static session cookie** — `Cookie: sid=` with the same 16-character hex value (node-id) on every request from the same node
-- **POST to root with Connection: close** — modern browsers use keep-alive
-- **No Referer header** — legitimate browser POSTs almost always have one
-- **Form body with data/token pattern** — the specific `data=<base64>&token=<hex>` structure is unusual
-- **Empty response body** — 200 OK with Content-Length: 0 suggests no tasking
+- **Static session cookie** - `Cookie: sid=` with the same 16-character hex value (node-id) on every request from the same node
+- **POST to root with Connection: close** - modern browsers use keep-alive
+- **No Referer header** - legitimate browser POSTs almost always have one
+- **Form body with data/token pattern** - the specific `data=<base64>&token=<hex>` structure is unusual
+- **Empty response body** - 200 OK with Content-Length: 0 suggests no tasking
 
 A Suricata rule matching `POST` with no `User-Agent` and a cookie containing `sid=` would catch every beacon with near-zero false positives. These network-layer signatures are the focus of the next hardening round.
 
@@ -307,7 +302,7 @@ The first purple team loop is complete: build, detect, analyze. The next round f
 
 **Network evasion** - fixing the HTTP fingerprint, adding TLS, implementing channel rotation. The beacon should be able to communicate through multiple channels (HTTP, DNS, process proxying) and rotate between them to break timing correlation.
 
-**Process architecture evasion** — the current correlation query works because one binary does everything. YARA flags it for static indicators, auditd catches it making network connections, and the join is trivial. A more sophisticated architecture would separate concerns with a coordinator binary holding crypto state and tasking logic that never touches the network, spawning ephemeral worker processes that make a single connection and exit. YARA would still flag the coordinator, auditd sees the worker make a connection, but they're different binaries with different PIDs and no obvious link. Defeating this would require tracking process lineage to connect parent PPIDs to child PIDs across the detection sources. Even that breaks down when the coordinator uses techniques like `memfd_create` to execute workers from memory without ever writing to disk, bypassing FIM and YARA entirely.
+**Process architecture evasion** - the current correlation query works because one binary does everything. YARA flags it for static indicators, auditd catches it making network connections, and the join is trivial. A more sophisticated architecture would separate concerns with a coordinator binary holding crypto state and tasking logic that never touches the network, spawning ephemeral worker processes that make a single connection and exit. YARA would still flag the coordinator, auditd sees the worker make a connection, but they're different binaries with different PIDs and no obvious link. Defeating this would require tracking process lineage to connect parent PPIDs to child PIDs across the detection sources. Even that breaks down when the coordinator uses techniques like `memfd_create` to execute workers from memory without ever writing to disk, bypassing FIM and YARA entirely.
 
 **Network steganography** - encoding data in TCP initial sequence numbers, timing channels, and other protocol fields that aren't typically logged or inspected. These are low-bandwidth but nearly invisible to standard network monitoring.
 
