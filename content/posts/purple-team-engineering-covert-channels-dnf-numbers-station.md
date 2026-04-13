@@ -120,7 +120,7 @@ The beacon never identifies itself through the DNF channel. No cookies, no encod
 
 The check-in happens over a separate HTTP POST channel that establishes the shared time-based key. After that, the DNF channel is receive-only: the beacon polls, the server broadcasts, encryption handles addressing. This channel is designed for stealth, not high-bandwidth or 'proof-of-life' from the beacon.
 
-For tasking, 20 bits provides an 8-bit task code (256 possible tasks) and 12 bits of arguments (4096 possible values). A codebook maps argument values to predefined parameters — file paths, network ranges, configuration options, etc. More complex tasking that exceeds 20 bits requires switching to a higher-bandwidth channel, which is itself a task that can be delivered through the DNF channel.
+For tasking, 20 bits provides an 8-bit task code (256 possible tasks) and 12 bits of arguments (4096 possible values). A codebook maps argument values to predefined parameters - file paths, network ranges, configuration options, etc. More complex tasking that exceeds 20 bits requires switching to a higher-bandwidth channel, which is itself a task that can be delivered through the DNF channel.
 
 The server only updates the ETag when the underlying content actually changes - matching a real mirror's behavior. When a repo sync script updates the mirror content, the server checks its task queue, encodes the next pending task into the file's microsecond mtime, and the ETag legitimately changes because the content changed. The file date and ETag are entirely legitimate and match what happened organically from the sync script with the exception of the microseconds adjustment. Between updates, the ETag is stable. No anomalous per-request variation. Very difficult to detect.
 
@@ -196,7 +196,7 @@ As part of the channel research, I surveyed the verification posture of every en
 
 **Repodata verification** - of twelve enabled repos, only **Tailscale** enables `repo_gpgcheck` (GPG signature verification on repository metadata). Every other repo - Hashicorp, Brave, Trivy, VS Code, and Wazuh - disables it.
 
-**Package verification** - most repos at least verify GPG signatures on individual packages. The exception: **Slack** disables both `repo_gpgcheck` AND `gpgcheck`. Slack distributes unsigned packages through an unsigned repository. A MITM on Slack's package delivery, or a compromise of their hosting provider, would allow distributing arbitrary code to every Slack user on Fedora with zero cryptographic verification.
+**Package verification** - most repos at least verify GPG signatures on individual packages. The exception: **Slack** disables both `repo_gpgcheck` AND `gpgcheck`. Slack distributes unsigned packages through an unsigned repository hosted by a 3rd party under the 3rd parties' domain. A MITM on Slack's package delivery, or a compromise of their hosting provider, would allow distributing arbitrary code to every Slack user on Fedora with zero cryptographic verification.
 
 This matters for the DNF channel because repos without metalink can be redirected via `repos.override.d` - a configuration directory specifically designed for admin customization of repository settings. A single file in this directory can change an existing repo's `baseurl` to point at my mirror. The repo name stays the same in all logging. No new repository appears.
 
@@ -204,7 +204,7 @@ Even without persistent file writes, `dnf5 --repofrompath=name,url` creates a te
 
 **Brave Browser's repo** is particularly interesting: it's hosted on S3 behind CloudFront (`brave-browser-rpm-release.s3.brave.com` is a CNAME for `d27m38e0qdi7wl.cloudfront.net`), doesn't use metalink, and doesn't verify repodata. A CloudFront distribution serving mirrored Brave packages with a modified `repomd.xml` revision field would be accepted without question.
 
-Tailscale deserves recognition for being the only third-party repo doing this correctly. Someone there cared enough about supply chain security to implement GPG verification on repository metadata - a detail that almost no one notices and even fewer implement. In a landscape where convenience consistently wins over security, that level of care stands out.
+Tailscale deserves recognition for being the only third-party repo doing this correctly. Someone there cared enough about supply chain security and was given the time to implement GPG verification on repository metadata. It is noticed and appreciated.
 
 ### What's Still Detectable
 
@@ -224,7 +224,7 @@ The DNF channel has real detection surfaces:
 
 This research prompted immediate changes to my own workstation:
 
-- **DNF mirror pinning** - out of >300 Fedora mirrors, there's no guarantee none are doing this today. I'm restricting my system to a handful of mirrors I've verified, rather than accepting whatever the metalink suggests.
+- **DNF mirror pinning** - out of >300 Fedora mirrors, there's no guarantee none are doing this today. I'm restricting my system to a handful of mirrors I've verified.
 - **Slack repo removed** - with zero cryptographic verification on both repodata and packages, I'm not comfortable running it. If Slack won't verify their own packages, I'll install updates manually from their website where I can at least verify checksums.
 - **GitHub SSH rule removed** - replaced with HTTPS-only access through a TLS inspection proxy. SSH to GitHub is too useful as a high-bandwidth exfiltration channel to leave open and too easy as a tasking/beaconing channel given apps like vscode are often configured to sync with remotes on a scheduled, frequent basis.
 - **DNF5 OpenSnitch rule tightened** - replacing the "any host on 80/443" rule with explicit mirror hostnames. The alert fatigue that led to the broad rule is exactly the weakness this channel exploits.
