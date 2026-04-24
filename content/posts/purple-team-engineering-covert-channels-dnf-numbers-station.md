@@ -94,7 +94,7 @@ I also profiled PackageKit, the system service that triggers daily repository ch
 
 Apache generates ETags in the format `"{content_size_hex}-{mtime_hex}"` where `mtime_hex` is the file's modification time in **microseconds** since epoch. The `Last-Modified` response header contains the same timestamp but truncated to **seconds**.
 
-This creates a verification gap. A defender examining the response can confirm that the ETag's seconds component matches `Last-Modified`. But the sub-second microsecond portion - up to 999,999 possible values, approximately 20 bits - cannot be verified from the response alone. Confirming it would require fetching the same file from a different mirror and comparing microsecond values. But different mirrors sync at different times, run different server configurations, and produce naturally different sub-second values. Cross-mirror comparison would have massive false positive rates (probably 100%).
+This creates a verification gap. A defender examining the response can confirm that the ETag's seconds component matches `Last-Modified`. But the sub-second microsecond portion - up to 999,999 possible values, approximately 20 bits - cannot be verified from the response alone. Confirming it would require fetching the same file from a different mirror and comparing microsecond values. But different mirrors sync at different times, run different server configurations, and produce naturally different sub-second values. Cross-mirror comparison would have massive false positive rates.
 
 I encode tasking into these microseconds. Both the server and beacon derive a 20-bit key mask from `SHA-256(root_secret || "dnf-etag-key" || last_modified_epoch)`. The server XORs the tasking payload with this mask and stores the result in the file's mtime microseconds using `utimensat()`. Apache generates the ETag from the real file metadata, no Apache modification needed. The server is just a normal Apache file server that happens to have specific microsecond timestamps on its files.
 
@@ -251,4 +251,4 @@ The code is open source on [GitHub](https://github.com/linnemanlabs/glimmer). Th
 
 This work is certainly increasing the number of 'content warnings' I am receiving in my e-mail daily from different unamused vendors, so part 3 may be "coming soon" for a while as I revisit other projects like [Switchboard](https://github.com/linnemanlabs/switchboard). This is why we can't have nice (secure) things.
 
-*This is part 2 of an ongoing series. Part 3 will cover process execution evasion, browser-based channels, the GitHub ssh channel, the AWS SDK channel, and deeper detection engineering with Zeek traffic analysis.*
+*This is part 2 of an ongoing series. Part 3 will cover eBPF detection with Tetragon, deeper detection engineering with Zeek traffic analysis, asm syscalls, and creating raw sockets and packets.*
