@@ -1,0 +1,19 @@
+flowchart TD
+
+A["userspace<br>write / send / sendto / sendmsg"] --> B["sock_sendmsg"]
+B --> C{"sock->ops"}
+C -->|AF_INET SOCK_STREAM| D["inet_sendmsg"]
+C -->|AF_INET SOCK_DGRAM| E["inet_sendmsg"]
+C -->|AF_INET SOCK_RAW| F["inet_sendmsg"]
+C -->|AF_PACKET| G["packet_sendmsg"]
+D --> H{"sk->sk_prot"}
+E --> I{"sk->sk_prot"}
+F --> J{"sk->sk_prot"}
+H -->|IPPROTO_TCP| K["tcp_sendmsg"]
+I -->|IPPROTO_UDP| L["udp_sendmsg"]
+J -->|SOCK_RAW| M["raw_sendmsg"]
+
+style K fill:#f9a
+style L fill:#f9a
+style M fill:#f9a
+style G fill:#f9a

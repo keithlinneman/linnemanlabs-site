@@ -1,0 +1,15 @@
+flowchart TD
+
+A["(userspace)<br> write(fd, buf, len)"] --> B["(syscall entry)<br/>do_syscall_64"]
+B --> C["__x64_sys_write"]
+C --> D["ksys_write"]
+D --> E["vfs_write"]
+E --> F["new_sync_write"]
+F --> G["call_write_iter"]
+G --> H["sock_write_iter"]
+H --> I["sock_sendmsg"]
+I --> J["inet_sendmsg"]
+J --> K["tcp_sendmsg"]
+K --> L["packet on wire"]
+
+style K fill:#f9a,stroke:#333,stroke-width:3px

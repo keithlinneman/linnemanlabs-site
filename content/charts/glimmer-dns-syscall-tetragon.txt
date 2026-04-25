@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant app as Glimmer<br/>(direct syscalls)
+    participant kernel as Linux kernel
+    participant tetragon as Tetragon
+
+    app->>kernel: syscall: socket(AF_INET, SOCK_DGRAM)
+    kernel-->>tetragon: kprobe on sys_socket fires
+    
+    app->>kernel: syscall: connect(fd, 10.90.95.53:53)
+    kernel-->>tetragon: kprobe on sys_connect fires
+    kernel-->>tetragon: kprobe on udp_connect fires
+    
+    app->>kernel: syscall: sendto(fd, dns_packet)
+    kernel-->>tetragon: kprobe on udp_sendmsg fires
+    
+    Note over kernel: packet sent to resolver
+    Note over kernel: packet received from resolver
+    
+    app->>kernel: syscall: recvfrom(fd, buf)
+    kernel-->>tetragon: kprobe on udp_recvmsg fires
+    
+    app->>kernel: syscall: close(fd)
+    kernel-->>tetragon: kprobe on udp_destroy_sock fires

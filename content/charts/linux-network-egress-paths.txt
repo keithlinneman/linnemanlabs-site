@@ -1,0 +1,90 @@
+flowchart TD
+    %% User space entry points - annotated with what user vs kernel builds
+    subgraph US["User Space - what the app provides"]
+        APP1["<b>Normal socket</b><br/>socket(AF_INET, SOCK_STREAM/DGRAM)<br/>send() / write()<br/><br/>user: payload<br/>kernel builds: L2 + L3 + L4"]
+        APP2A["<b>Raw IP, kernel hdr</b><br/>socket(AF_INET, SOCK_RAW, proto)<br/>no IP_HDRINCL<br/>CAP_NET_RAW<br/><br/>user: L4 hdr + payload<br/>kernel builds: L2 + L3"]
+        APP2B["<b>Raw IP, user hdr</b><br/>socket(AF_INET, SOCK_RAW, proto)<br/>setsockopt IP_HDRINCL<br/>CAP_NET_RAW<br/><br/>user: L3 + L4 + payload<br/>kernel builds: L2 and may finalize some IP fields"]
+        APP3["<b>AF_PACKET SOCK_DGRAM</b><br/>socket(AF_PACKET, SOCK_DGRAM)<br/>CAP_NET_RAW<br/><br/>user: L3 + L4 + payload<br/>kernel builds: L2 (from sockaddr_ll)"]
+        APP4["<b>AF_PACKET SOCK_RAW</b><br/>socket(AF_PACKET, SOCK_RAW)<br/>CAP_NET_RAW<br/><br/>user: L2 + L3 + L4 + payload<br/>kernel builds: nothing"]
+        APP5["<b>Userspace driver</b><br/>DPDK / VFIO / AF_XDP zerocopy<br/>CAP_SYS_RAWIO + vfio-pci<br/><br/>user: entire frame + NIC DMA<br/>kernel: not involved"]
+    end
+
+    %% Kernel L4 layer
+    subgraph L4LAYER["Kernel L4 (net/ipv4/*)"]
+        UDP_TCP["udp_sendmsg / tcp_sendmsg<br/>kernel builds L4 header"]
+        RAW_NORM["raw_sendmsg<br/>ip_append_data path<br/>kernel builds L3, uses user L4"]
+        RAW_HDRINC["raw_sendmsg<br/>raw_send_hdrinc path<br/>uses user-supplied L3"]
+    end
+
+    %% Kernel L3 / IP output
+    IP_OUT["<b>ip_output / ip_local_out</b><br/>L3 header finalized if kernel-built<br/>skb handed to netfilter"]
+
+    %% Netfilter hooks
+    subgraph NF["Netfilter + conntrack"]
+        LOCAL_OUT["NF_INET_LOCAL_OUT<br/>iptables OUTPUT chain"]
+        CT_OUT["conntrack create/lookup<br/>TCP state machine runs"]
+        POSTROUTING["NF_INET_POSTROUTING<br/>SNAT / MASQUERADE"]
+        CT_CONFIRM["conntrack confirm<br/>entry committed"]
+    end
+
+    %% AF_PACKET entry
+    subgraph PKT["AF_PACKET"]
+        PKT_DGRAM["packet_sendmsg → packet_snd<br/>SOCK_DGRAM branch<br/>builds L2 from sockaddr_ll<br/>prepends Ethernet header"]
+        PKT_RAW["packet_sendmsg → packet_snd<br/>SOCK_RAW branch<br/>copies user bytes verbatim<br/>reads skb->protocol from frame"]
+    end
+
+    %% Driver layer
+    subgraph DRV["Device / Driver Layer"]
+        DQX["<b>__dev_queue_xmit</b><br/>⭐ every kernel egress path converges here<br/>Tetragon kprobe sweet spot"]
+        QDISC["qdisc enqueue<br/>tc clsact egress hook<br/>eBPF runs here - sees AF_PACKET too"]
+        DRV_XMIT["driver ndo_start_xmit<br/>writes TX descriptor ring<br/>kicks doorbell register"]
+        NIC["NIC hardware<br/>DMA read, MAC, PHY"]
+        WIRE(["wire / radio"])
+    end
+
+    %% AF_INET paths
+    APP1 --> UDP_TCP
+    UDP_TCP --> IP_OUT
+    APP2A --> RAW_NORM
+    RAW_NORM --> IP_OUT
+    APP2B --> RAW_HDRINC
+    RAW_HDRINC --> IP_OUT
+    IP_OUT --> LOCAL_OUT
+    LOCAL_OUT --> CT_OUT
+    CT_OUT --> POSTROUTING
+    POSTROUTING --> CT_CONFIRM
+    CT_CONFIRM --> DQX
+
+    %% AF_PACKET paths - split by socket type
+    APP3 --> PKT_DGRAM
+    APP4 --> PKT_RAW
+    PKT_DGRAM --> DQX
+    PKT_RAW --> DQX
+
+    %% Userspace driver - bypasses kernel entirely
+    APP5 -.->|"bypasses kernel<br/>not even tc sees it"| NIC
+
+    %% Driver chain
+    DQX --> QDISC
+    QDISC --> DRV_XMIT
+    DRV_XMIT --> NIC
+    NIC --> WIRE
+
+    %% Styling
+    classDef userspace fill:#1e3a5f,stroke:#4a9eff,stroke-width:2px,color:#ffffff
+    classDef l4layer fill:#1e4d2b,stroke:#4ade80,stroke-width:2px,color:#ffffff
+    classDef iplayer fill:#14532d,stroke:#22c55e,stroke-width:3px,color:#ffffff
+    classDef netfilter fill:#5c2d2d,stroke:#f87171,stroke-width:2px,color:#ffffff
+    classDef afpacket fill:#5c4a1e,stroke:#fbbf24,stroke-width:2px,color:#ffffff
+    classDef driver fill:#3d2d5c,stroke:#a78bfa,stroke-width:2px,color:#ffffff
+    classDef converge fill:#3d2d5c,stroke:#fbbf24,stroke-width:4px,color:#ffffff
+    classDef wire fill:#000000,stroke:#ffffff,stroke-width:2px,color:#ffffff
+
+    class APP1,APP2A,APP2B,APP3,APP4,APP5 userspace
+    class UDP_TCP,RAW_NORM,RAW_HDRINC l4layer
+    class IP_OUT iplayer
+    class LOCAL_OUT,CT_OUT,POSTROUTING,CT_CONFIRM netfilter
+    class PKT_DGRAM,PKT_RAW afpacket
+    class QDISC,DRV_XMIT,NIC driver
+    class DQX converge
+    class WIRE wire
