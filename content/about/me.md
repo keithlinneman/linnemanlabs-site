@@ -9,7 +9,7 @@ I've been doing this since the mid-90s - over 25 years of building, breaking, an
 
 I run LinnemanLabs as a working lab for security research and infrastructure engineering - documenting what I build and learn, and open-sourcing what I can.
 
-My roots are in offensive security, and that's where the work is heading again. I'm researching how production infrastructure - especially observability pipelines - can be subverted from within, and I'm building systems where security properties are cryptographically provable rather than assumed. I want to bring that same rigor to ML systems and model supply chains as those problems mature.
+My roots are in offensive security, and that's where the work is heading again. The current focus is a purple-team loop in the lab - building offensive tooling, exercising it against my own systems, and writing the detection rules to catch it. I'm researching how production infrastructure (especially observability pipelines) can be subverted from within, and I'm building systems where security properties are cryptographically provable rather than assumed: a self-hosted Sigstore stack with hardware-rooted trust, dual-signing through keyless OIDC and KMS, and deploy-time verification. Detection-coverage tooling that verifies "did we catch it?" as a continuous property across every SIEM and log backend, and deception environments realistic enough that malware behaves naturally rather than recognizing the lab are two areas I plan to push into next.
 
 ---
 
@@ -23,7 +23,7 @@ I prefer small, composable systems over big frameworks. When I learn a better mo
 
 I think security should be the default path, not a gate at the end. That means building guardrails into CI/CD, treating operability - telemetry, rollback, recovery - as a primary feature, and designing systems where the easy thing and the secure thing are the same thing.
 
-These principles don't change just because the system is an ML model instead of a web server. Provenance, integrity, and verification matter regardless of what the artifact is.
+These principles don't change with the artifact. Provenance, integrity, and verification matter whether what you're shipping is application code, a container image, an infrastructure definition, a configuration, an ML model, or firmware.
 
 ---
 

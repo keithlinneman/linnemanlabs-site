@@ -210,9 +210,9 @@ Worth noting, this is only showing the transmit, not the receive. `AF_NETLINK` p
 
 When I first wrote af_packet_test, I assumed the hard part was the kprobe coverage. The hard part was reconstructing all the things the kernel normally does for you. A packet sent via a standard TCP or UDP socket goes through several kernel subsystems, each of which adds something essential:
 
-- **Checksum computation**: TCP and UDP headers include checksums covering the transport header, payload, and a pseudo-header containing source/dest IP and protocol. The kernel computes these automatically; AF_PACKET requires you to compute them yourself. Missing or incorrect checksums cause pf, iptables, and some middleboxes to silently drop the packet.
+- **Checksum computation**: TCP and UDP headers include checksums covering the transport header, payload, and a pseudo-header containing source/dest IP and protocol. The kernel computes these automatically, AF_PACKET requires you to compute them yourself. Missing or incorrect checksums cause pf, iptables, and some middleboxes to silently drop the packet.
 
-- **IP identification field randomization**: every IP packet has a 16-bit ID used to identify fragments. The kernel generates these with randomization; a hand-crafted packet using a fixed ID (like `0x1234`) triggers dedup heuristics in stateful firewalls. 
+- **IP identification field randomization**: every IP packet has a 16-bit ID used to identify fragments. The kernel generates these with randomization, a hand-crafted packet using a fixed ID (like `0x1234`) triggers dedup heuristics in stateful firewalls. 
 
 - **Routing and ARP resolution**: normally the kernel looks up the destination IP, determines the next hop, queries ARP for the next hop's MAC, and constructs the Ethernet frame. AF_PACKET requires you to do all of that yourself - read the routing table, find the correct gateway, look up its MAC in the ARP cache.
 
@@ -284,7 +284,7 @@ I will be exploring io_uring further as a practical evasion surface and methods 
 
 Everything in this post operates below the application layer. A beacon doing HTTP POST over HTTPS goes through `tcp_sendmsg` with encrypted bytes in the payload - we see the connection, the destination, the byte count, but not the plaintext request.
 
-For plaintext visibility, uprobes on TLS library functions (`SSL_write` in OpenSSL, equivalents in BoringSSL/NSS/rustls/GnuTLS) capture data before encryption or after decryption. Coverage varies by library; statically-linked TLS (common in Go binaries and Chromium-based browsers) requires hooking at offsets inside the specific binary rather than a shared library, which means re-discovering offsets after every update.
+For plaintext visibility, uprobes on TLS library functions (`SSL_write` in OpenSSL, equivalents in BoringSSL/NSS/rustls/GnuTLS) capture data before encryption or after decryption. Coverage varies by library, statically-linked TLS (common in Go binaries and Chromium-based browsers) requires hooking at offsets inside the specific binary rather than a shared library, which means re-discovering offsets after every update.
 
 This will also be its own post. Endpoint-level TLS inspection is essential as ECH, QUIC, and certificate pinning reduce what's visible on the wire.
 
@@ -310,7 +310,7 @@ The reason I'm not doing this as the primary approach is the per-protocol contex
 
 What I'm considering is a secondary hook at `__dev_queue_xmit` specifically as an "anomaly detector" - fire only when packets reach the wire through a path my higher-level hooks don't cover. That way the primary detection uses the ergonomic layer, and the lower hook serves as a "trust but verify" check for the paths I haven't thought of yet. I haven't built this yet, it's on the list.
 
-The hooks I'm less sure about are the ones where the asymmetry is closer to even. Hooking `SSL_write` in libc is easy, hooking it in Chromium's statically-linked BoringSSL is technically straightforward, but keeping it working across browser updates requires ongoing maintenance as binary offsets shift. An attacker who wants to avoid it can statically link rustls instead, which is not especially hard. The cost on my side accumulates with every browser update; the attacker's cost is a one-time decision. I'm still thinking about whether the visibility into plaintext traffic is worth that ongoing maintenance for my situation, or whether I'd rather invest the same effort into something with better asymmetry.
+The hooks I'm less sure about are the ones where the asymmetry is closer to even. Hooking `SSL_write` in libc is easy, hooking it in Chromium's statically-linked BoringSSL is technically straightforward, but keeping it working across browser updates requires ongoing maintenance as binary offsets shift. An attacker who wants to avoid it can statically link rustls instead, which is not especially hard. The cost on my side accumulates with every browser update, the attacker's cost is a one-time decision. I'm still thinking about whether the visibility into plaintext traffic is worth that ongoing maintenance for my situation, or whether I'd rather invest the same effort into something with better asymmetry.
 
 Other people working in other environments might weigh the same hooks differently, or might care about entirely different dimensions (performance overhead, kernel version portability, what their SIEM can ingest, etc). 
 

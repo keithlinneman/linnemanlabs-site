@@ -23,4 +23,6 @@ Website Source: [linnemanlabs-site on GitHub](https://github.com/keithlinneman/l
 
 ## What's next
 
-This page currently covers application and content provenance. I'm working toward attestations across the full trust hierarchy - from the application layer down through OS-enforced signed execution (IMA/EVM), dm-verity verified filesystems on golden images, kernel lockdown, UEFI Secure Boot, and TPM-based hardware attestation. The end goal is a verifiable chain from silicon to running application, where every layer's integrity is cryptographically anchored to the one below it.
+This page currently covers application and content provenance. The cryptographic and transparency layer beneath the application is already self-hosted in the lab - Fulcio for keyless certificates, Rekor as the transparency log, TesseraCT as the certificate transparency log, and a Timestamp Authority for trusted timestamps, all rooted in an offline YubiKey-held CA with KMS-backed signing keys. Trust material is published at [trust.linnemanlabs.com](https://trust.linnemanlabs.com/).
+
+What's still ahead is the layer below that - OS-enforced signed execution (IMA/EVM), dm-verity verified filesystems on golden images, kernel lockdown, UEFI Secure Boot, and TPM-based hardware attestation. The end goal is a verifiable chain from silicon to running application, where every layer's integrity is cryptographically anchored to the one below it.

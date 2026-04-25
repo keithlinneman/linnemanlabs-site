@@ -1,6 +1,6 @@
 ---
 title: "LinnemanLabs Infrastructure"
-description: "Multi-account AWS platform architecture with supply chain security, TUF-based updates, CIS-hardened images, and a 98-node observability stack."
+description: "Multi-account AWS platform architecture with self-hosted Sigstore transparency, multi-signal detection and SIEM, CIS-hardened images, and a 118-node observability stack."
 ---
 
 This site runs on the full LinnemanLabs platform - the same multi-account AWS organization, observability stack, supply chain security, and hardened images behind every project. Everything described here applies to what's serving this page.
@@ -97,9 +97,35 @@ All instances are built from hardened golden AMIs and further configured at depl
 
 ---
 
+## Detection and SIEM
+
+Multi-signal detection across the network, kernel, and host layers, all flowing into a single SIEM. The detection stack is exercised continuously by purple-team work in the lab - I run my own offensive tooling against it, find the gaps, and tune.
+
+- **Wazuh** SIEM with **OpenSearch** as the backend - agents deployed across all accounts and roles, centralized rule management, and integrated alerting
+- **Suricata** for network intrusion detection, integrated with Wazuh for unified alerting
+- **Tetragon** for eBPF-based runtime detection - kprobe and tracepoint policies covering syscall execution, socket allocation, raw socket and AF_PACKET use, and the kernel's TCP/UDP send paths below `tcp_sendmsg`
+- **YARA** for binary detection (process memory and on-disk artifacts), running through the Wazuh pipeline
+- **osquery** for endpoint introspection
+- **auditd** rules (file access, privilege escalation, kernel module events) ship to the SIEM rather than staying local
+- Detection rules and Tetragon policies live in version control alongside the offensive tooling that exercises them
+
+---
+
 ## Supply Chain Security
 
 Securing the full path from source to deployment to operation.
+
+### Self-Hosted Transparency Infrastructure
+
+The lab runs its own Sigstore stack rather than depending on the public instance. This is the trust root that everything else's `cosign` signing flow chains to. Trust material is published at [trust.linnemanlabs.com](https://trust.linnemanlabs.com/).
+
+- **Fulcio** issues short-lived code-signing certificates from GitHub OIDC identities
+- **Rekor** records every signed artifact in a tamper-evident transparency log
+- **TesseraCT** records every certificate Fulcio issues in a CT log
+- **Timestamp Authority** provides RFC 3161 signed timestamps so signatures remain verifiable after certificates expire
+- **Root CA** private key on an offline **YubiKey**, 10-year root certificate lifetime
+- **Fulcio CA, TSA, Rekor, and TesseraCT signing keys** are non-exportable in **AWS KMS**, held in a dedicated KMS-only account, all signing flows are cross-account KMS API calls
+
 
 ### Artifact Signing and Attestation
 
@@ -143,7 +169,7 @@ Content delivery uses TUF for verified updates:
 
 ## Observability Stack
 
-The observability platform serves the full LinnemanLabs environment - 98 nodes dedicated to observability alone, supporting the larger multi-account infrastructure across all projects.
+The observability platform serves the full LinnemanLabs environment - 118 nodes dedicated to observability alone, supporting the larger multi-account infrastructure across all projects.
 
 This is a full Grafana stack running as distributed microservices across multiple availability zones. Service discovery and per-app configurations drive collection across multiple exporters including custom eBPF collectors and instrumented applications. All communication uses OTLP to stay standards-based and avoid lock-in to any specific vendor implementation.
 
@@ -209,6 +235,14 @@ This is a full Grafana stack running as distributed microservices across multipl
   - Comprehensive alert rules for all LGTM components
   - Node-level alerts (CPU, disk, memory, network, time sync) and per-application conditions
   - CloudFormation stack event notifications via Slack
+
+### AI-Augmented Operations
+
+- **Vigil** - a Go service I built that closes the loop between alerts and investigation. Alertmanager posts to Vigil's webhook, Vigil dispatches an async triage to Claude with tool access to instant and range PromQL queries against Mimir and LogQL queries against Loki. Claude iterates - typically 7-10 tool calls - until it has enough context to produce a root-cause analysis that lands in Slack
+  - Full conversations (every tool call and response) persisted to PostgreSQL for replay and prompt evaluation
+  - Every triage instrumented with OpenTelemetry GenAI semantic attributes - LLM calls, tool executions, and database writes are spans visible as a single trace in Tempo
+  - Pyroscope continuous profiling correlated to traces, Prometheus histograms track triage duration, token usage, tool call counts, and per-tool latency
+  - Vigil consumes the same observability signals as everything else and sits inside the platform it monitors
 
 ---
 
