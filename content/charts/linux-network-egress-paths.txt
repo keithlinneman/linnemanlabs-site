@@ -6,6 +6,7 @@ flowchart TD
         APP2B["<b>Raw IP, user hdr</b><br/>socket(AF_INET, SOCK_RAW, proto)<br/>setsockopt IP_HDRINCL<br/>CAP_NET_RAW<br/><br/>user: L3 + L4 + payload<br/>kernel builds: L2 and may finalize some IP fields"]
         APP3["<b>AF_PACKET SOCK_DGRAM</b><br/>socket(AF_PACKET, SOCK_DGRAM)<br/>CAP_NET_RAW<br/><br/>user: L3 + L4 + payload<br/>kernel builds: L2 (from sockaddr_ll)"]
         APP4["<b>AF_PACKET SOCK_RAW</b><br/>socket(AF_PACKET, SOCK_RAW)<br/>CAP_NET_RAW<br/><br/>user: L2 + L3 + L4 + payload<br/>kernel builds: nothing"]
+        APP4B["<b>AF_PACKET + QDISC_BYPASS</b><br/>socket(AF_PACKET, SOCK_RAW/DGRAM)<br/>setsockopt PACKET_QDISC_BYPASS<br/>CAP_NET_RAW<br/><br/>user: L2 + L3 + L4 + payload<br/>kernel builds: nothing<br />skips qdisc + tc entirely"]
         APP5["<b>Userspace driver</b><br/>DPDK / VFIO / AF_XDP zerocopy<br/>CAP_SYS_RAWIO + vfio-pci<br/><br/>user: entire frame + NIC DMA<br/>kernel: not involved"]
     end
 
@@ -31,16 +32,21 @@ flowchart TD
     subgraph PKT["AF_PACKET"]
         PKT_DGRAM["packet_sendmsg → packet_snd<br/>SOCK_DGRAM branch<br/>builds L2 from sockaddr_ll<br/>prepends Ethernet header"]
         PKT_RAW["packet_sendmsg → packet_snd<br/>SOCK_RAW branch<br/>copies user bytes verbatim<br/>reads skb->protocol from frame"]
+        PKT_DIRECT["packet_sendmsg → packet_direct_xmit<br/>QDISC_BYPASS branch<br/>same skb construction<br/>different egress dispatch"]
     end
 
     %% Driver layer
     subgraph DRV["Device / Driver Layer"]
-        DQX["<b>__dev_queue_xmit</b><br/>⭐ every kernel egress path converges here<br/>Tetragon kprobe sweet spot"]
-        QDISC["qdisc enqueue<br/>tc clsact egress hook<br/>eBPF runs here - sees AF_PACKET too"]
-        DRV_XMIT["driver ndo_start_xmit<br/>writes TX descriptor ring<br/>kicks doorbell register"]
+        DQX["<b>__dev_queue_xmit</b><br/>⭐ normal egress convergence point<br/>Tetragon kprobe sweet spot"]
+        DDX["<b>dev_direct_xmit</b><br/>bypass egress entry point<br/>second Tetragon kprobe<br/>skips qdisc + tc"]
+        QDISC["qdisc enqueue + sch_handle_egress<br/>tc clsact egress hook<br/>eBPF runs here - sees AF_PACKET too"]
+        DRV_XMIT["__netdev_start_xmit<br/>driver ndo_start_xmit<br/>writes TX descriptor ring<br/>kicks doorbell register"]
         NIC["NIC hardware<br/>DMA read, MAC, PHY"]
         WIRE(["wire / radio"])
     end
+
+    %% L2 construction (AF_INET only - AF_PACKET handles its own L2)
+    NEIGH["<b>neigh_output / dev_hard_header</b><br/><br />ARP/ND resolves next-hop MAC<br/>kernel writes Ethernet header<br/>(L2 added here for AF_INET paths)"]
 
     %% AF_INET paths
     APP1 --> UDP_TCP
@@ -53,26 +59,33 @@ flowchart TD
     LOCAL_OUT --> CT_OUT
     CT_OUT --> POSTROUTING
     POSTROUTING --> CT_CONFIRM
-    CT_CONFIRM --> DQX
+    CT_CONFIRM --> NEIGH
+    NEIGH --> DQX
 
     %% AF_PACKET paths - split by socket type
     APP3 --> PKT_DGRAM
     APP4 --> PKT_RAW
+    APP4B --> PKT_DIRECT
     PKT_DGRAM --> DQX
     PKT_RAW --> DQX
+    PKT_DIRECT --> DDX
 
     %% Userspace driver - bypasses kernel entirely
     APP5 -.->|"bypasses kernel<br/>not even tc sees it"| NIC
 
-    %% Driver chain
+    %% Driver chain - normal path through qdisc
     DQX --> QDISC
     QDISC --> DRV_XMIT
+    %% Bypass path - jumps straight to driver xmit
+    DDX --> DRV_XMIT
     DRV_XMIT --> NIC
     NIC --> WIRE
 
     %% Styling
     classDef userspace fill:#1e3a5f,stroke:#4a9eff,stroke-width:2px,color:#ffffff
+    classDef userspaceBypass fill:#1e3a5f,stroke:#fbbf24,stroke-width:3px,color:#ffffff
     classDef l4layer fill:#1e4d2b,stroke:#4ade80,stroke-width:2px,color:#ffffff
+    classDef l2layer fill:#1e4d2b,stroke:#22d3ee,stroke-width:2px,color:#ffffff
     classDef iplayer fill:#14532d,stroke:#22c55e,stroke-width:3px,color:#ffffff
     classDef netfilter fill:#5c2d2d,stroke:#f87171,stroke-width:2px,color:#ffffff
     classDef afpacket fill:#5c4a1e,stroke:#fbbf24,stroke-width:2px,color:#ffffff
@@ -81,10 +94,12 @@ flowchart TD
     classDef wire fill:#000000,stroke:#ffffff,stroke-width:2px,color:#ffffff
 
     class APP1,APP2A,APP2B,APP3,APP4,APP5 userspace
+    class APP4B userspaceBypass
     class UDP_TCP,RAW_NORM,RAW_HDRINC l4layer
     class IP_OUT iplayer
+    class NEIGH l2layer
     class LOCAL_OUT,CT_OUT,POSTROUTING,CT_CONFIRM netfilter
-    class PKT_DGRAM,PKT_RAW afpacket
+    class PKT_DGRAM,PKT_RAW,PKT_DIRECT afpacket
     class QDISC,DRV_XMIT,NIC driver
-    class DQX converge
+    class DQX,DDX converge
     class WIRE wire
