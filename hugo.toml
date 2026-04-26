@@ -24,7 +24,7 @@ publishDir = "public"
     codeFences = true
     guessSyntax = true
     lineNos = false
-    noClasses = true
+    noClasses = false
 
 [params]
   description = "Building systems, breaking systems, observing systems, securing systems, auditing systems... improving systems."

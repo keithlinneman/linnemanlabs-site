@@ -1,5 +1,9 @@
+{{- $isPostSingle := and (eq .Kind "page") (eq .Section "posts") -}}
 <header class="border-b border-[rgb(var(--border))] bg-[rgb(var(--bg))]">
-  <div class="mx-auto max-w-3xl px-6 py-6 flex items-center justify-between gap-4">
+  <div class="mx-auto px-6 py-6 flex items-center justify-between gap-4 {{ if $isPostSingle }}max-w-[1400px] lg:grid lg:grid-cols-[minmax(0,108ch)_minmax(200px,260px)] lg:gap-12{{ else }}max-w-3xl{{ end }}">
+    {{ if $isPostSingle }}
+    <div class="flex items-center gap-4 min-w-0 lg:justify-between">
+    {{ end }}
     <a href="/" class="flex items-center gap-1.5 md:gap-2">
       {{ with .Site.Params.logo }}
         <img src="{{ . }}" alt="" class="w-5 h-5 md:w-6 md:h-6">
@@ -7,37 +11,26 @@
       <span class="font-semibold tracking-tight text-base md:text-lg">{{ .Site.Title }}</span>
     </a>
 
-    <div class="flex items-center gap-3">
-      <nav class="text-sm md:text-base text-[rgb(var(--muted))] flex gap-3">
+    <nav class="text-sm md:text-base text-[rgb(var(--muted))] flex flex-wrap gap-3 md:gap-4">
         {{ range .Site.Menus.main }}
-          {{ $active := or ($.IsMenuCurrent "main" .) ($.HasMenuCurrent "main" .) }}
           {{ if .HasChildren }}
-            <div class="relative" data-dropdown>
-              <button data-dropdown-toggle class="hover:text-[rgb(var(--fg))] {{ if $active }}text-[rgb(var(--fg))] font-medium{{ end }} flex items-center gap-0.5 cursor-pointer">
+            {{ range .Children }}
+              {{ $childActive := eq $.RelPermalink .URL }}
+              <a href="{{ .URL }}" class="hover:text-[rgb(var(--fg))] transition-colors {{ if $childActive }}text-[rgb(var(--fg))] font-medium{{ end }}">
                 {{ .Name }}
-                <svg class="w-3 h-3 inline-block ml-0.5 transition-transform [.open_&]:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
-              </button>
-              <div class="absolute hidden [.open_&]:block min-w-max">
-                <div class="h-3 w-full"></div>
-                <div class="bg-[rgb(var(--bg))] border border-[rgb(var(--fg-muted))] py-1">
-                  {{ range .Children }}
-                    {{ $childActive := eq $.RelPermalink .URL }}
-                    <a href="{{ .URL }}" class="block px-4 py-1 hover:text-[rgb(var(--fg))] {{ if $childActive }}text-[rgb(var(--fg))] font-medium{{ end }}">
-                      {{ .Name }}
-                    </a>
-                  {{ end }}
-                </div>
-              </div>
-            </div>
+              </a>
+            {{ end }}
           {{ else }}
-            <a href="{{ .URL }}" class="hover:text-[rgb(var(--fg))] {{ if $active }}text-[rgb(var(--fg))] font-medium{{ end }}">
+            {{ $active := or ($.IsMenuCurrent "main" .) ($.HasMenuCurrent "main" .) }}
+            <a href="{{ .URL }}" class="hover:text-[rgb(var(--fg))] transition-colors {{ if $active }}text-[rgb(var(--fg))] font-medium{{ end }}">
               {{ .Name }}
             </a>
           {{ end }}
         {{ end }}
       </nav>
+    {{ if $isPostSingle }}
+    </div>
+    {{ end }}
 
       {{/* Provenance Badge with Dropdown - populated by main.js */}}
       <div class="relative" data-dropdown id="header-provenance">
@@ -237,6 +230,5 @@
           </div>
         </div>
       </div>
-    </div>
   </div>
 </header>

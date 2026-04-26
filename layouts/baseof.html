@@ -13,10 +13,12 @@
 <body class="min-h-screen">
   {{ partial "header.html" . }}
 
-  <main class="mx-auto max-w-3xl px-6 py-10">
+  {{- $isPostSingle := and (eq .Kind "page") (eq .Section "posts") -}}
+  <main class="mx-auto px-6 py-10 {{ if $isPostSingle }}max-w-[1400px]{{ else }}max-w-3xl{{ end }}">
     {{ block "main" . }}{{ end }}
   </main>
 
   {{ partial "footer.html" . }}
+  {{ block "scripts" . }}{{ end }}
 </body>
 </html>

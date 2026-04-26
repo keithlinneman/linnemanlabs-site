@@ -725,19 +725,6 @@ async function initFooter() {
   if (contentVer) contentVer.textContent = data?.version || '—';
 }
 
-// Image shortcode
-document.addEventListener('click', (e) => {
-  const img = e.target.closest('.img-lightbox');
-  if (img) {
-    const dialog = img.nextElementSibling;
-    dialog.showModal();
-    dialog.scrollTop = 0;
-  }
-
-  const dialog = e.target.closest('.img-lightbox-dialog');
-  if (dialog) dialog.close();
-});
-
 // init on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
   initHeader();
