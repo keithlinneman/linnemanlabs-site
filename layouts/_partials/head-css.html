@@ -2,3 +2,11 @@
 {{- $css = $css | css.TailwindCSS -}}
 {{- $css = $css | minify | fingerprint -}}
 <link rel="stylesheet" href="{{ $css.RelPermalink }}" integrity="{{ $css.Data.Integrity }}">
+
+{{- $syntax := resources.Get "css/syntax.css" -}}
+{{- $syntax = $syntax | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $syntax.RelPermalink }}" integrity="{{ $syntax.Data.Integrity }}">
+
+{{- $pswpCss := resources.Get "vendor/photoswipe/photoswipe.css" -}}
+{{- $pswpCss = $pswpCss | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $pswpCss.RelPermalink }}" integrity="{{ $pswpCss.Data.Integrity }}">

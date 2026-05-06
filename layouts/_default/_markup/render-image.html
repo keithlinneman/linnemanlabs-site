@@ -1,0 +1,29 @@
+{{- $dest := .Destination -}}
+{{- $alt := .PlainText -}}
+{{- $title := .Title -}}
+{{- $external := or (hasPrefix $dest "http://") (hasPrefix $dest "https://") (hasPrefix $dest "//") -}}
+{{- $img := false -}}
+{{- if not $external -}}
+  {{- $rel := strings.TrimPrefix "/" $dest -}}
+  {{- $img = resources.Get $rel -}}
+{{- end -}}
+{{- if $img -}}
+<figure class="mb-4">
+  <a href="{{ $img.RelPermalink }}"
+     data-pswp-width="{{ $img.Width }}"
+     data-pswp-height="{{ $img.Height }}"
+     target="_blank"
+     rel="noopener">
+    <img src="{{ $img.RelPermalink }}"
+         width="{{ $img.Width }}"
+         height="{{ $img.Height }}"
+         alt="{{ $alt }}"
+         loading="lazy">
+  </a>
+  {{- with $title }}
+  <figcaption class="text-center italic text-neutral-400 mt-2 text-sm">{{ . }}</figcaption>
+  {{- end }}
+</figure>
+{{- else -}}
+<img src="{{ $dest | safeURL }}" alt="{{ $alt }}"{{ with $title }} title="{{ . }}"{{ end }} loading="lazy">
+{{- end -}}

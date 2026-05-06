@@ -13,10 +13,14 @@
 <body class="min-h-screen">
   {{ partial "header.html" . }}
 
-  <main class="mx-auto max-w-3xl px-6 py-10">
-    {{ block "main" . }}{{ end }}
+  <main class="mx-auto px-6 py-10 max-w-[1400px]">
+    <div class="lg:grid lg:grid-cols-[minmax(0,108ch)_minmax(200px,260px)] lg:gap-12">
+      <div class="min-w-0">{{ block "main" . }}{{ end }}</div>
+      <aside class="hidden lg:block">{{ block "right-rail" . }}{{ end }}</aside>
+    </div>
   </main>
 
   {{ partial "footer.html" . }}
+  {{ block "scripts" . }}{{ end }}
 </body>
 </html>

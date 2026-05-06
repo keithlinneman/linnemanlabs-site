@@ -12,6 +12,5 @@
   </div>
 </footer>
 
-{{- $jsMain := resources.Get "js/main.js" -}}
-{{- $jsMain = $jsMain | minify | fingerprint -}}
+{{- $jsMain := resources.Get "js/main.js" | minify | fingerprint "sha384" -}}
 <script src="{{ $jsMain.RelPermalink }}" integrity="{{ $jsMain.Data.Integrity }}"></script>

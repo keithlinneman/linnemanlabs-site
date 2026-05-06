@@ -1,7 +1,7 @@
 {{ define "main" }}
-<article class="space-y-6">
+<article class="space-y-6 min-w-0">
   <header class="space-y-2">
-    <h1 class="text-3xl font-semibold tracking-tight text-balance">{{ .Title }}</h1>
+    <h1 class="text-3xl font-semibold tracking-tight">{{ .Title }}</h1>
     <div class="text-sm text-[rgb(var(--muted))] flex flex-wrap gap-2">
       <span class="tabular">{{ .Date.Format "2006-01-02" }}</span>
       {{ $author := .Params.author | default .Site.Params.author.name }}
@@ -16,6 +16,13 @@
         {{ end }}
       {{ end }}
     </div>
+
+    {{ with .TableOfContents }}
+    <details class="post-toc-mobile lg:hidden mt-4 border border-[rgb(var(--border))] rounded p-3 bg-[rgb(var(--panel))]">
+      <summary class="cursor-pointer text-sm font-medium text-[rgb(var(--muted))]">Contents</summary>
+      <div class="post-toc mt-3 text-sm">{{ . }}</div>
+    </details>
+    {{ end }}
   </header>
 
   <div class="prose max-w-none">
@@ -46,4 +53,22 @@
   </footer>
   {{ end }}
 </article>
+{{ end }}
+
+{{ define "right-rail" }}
+{{ with .TableOfContents }}
+<div class="post-toc sticky top-6 text-sm max-h-[calc(100vh-4rem)] overflow-y-auto pr-2">
+  <div class="text-xs uppercase tracking-wider text-[rgb(var(--muted))] mb-3 font-medium">Contents</div>
+  {{ . }}
+</div>
+{{ end }}
+{{ end }}
+
+{{ define "scripts" }}
+{{- $psLightbox := resources.Get "js/vendor/photoswipe/photoswipe-lightbox.umd.min.js" | fingerprint "sha384" -}}
+{{- $ps        := resources.Get "js/vendor/photoswipe/photoswipe.umd.min.js"          | fingerprint "sha384" -}}
+{{- $postJs    := resources.Get "js/post.js"                               | minify | fingerprint "sha384" -}}
+<script src="{{ $psLightbox.RelPermalink }}" integrity="{{ $psLightbox.Data.Integrity }}" defer></script>
+<script src="{{ $ps.RelPermalink }}"         integrity="{{ $ps.Data.Integrity }}"         defer></script>
+<script src="{{ $postJs.RelPermalink }}"     integrity="{{ $postJs.Data.Integrity }}"     defer></script>
 {{ end }}
