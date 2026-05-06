@@ -1,22 +1,21 @@
-// Post-page enhancements: TOC scrollspy + PhotoSwipe init.
-// Loaded only on post single pages via the {{ block "scripts" }} hook.
-
 (function () {
   'use strict';
 
-  // TOC scrollspy
-  // Watches h2/h3 inside the prose, marks the matching TOC link active.
+  // Watches h2/h3 inside the prose, marks the matching TOC link(s) active.
   function initScrollspy() {
     const tocLinks = document.querySelectorAll('.post-toc a[href^="#"]');
     if (tocLinks.length === 0) return;
 
-    const linkById = new Map();
+    // Mobile <details> TOC and desktop rail TOC share hrefs; track all links per id.
+    const linksById = new Map();
     tocLinks.forEach(a => {
       const id = decodeURIComponent(a.getAttribute('href').slice(1));
-      if (id) linkById.set(id, a);
+      if (!id) return;
+      if (!linksById.has(id)) linksById.set(id, []);
+      linksById.get(id).push(a);
     });
 
-    const headings = Array.from(linkById.keys())
+    const headings = Array.from(linksById.keys())
       .map(id => document.getElementById(id))
       .filter(Boolean);
     if (headings.length === 0) return;
@@ -25,34 +24,43 @@
     function setActive(id) {
       if (active === id) return;
       tocLinks.forEach(a => a.classList.remove('toc-active'));
-      const link = linkById.get(id);
-      if (link) link.classList.add('toc-active');
+      const links = linksById.get(id) || [];
+      links.forEach(a => a.classList.add('toc-active'));
       active = id;
     }
 
-    const visible = new Set();
+    // Click: instant feedback, before observer events from the scroll arrive.
+    tocLinks.forEach(a => {
+      a.addEventListener('click', () => {
+        const id = decodeURIComponent(a.getAttribute('href').slice(1));
+        if (id && linksById.has(id)) setActive(id);
+      });
+    });
+
+    // Intersection zone is the top 25% of the viewport, including the very top
+    // edge, so a heading scrolled to top: 0 still counts as visible.
+    const intersecting = new Set();
     const io = new IntersectionObserver((entries) => {
       entries.forEach(e => {
-        if (e.isIntersecting) visible.add(e.target.id);
-        else visible.delete(e.target.id);
+        if (e.isIntersecting) intersecting.add(e.target);
+        else intersecting.delete(e.target);
       });
 
-      if (visible.size > 0) {
-        // pick the topmost visible heading in document order
-        for (const h of headings) {
-          if (visible.has(h.id)) { setActive(h.id); break; }
-        }
-      } else {
-        // none visible: pick the last heading whose top is above the viewport
-        let candidate = null;
-        for (const h of headings) {
-          if (h.getBoundingClientRect().top < 80) candidate = h.id;
-          else break;
-        }
-        if (candidate) setActive(candidate);
+      // Topmost (document-order) heading currently in the zone wins.
+      for (const h of headings) {
+        if (intersecting.has(h)) { setActive(h.id); return; }
       }
+
+      // No heading in zone: highlight the last one whose top has scrolled above
+      // the viewport (we're reading content within that section).
+      let candidate = null;
+      for (const h of headings) {
+        if (h.getBoundingClientRect().top < 1) candidate = h.id;
+        else break;
+      }
+      if (candidate) setActive(candidate);
     }, {
-      rootMargin: '-72px 0px -60% 0px',
+      rootMargin: '0px 0px -75% 0px',
       threshold: 0
     });
 

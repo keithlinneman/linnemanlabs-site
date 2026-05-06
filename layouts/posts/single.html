@@ -1,75 +1,74 @@
 {{ define "main" }}
-<div class="lg:grid lg:grid-cols-[minmax(0,108ch)_minmax(200px,260px)] lg:gap-12">
-  <article class="space-y-6 min-w-0">
-    <header class="space-y-2">
-      <h1 class="text-3xl font-semibold tracking-tight">{{ .Title }}</h1>
-      <div class="text-sm text-[rgb(var(--muted))] flex flex-wrap gap-2">
-        <span class="tabular">{{ .Date.Format "2006-01-02" }}</span>
-        {{ $author := .Params.author | default .Site.Params.author.name }}
-        {{ with $author }}
-          <span>·</span>
-          <span>{{ . }}</span>
-        {{ end }}
-        {{ with .Params.tags }}
-          <span>·</span>
-          {{ range . }}
-            <a class="hover:text-[rgb(var(--fg))] transition-colors" href="/tags/{{ . | urlize }}/">#{{ . }}</a>
-          {{ end }}
-        {{ end }}
-      </div>
-
-      {{ with .TableOfContents }}
-      <details class="post-toc-mobile lg:hidden mt-4 border border-[rgb(var(--border))] rounded p-3 bg-[rgb(var(--panel))]">
-        <summary class="cursor-pointer text-sm font-medium text-[rgb(var(--muted))]">Contents</summary>
-        <div class="post-toc mt-3 text-sm">{{ . }}</div>
-      </details>
+<article class="space-y-6 min-w-0">
+  <header class="space-y-2">
+    <h1 class="text-3xl font-semibold tracking-tight">{{ .Title }}</h1>
+    <div class="text-sm text-[rgb(var(--muted))] flex flex-wrap gap-2">
+      <span class="tabular">{{ .Date.Format "2006-01-02" }}</span>
+      {{ $author := .Params.author | default .Site.Params.author.name }}
+      {{ with $author }}
+        <span>·</span>
+        <span>{{ . }}</span>
       {{ end }}
-    </header>
-
-    <div class="prose max-w-none">
-      {{ .Content }}
+      {{ with .Params.tags }}
+        <span>·</span>
+        {{ range . }}
+          <a class="hover:text-[rgb(var(--fg))] transition-colors" href="/tags/{{ . | urlize }}/">#{{ . }}</a>
+        {{ end }}
+      {{ end }}
     </div>
 
-    {{/* Author box */}}
-    {{ with .Site.Params.author }}
-    <footer class="mt-10 pt-6 border-t border-[rgb(var(--border))]">
-      <div class="blueprint-card">
-        <div class="flex items-start gap-4">
-          <div class="w-12 h-12 rounded-full bg-[rgb(var(--accent))] flex items-center justify-center text-[rgb(var(--bg))] font-semibold text-lg">
-              {{ substr .name 0 1 }}
-          </div>
-          <div class="flex-1">
-            <a href="/about/me">
-              <div class="font-medium">{{ .name }}</div>
-            </a>
-            <div class="text-sm text-[rgb(var(--muted))] mt-1">{{ .bio }}</div>
-            {{ with .github }}
-            <a href="https://github.com/{{ . }}" class="text-sm text-[rgb(var(--accent))] hover:underline mt-2 inline-block">
-              github.com/{{ . }}
-            </a>
-            {{ end }}
-          </div>
+    {{ with .TableOfContents }}
+    <details class="post-toc-mobile lg:hidden mt-4 border border-[rgb(var(--border))] rounded p-3 bg-[rgb(var(--panel))]">
+      <summary class="cursor-pointer text-sm font-medium text-[rgb(var(--muted))]">Contents</summary>
+      <div class="post-toc mt-3 text-sm">{{ . }}</div>
+    </details>
+    {{ end }}
+  </header>
+
+  <div class="prose max-w-none">
+    {{ .Content }}
+  </div>
+
+  {{/* Author box */}}
+  {{ with .Site.Params.author }}
+  <footer class="mt-10 pt-6 border-t border-[rgb(var(--border))]">
+    <div class="blueprint-card">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-full bg-[rgb(var(--accent))] flex items-center justify-center text-[rgb(var(--bg))] font-semibold text-lg">
+            {{ substr .name 0 1 }}
+        </div>
+        <div class="flex-1">
+          <a href="/about/me">
+            <div class="font-medium">{{ .name }}</div>
+          </a>
+          <div class="text-sm text-[rgb(var(--muted))] mt-1">{{ .bio }}</div>
+          {{ with .github }}
+          <a href="https://github.com/{{ . }}" class="text-sm text-[rgb(var(--accent))] hover:underline mt-2 inline-block">
+            github.com/{{ . }}
+          </a>
+          {{ end }}
         </div>
       </div>
-    </footer>
-    {{ end }}
-  </article>
-
-  {{ with .TableOfContents }}
-  <aside class="hidden lg:block">
-    <div class="post-toc sticky top-6 text-sm max-h-[calc(100vh-4rem)] overflow-y-auto pr-2">
-      <div class="text-xs uppercase tracking-wider text-[rgb(var(--muted))] mb-3 font-medium">Contents</div>
-      {{ . }}
     </div>
-  </aside>
+  </footer>
   {{ end }}
+</article>
+{{ end }}
+
+{{ define "right-rail" }}
+{{ with .TableOfContents }}
+<div class="post-toc sticky top-6 text-sm max-h-[calc(100vh-4rem)] overflow-y-auto pr-2">
+  <div class="text-xs uppercase tracking-wider text-[rgb(var(--muted))] mb-3 font-medium">Contents</div>
+  {{ . }}
 </div>
+{{ end }}
 {{ end }}
 
 {{ define "scripts" }}
-<script src="/vendor/photoswipe/photoswipe-lightbox.umd.min.js" defer></script>
-<script src="/vendor/photoswipe/photoswipe.umd.min.js" defer></script>
-{{- $postJs := resources.Get "js/post.js" -}}
-{{- $postJs = $postJs | minify | fingerprint -}}
-<script src="{{ $postJs.RelPermalink }}" integrity="{{ $postJs.Data.Integrity }}" defer></script>
+{{- $psLightbox := resources.Get "js/vendor/photoswipe/photoswipe-lightbox.umd.min.js" | fingerprint "sha384" -}}
+{{- $ps        := resources.Get "js/vendor/photoswipe/photoswipe.umd.min.js"          | fingerprint "sha384" -}}
+{{- $postJs    := resources.Get "js/post.js"                               | minify | fingerprint "sha384" -}}
+<script src="{{ $psLightbox.RelPermalink }}" integrity="{{ $psLightbox.Data.Integrity }}" defer></script>
+<script src="{{ $ps.RelPermalink }}"         integrity="{{ $ps.Data.Integrity }}"         defer></script>
+<script src="{{ $postJs.RelPermalink }}"     integrity="{{ $postJs.Data.Integrity }}"     defer></script>
 {{ end }}

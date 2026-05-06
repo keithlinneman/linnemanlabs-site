@@ -1,36 +1,44 @@
-{{- $isPostSingle := and (eq .Kind "page") (eq .Section "posts") -}}
 <header class="border-b border-[rgb(var(--border))] bg-[rgb(var(--bg))]">
-  <div class="mx-auto px-6 py-6 flex items-center justify-between gap-4 {{ if $isPostSingle }}max-w-[1400px] lg:grid lg:grid-cols-[minmax(0,108ch)_minmax(200px,260px)] lg:gap-12{{ else }}max-w-3xl{{ end }}">
-    {{ if $isPostSingle }}
-    <div class="flex items-center gap-4 min-w-0 lg:justify-between">
-    {{ end }}
-    <a href="/" class="flex items-center gap-1.5 md:gap-2">
+  <div class="mx-auto px-6 py-6 max-w-[1400px]">
+    <div class="flex items-center justify-between gap-4 lg:grid lg:grid-cols-[minmax(0,108ch)_minmax(200px,260px)] lg:gap-12">
+      <div class="flex items-center justify-between gap-4 min-w-0 flex-1 lg:flex-none">
+        <a href="/" class="flex items-center gap-1.5 md:gap-2">
       {{ with .Site.Params.logo }}
         <img src="{{ . }}" alt="" class="w-5 h-5 md:w-6 md:h-6">
       {{ end }}
       <span class="font-semibold tracking-tight text-base md:text-lg">{{ .Site.Title }}</span>
     </a>
 
-    <nav class="text-sm md:text-base text-[rgb(var(--muted))] flex flex-wrap gap-3 md:gap-4">
+    <nav class="text-sm md:text-base text-[rgb(var(--muted))] hidden lg:flex flex-wrap items-center gap-3 md:gap-4">
         {{ range .Site.Menus.main }}
+          {{ $active := or ($.IsMenuCurrent "main" .) ($.HasMenuCurrent "main" .) }}
           {{ if .HasChildren }}
-            {{ range .Children }}
-              {{ $childActive := eq $.RelPermalink .URL }}
-              <a href="{{ .URL }}" class="hover:text-[rgb(var(--fg))] transition-colors {{ if $childActive }}text-[rgb(var(--fg))] font-medium{{ end }}">
+            <div class="relative" data-dropdown>
+              <button data-dropdown-toggle class="hover:text-[rgb(var(--fg))] transition-colors {{ if $active }}text-[rgb(var(--fg))] font-medium{{ end }} flex items-center gap-0.5 cursor-pointer">
                 {{ .Name }}
-              </a>
-            {{ end }}
+                <svg class="w-3 h-3 inline-block ml-0.5 transition-transform [.open_&]:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </button>
+              <div class="absolute hidden [.open_&]:block min-w-max z-50">
+                <div class="h-3 w-full"></div>
+                <div class="bg-[rgb(var(--bg))] border border-[rgb(var(--border))] rounded py-1">
+                  {{ range .Children }}
+                    {{ $childActive := eq $.RelPermalink .URL }}
+                    <a href="{{ .URL }}" class="block px-4 py-1 hover:text-[rgb(var(--fg))] transition-colors {{ if $childActive }}text-[rgb(var(--fg))] font-medium{{ end }}">
+                      {{ .Name }}
+                    </a>
+                  {{ end }}
+                </div>
+              </div>
+            </div>
           {{ else }}
-            {{ $active := or ($.IsMenuCurrent "main" .) ($.HasMenuCurrent "main" .) }}
             <a href="{{ .URL }}" class="hover:text-[rgb(var(--fg))] transition-colors {{ if $active }}text-[rgb(var(--fg))] font-medium{{ end }}">
               {{ .Name }}
             </a>
           {{ end }}
         {{ end }}
       </nav>
-    {{ if $isPostSingle }}
-    </div>
-    {{ end }}
 
       {{/* Provenance Badge with Dropdown - populated by main.js */}}
       <div class="relative" data-dropdown id="header-provenance">
@@ -230,5 +238,8 @@
           </div>
         </div>
       </div>
+      </div>
+      <div class="hidden lg:block"></div>
+    </div>
   </div>
 </header>

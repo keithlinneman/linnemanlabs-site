@@ -17,7 +17,7 @@
     </div>
 
     <div class="space-y-4">
-      {{ $posts := first 5 (where .Site.RegularPages "Section" "posts") }}
+      {{ $posts := first 10 (where .Site.RegularPages "Section" "posts") }}
       {{ range $posts }}
         <article class="blueprint-card">
           <a href="{{ .Permalink }}" class="block group">
@@ -42,58 +42,61 @@
     </div>
   </section>
 
-  {{/* Browse by Tag & Category */}}
-  <div class="grid md:grid-cols-2 gap-8">
+</div>
+{{ end }}
 
-    {{/* Browse by Tag */}}
-    <section class="space-y-4">
-      <h2 class="text-xl font-semibold tracking-tight">Browse by Tag</h2>
-      <div class="blueprint-card">
-        {{ $tags := .Site.Taxonomies.tags }}
-        {{ if $tags }}
-          <div class="flex flex-wrap gap-2">
-            {{ range $name, $taxonomy := $tags }}
+{{ define "right-rail" }}
+<div class="sticky top-6 space-y-6 max-h-[calc(100vh-4rem)] overflow-hidden pr-2">
+  {{/* Browse by Category */}}
+  <section class="space-y-2">
+    <h2 class="text-xs uppercase tracking-wider text-[rgb(var(--muted))] font-medium">Browse by Category</h2>
+    <div class="blueprint-card">
+      {{ $categories := .Site.Taxonomies.categories }}
+      {{ if $categories }}
+        <ul class="space-y-1.5 text-sm">
+          {{ range $name, $taxonomy := $categories }}
+            <li>
               <a
-                href="/tags/{{ $name | urlize }}/"
-                class="text-sm px-3 py-1.5 rounded-full border border-[rgb(var(--border))] hover:border-[rgb(var(--accent))] hover:text-[rgb(var(--accent))] transition-colors"
+                href="/categories/{{ $name | urlize }}/"
+                class="flex items-center justify-between group gap-2"
               >
-                #{{ $name }}
-                <span class="text-[rgb(var(--muted))] ml-1">{{ len $taxonomy }}</span>
+                <span class="group-hover:text-[rgb(var(--accent))] transition-colors truncate">{{ $name | title }}</span>
+                <span class="text-xs text-[rgb(var(--muted))] tabular shrink-0">{{ len $taxonomy }}</span>
               </a>
-            {{ end }}
-          </div>
-        {{ else }}
-          <p class="text-[rgb(var(--muted))] text-sm">No tags yet.</p>
-        {{ end }}
-      </div>
-    </section>
+            </li>
+          {{ end }}
+        </ul>
+      {{ else }}
+        <p class="text-[rgb(var(--muted))] text-xs">No categories yet.</p>
+      {{ end }}
+    </div>
+  </section>
 
-    {{/* Browse by Category */}}
-    <section class="space-y-4">
-      <h2 class="text-xl font-semibold tracking-tight">Browse by Category</h2>
-      <div class="blueprint-card">
-        {{ $categories := .Site.Taxonomies.categories }}
-        {{ if $categories }}
-          <ul class="space-y-2">
-            {{ range $name, $taxonomy := $categories }}
-              <li>
-                <a
-                  href="/categories/{{ $name | urlize }}/"
-                  class="flex items-center justify-between group"
-                >
-                  <span class="group-hover:text-[rgb(var(--accent))] transition-colors">{{ $name | title }}</span>
-                  <span class="text-sm text-[rgb(var(--muted))] tabular">{{ len $taxonomy }} {{ if eq (len $taxonomy) 1 }}post{{ else }}posts{{ end }}</span>
-                </a>
-              </li>
-            {{ end }}
-          </ul>
-        {{ else }}
-          <p class="text-[rgb(var(--muted))] text-sm">No categories yet.</p>
-        {{ end }}
-      </div>
-    </section>
-
-  </div>
+  {{/* Browse by Tag */}}
+  <section class="space-y-2">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xs uppercase tracking-wider text-[rgb(var(--muted))] font-medium">Browse by Tag</h2>
+      <a href="/tags/" class="text-xs text-[rgb(var(--accent))] hover:underline">View all</a>
+    </div>
+    <div class="blueprint-card">
+      {{ $tags := .Site.Taxonomies.tags }}
+      {{ if $tags }}
+        <div class="flex flex-wrap gap-1.5">
+          {{ range first 30 $tags.ByCount }}
+            <a
+              href="/tags/{{ .Name | urlize }}/"
+              class="text-xs px-2 py-1 rounded-full border border-[rgb(var(--border))] hover:border-[rgb(var(--accent))] hover:text-[rgb(var(--accent))] transition-colors"
+            >
+              #{{ .Name }}
+              <span class="text-[rgb(var(--muted))] ml-1">{{ .Count }}</span>
+            </a>
+          {{ end }}
+        </div>
+      {{ else }}
+        <p class="text-[rgb(var(--muted))] text-xs">No tags yet.</p>
+      {{ end }}
+    </div>
+  </section>
 
 </div>
 {{ end }}
