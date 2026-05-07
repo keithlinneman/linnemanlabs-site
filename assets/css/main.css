@@ -289,11 +289,38 @@
 
   .prose table {
     @apply w-full;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.95em;
   }
 
   .prose th,
   .prose td {
-    @apply px-4 py-3 ;
+    @apply px-4 py-3;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .prose thead th {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgb(var(--muted));
+    border-bottom: 1px dashed rgb(var(--border));
+    padding-bottom: 0.6rem;
+  }
+
+  .prose tbody tr {
+    transition: background 120ms ease;
+  }
+
+  .prose tbody tr:nth-child(even) {
+    background: rgb(var(--panel) / 0.55);
+  }
+
+  .prose tbody tr:hover {
+    background: rgb(var(--accent) / 0.06);
   }
 
   .prose figure {

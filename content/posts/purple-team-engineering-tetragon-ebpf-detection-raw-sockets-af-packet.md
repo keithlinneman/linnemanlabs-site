@@ -104,7 +104,6 @@ Which means Glimmer needs another iteration. How else can we get our traffic out
 
 Before moving on to the next Glimmer iteration, it's worth understanding what's actually happening when a kprobe fires. When userspace calls `write(fd, buf, len)` on a normal TCP socket (AF_INET, SOCK_STREAM), the kernel dispatches through a chain of functions before the bytes hit the wire. On my workstation:
 
-
 {{< imgmodal src="/img/security/syscall-write-tcp-sendmsg.png" alt="Diagram of Syscall Network Write Path" mode="shrink" caption="Path from userspace write to packet on the wire" >}}
 
 Each of those functions is a potential kprobe target. Hooking at `tcp_sendmsg` (highlighted) catches TCP traffic regardless of which userspace call initiated it - `write`, `send`, `sendto`, `sendmsg`, or a direct assembly syscall all converge on `tcp_sendmsg` for TCP sockets. That convergence is what makes kprobes more reliable than uprobes for catching network activity: attackers can avoid libc, but they can't avoid the kernel's dispatch.
@@ -113,12 +112,11 @@ But `tcp_sendmsg` only catches TCP. The kernel's dispatch logic for network send
 
 {{< imgmodal src="/img/security/linux-sock-sendmsg-dispatch.png" alt="Diagram of Linux sock_sendmsg Dispatch" mode="shrink" caption="Path from sock_sendmsg splitting on socket type and protocol" >}}
 
-
 Each highlighted function is a separate kprobe target. `tcp_sendmsg` catches TCP only. `udp_sendmsg` catches UDP only. `raw_sendmsg` catches AF_INET raw sockets. `packet_sendmsg` catches AF_PACKET sockets - an entirely different family that bypasses the normal IP path.
 
 Hooking at `sock_sendmsg` would catch everything in this diagram, but at a cost - you lose access to protocol-specific context (TCP sequence numbers, UDP lengths, etc.). Hooking at each leaf gives you that context but requires covering every branch.
 
-Missing even one branch creates a blind spot. For a detection policy focused on "normal" traffic, you might hook `tcp_sendmsg` and `udp_sendmsg` and feel covered. For a detection policy expected to catch sophisticated adversaries, you need `raw_sendmsg` and `packet_sendmsg` too. Glimmer is about to explore those blind spots.
+Most "normal" traffic will get captured by hooks on `tcp_sendmsg` and `udp_sendmsg`, but there are other paths including `raw_sendmsg` and `packet_sendmsg` too. Glimmer is about to explore those blind spots.
 
 The above diagrams are simplified, there are additional steps not shown (like VFS layer details, skb handling, qdisc processing on egress, etc) but the essential structure is correct.
 
@@ -167,7 +165,7 @@ Adding three more kprobes:
 
 - `raw_sendmsg` - labeled as `🪤 raw-send` below, catches AF_INET SOCK_RAW sends
 - `packet_sendmsg` - labeled as `🧪 pkt-send` below, catches AF_PACKET sends
-- `__dev_queue_xmit` - labeled as `🚚 dev-xmit` below, all kernel-managed egress paths discussed converge here
+- `__dev_queue_xmit` - labeled as `🚚 dev-qxmit` below, most kernel-managed egress paths discussed converge here
 
 Running the test binaries again. First, `raw-test-af-packet`:
 
@@ -175,7 +173,7 @@ Running the test binaries again. First, `raw-test-af-packet`:
 🚀 exec      bash -> <path>/raw-test-af-packet        🛑 CAP_SYS_ADMIN
 🧦 sys-sock  <path>/raw-test-af-packet  AF_PACKET  DGRAM  proto=8 🛑 CAP_SYS_ADMIN
 🧦 sys-sock  <path>/raw-test-af-packet  AF_NETLINK  RAW|CLOEXEC  default 🛑 CAP_SYS_ADMIN
-🚚 dev-xmit  <path>/raw-test-af-packet  10.90.90.154:60703 -> 10.90.95.53:53 udp  len=68 🛑 CAP_SYS_ADMIN
+🚚 dev-qxmit  <path>/raw-test-af-packet  10.90.90.154:60703 -> 10.90.95.53:53 udp  len=68 🛑 CAP_SYS_ADMIN
 🧪 pkt-send  <path>/raw-test-af-packet  AF_PACKET SOCK_DGRAM  bytes=54 🛑 CAP_SYS_ADMIN
 💥 exit      <path>/raw-test-af-packet  0             🛑 CAP_SYS_ADMIN
 ```
@@ -186,11 +184,11 @@ Next `raw-test-af-inet`:
 🚀 exec      bash -> <path>/raw-test-af-inet  🛑 CAP_SYS_ADMIN
 🧦 sys-sock  <path>/raw-test-af-inet  AF_INET  RAW  TCP 🛑 CAP_SYS_ADMIN
 🪤 raw-send  <path>/raw-test-af-inet  AF_INET proto=TCP  bytes=40 🛑 CAP_SYS_ADMIN
-🚚 dev-xmit  <path>/raw-test-af-inet  127.0.0.1:45000 -> 127.0.0.1:8080 tcp  len=54 🛑 CAP_SYS_ADMIN
+🚚 dev-qxmit <path>/raw-test-af-inet  127.0.0.1:45000 -> 127.0.0.1:8080 tcp  len=54 🛑 CAP_SYS_ADMIN
 💥 exit      <path>/raw-test-af-inet  0 🛑 CAP_SYS_ADMIN
 ```
 
-Both test binaries are now caught at send time. The `raw-send` event includes the socket context and bytes sent. The `packet-send` event includes the interface, protocol (ETH_P_IP), and packet bytes. The `dev-xmit` events capture the connection tuple and protocol information.
+Both test binaries are now caught at send time. The `raw-send` event includes the socket context and bytes sent. The `pkt-send` event includes the interface, protocol (ETH_P_IP), and packet bytes. The `dev-qxmit` events capture the connection tuple and protocol information.
 
 For `af_packet_test` specifically, the detection story is richer. The test binary has to do significant work before it can send:
 
@@ -205,6 +203,37 @@ For `af_packet_test` specifically, the detection story is richer. The test binar
 Each of those is a weak signal alone - normal software reads /proc/net occasionally, normal software calls getifaddrs. But a single process reading /proc/net/route AND /proc/net/arp AND opening an AF_PACKET socket within a few seconds is distinctively for raw packet crafting. This is where single-event detection gives way to combination detection, and it's the shape of everything that follows.
 
 Worth noting, this is only showing the transmit, not the receive. `AF_NETLINK` poses as many if not more challenges on the receive side as it does on the transmit side. This will be explored in-depth in a future post exploring integrating these channels for stable reliable communications in Glimmer.
+
+### One more bypass
+
+There is another parallel path to `__dev_queue_xmit` that bypasses `qdisc` and `tc` entirely. Setting the sockopt `PACKET_QDISC_BYPASS` on an `AF_PACKET` socket flips an internal check inside `packet_sendmsg` so that the packet exits via `__dev_direct_xmit` instead of going through `__dev_queue_xmit` and the qdisc/tc layer. 
+
+I added functionality to glimmer and `af_packet_test --bypass` to test this and see what shows up in our current Tetragon detection. Running af_packet_test again with --bypass enabled:
+
+```
+🚀 exec      sudo -> <path>/raw-test-af-packet --bypass 🛑 CAP_SYS_ADMIN
+🧦 sys-sock  <path>/raw-test-af-packet  AF_PACKET  DGRAM  proto=8 🛑 CAP_SYS_ADMIN
+🧦 sys-sock  <path>/raw-test-af-packet  AF_NETLINK  RAW|CLOEXEC  default 🛑 CAP_SYS_ADMIN
+🧪 pkt-send  <path>/raw-test-af-packet  AF_PACKET SOCK_DGRAM  bytes=54 🛑 CAP_SYS_ADMIN
+💥 exit      <path>/raw-test-af-packet  0             🛑 CAP_SYS_ADMIN
+```
+
+We still capture the `pkt-send` line because of our hook on `packet_sendmsg`, however we no longer capture the `dev-qxmit` line. If the only egress hook had been __dev_queue_xmit, this would have been a complete miss. The per-family hook upstream is what kept it visible.
+
+This introduces two more hooks that are high value:
+
+- `__dev_direct_xmit` - labeled as `🛻 dev-xmit` below, catches the AF_PACKET QDISC_BYPASS path
+- `sys_setsockopt`  - labeled as `🪛 sock-opt` below, catches socket options being set that are unusual/suspicious
+
+```
+🚀 exec      sudo -> <path>/raw-test-af-packet --bypass 🛑 CAP_SYS_ADMIN
+🧦 sys-sock  <path>/raw-test-af-packet  AF_PACKET  DGRAM  proto=8 🛑 CAP_SYS_ADMIN
+🧦 sys-sock  <path>/raw-test-af-packet  AF_NETLINK  RAW|CLOEXEC  default 🛑 CAP_SYS_ADMIN
+🪛 sock-opt  <path>/raw-test-af-packet  fd=3  SOL_PACKET/PACKET_QDISC_BYPASS 🛑 CAP_SYS_ADMIN
+🛻 dev-xmit  <path>/raw-test-af-packet  10.90.90.154:16739 -> 10.90.95.53:53 udp  len=68 🛑 CAP_SYS_ADMIN
+🧪 pkt-send  <path>/raw-test-af-packet  AF_PACKET SOCK_DGRAM  bytes=54 🛑 CAP_SYS_ADMIN
+💥 exit      <path>/raw-test-af-packet  0             🛑 CAP_SYS_ADMIN
+```
 
 ### The kernel was doing a lot for us
 
@@ -226,23 +255,36 @@ There's a useful detection insight hiding here. Legitimate software that uses AF
 
 Add to that the syscall and file-access signals on the endpoint (reading /proc/net/route, opening AF_NETLINK for interface queries, opening AF_PACKET socket), and the combination is very challenging to avoid unless you're writing high-quality custom tooling.
 
-
 ### Combination detection
 
 The af_packet_test binary produces a specific signature across multiple Tetragon events. If we capture reads to `/proc/net/route` and `/proc/net/arp`:
 
 ```
-📖 file-read  <path>/raw-test-af-packet  /proc/1180630/net/route 🛑 CAP_SYS_ADMIN
+📖 fs-read   <path>/raw-test-af-packet  /proc/1180630/net/route 🛑 CAP_SYS_ADMIN
 🧦 sys-sock  <path>/raw-test-af-packet  AF_NETLINK  RAW|CLOEXEC  default 🛑 CAP_SYS_ADMIN
-📖 file-read  <path>/raw-test-af-packet  /proc/1180630/net/arp 🛑 CAP_SYS_ADMIN
+📖 fs-read   <path>/raw-test-af-packet  /proc/1180630/net/arp 🛑 CAP_SYS_ADMIN
 🧦 sys-sock  <path>/raw-test-af-packet  AF_PACKET  DGRAM  proto=8 🛑 CAP_SYS_ADMIN
-🚚 dev-xmit  <path>/raw-test-af-packet  10.90.90.154:39227 -> 10.90.95.53:53 udp  len=68 🛑 CAP_SYS_ADMIN
+🚚 dev-qxmit <path>/raw-test-af-packet  10.90.90.154:39227 -> 10.90.95.53:53 udp  len=68 🛑 CAP_SYS_ADMIN
 🧪 pkt-send  <path>/raw-test-af-packet  AF_PACKET SOCK_DGRAM  bytes=54 🛑 CAP_SYS_ADMIN
 ```
 
 Individual events vary in quality of signal. /proc/net/route is read by normal software occasionally. AF_NETLINK sockets are common (systemd uses them extensively). AF_PACKET sockets exist for legitimate reasons (tcpdump, wireshark, DHCP clients, some VPN software).
 
 But the combination of a single process, within a few seconds, reading /proc/net/route, opening an AF_NETLINK socket, opening an AF_PACKET socket, and calling packet_sendmsg - is extremely rare in normal operation. Tcpdump and wireshark match this pattern but their binaries are known and whitelistable. A previously-unknown binary matching this combination is essentially always worth investigating.
+
+### Alerts
+
+I have started adding tags to individual events I want to alert on immediately. While many calls require correlation across multiple conditions before alerting, some are immediately suspicious/anomalous. I have added an alert on calls to `__dev_direct_xmit` with sockets setting `PACKET_QDISC_BYPASS`. The tags and the alert message are all added to the Tetragon json log. I produce lines like this in the tetra-pretty script:
+
+```
+🚨 ALERT     qdisc-bypass-transmit  AF_PACKET qdisc bypass direct network transmission
+🛻 dev-xmit  <path>/raw-test-af-packet  10.90.90.154:16739 -> 10.90.95.53:53 udp  len=68 🛑 CAP_SYS_ADMIN
+```
+
+I am tagging alerts in terms of severity and confidence. This is a high-confidence medium-severity alert on my workstation - there is no legitimate software calling `__dev_direct_xmit`.
+
+I stream these logs to both Loki and Wazuh and I can write rules to alert or take action on them immediately. In the future I will be exploring writing a local security agent that can watch the event stream in real-time and take some actions on its own - kill processes, quarantine binaries, collect forensics, react faster. The external systems can take much more meaningful action (quarantine the node, take an image of the volume, research other anomalies across my environment, etc.) but they are largely designed to preserve the integrity and functioning of the environment as a whole. The individual node (or my workstation in this case) needs capabilities of its own, it can react faster, and it can keep working even if those external systems are unreachable.
+
 
 ### Every egress path in one picture
 
@@ -252,12 +294,13 @@ Pulling all the egress paths into one view shows which hooks cover what, and whe
 
 Pulling it together, here's the coverage matrix for the techniques explored in this post:
 
-| Technique | Dispatched via | Uprobes | Stock kprobes | Extended kprobes | Needed to catch |
+| Technique | Dispatched via | Uprobes | Stock kprobes | Extended kprobes | Needed for full picture |
 |---|---|---|---|---|---|
-| libc TCP connect/send | tcp_sendmsg | ✓ | ✓ | ✓ | - |
-| Asm syscall UDP | udp_sendmsg | ✗ | ✓ | ✓ | - |
-| AF_INET SOCK_RAW (IP_HDRINCL) | raw_sendmsg | ✗ | ✗ | ✓ | - |
-| AF_PACKET SOCK_DGRAM/RAW | packet_sendmsg | ✗ | ✗ | ✓ | - |
+| libc TCP connect/send | tcp_sendmsg -> __dev_queue_xmit | ✓ | ✓ | ✓ | - |
+| Asm syscall UDP | udp_sendmsg -> __dev_queue_xmit | ✗ | ✓ | ✓ | - |
+| AF_INET SOCK_RAW (IP_HDRINCL) | raw_sendmsg -> __dev_queue_xmit | ✗ | ✗ | ✓ | setsockopt(IP_HDRINCL) |
+| AF_PACKET SOCK_DGRAM/RAW | packet_sendmsg -> __dev_queue_xmit | ✗ | ✗ | ✓ | - |
+| AF_PACKET + QDISC_BYPASS | packet_sendmsg -> __dev_direct_xmit | ✗ | ✗ | ✓ | __dev_direct_xmit + setsockopt(PACKET_QDISC_BYPASS) |
 | AF_PACKET PACKET_MMAP TX_RING | (not caught) | ✗ | ✗ | ✗ | TC |
 
 ## Caveats and What's Still Missing
@@ -362,4 +405,4 @@ Tetragon caught some things. Extending it caught more things. Iterating against 
 
 The matrix of techniques is wider than I can keep track of by hand, and the iteration loop is slow when I'm manually running each test binary and checking output. Outside of this series, I will be building a tool that manages the matrix, runs the tests, and verifies the detection coverage end-to-end.
 
-*This is part 3 of an ongoing series. Part 4 will cover reverse engineering with Ghidra, deeper anti-debug, sandbox evasion and process behavioral analysis.*
+*This is part 3 of an ongoing series. Part 4 will cover D-Bus as an information collection surface - what a process can learn about the system, the user, and other applications over the session and system buses, and what that looks like through Tetragon.*
