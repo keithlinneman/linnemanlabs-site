@@ -44,7 +44,6 @@ description: "Keith Linneman - infrastructure and security engineer with 25+ yea
   /etc/localtime: symbolic link to ../usr/share/zoneinfo/America/Los_Angeles    │
                                                                                 │
   $ id                                                                          │
-  uid=1001(keith) gid=1005(operators) groups=1006(research),1007(purple-team)   │
   uid=1001(k) gid=1005(ops) groups=1006(research),1007(blue-team),1008(red-team)│
                                                                                 │
   $ history | tail -21 | head -20                                               │
@@ -148,7 +147,9 @@ I've been doing this since the mid-90s - over 25 years of building, breaking, an
 
 I run LinnemanLabs as a working lab for security research and infrastructure engineering - documenting what I build and learn, and open-sourcing what I can.
 
-My roots are in offensive security, and that's where the work is heading again. The current focus is a purple-team loop in the lab - building offensive tooling, exercising it against my own systems, and writing the detection rules to catch it. I'm researching how production infrastructure (especially observability pipelines) can be subverted from within, and I'm building systems where security properties are cryptographically provable rather than assumed: a self-hosted Sigstore stack with hardware-rooted trust, dual-signing through keyless OIDC and KMS, and deploy-time verification. Detection-coverage tooling that verifies "did we catch it?" as a continuous property across every SIEM and log backend, and deception environments realistic enough that malware behaves naturally rather than recognizing the lab are two areas I plan to push into next.
+My roots are in offensive security, and that's where the work is heading again. The current focus is a purple-team loop in the lab - building offensive tooling, exercising it against my own systems, and writing the detection rules to catch it. I'm researching how production infrastructure (especially observability pipelines) can be subverted from within, and I'm building systems where security properties are cryptographically provable rather than assumed: a self-hosted Sigstore stack with hardware-rooted trust, dual-signing through keyless OIDC and KMS, and deploy-time verification. 
+
+Detection-coverage tooling that verifies "did we catch it?" as a continuous property across every SIEM and log backend, and deception environments realistic enough that malware behaves naturally rather than recognizing the lab are two areas I plan to push into next.
 
 ---
 
