@@ -2,7 +2,7 @@
 date: '2026-05-13T00:00:00Z'
 title: "Hello, my name is NOT unconfined: Two Hops and a Shell on Ubuntu"
 summary: "Ubuntu's userns restriction patch checks a pointer, not a property. After one profile hop, the label is still functionally unconfined but it's not the sentinel the patch is looking for. Two aa-exec calls, chained into host root via dirtyfrag. Exploring SiCk's two-hop AppArmor bypass."
-tags: ["bypass-pwn", "Dirty Frag", "CVE-2026-43284", "CVE-2026-43500", "AppArmor", "Purple Team", "Kernel Security", "Exploit", "User Namespaces", "Ubuntu"]
+tags: ["bypass-pwn", "AppArmor", "Ubuntu", "Dirty Frag", "CVE-2026-43284", "CVE-2026-43500", "Purple Team", "Kernel Security", "Exploit", "User Namespaces"]
 categories: ["Security Research"]
 ---
 
