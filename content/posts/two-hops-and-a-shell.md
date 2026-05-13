@@ -15,6 +15,11 @@ Ubuntu's AppArmor restrictions on unprivileged user namespaces are controlled by
 
 The second check identifies you as unconfined by comparing your label against a single kernel pointer - the global-unconfined sentinel. Hop into any named profile and your label is a different pointer. You're still functionally unconfined, but your name tag says otherwise, and that's all the kernel checks.
 
+```bash
+k@devbox:~$ aa-exec -p crun -- aa-exec -p crun -- cat /proc/self/attr/current
+crun (complain)
+```
+
 ## Background
 
 I landed on [SiCk's bypass-pwn post](https://afflicted.sh/blog/posts/bypass-pwn.html) by chance a few days ago, which demonstrates a two-hop profile transition that defeats Ubuntu's AppArmor-based restrictions on unprivileged user namespaces from an unprivileged user, with both sysctls enabled, on stock Ubuntu 26.04 LTS. The write-up is thorough and the analysis is clean. The PoC is a compiled C binary using `change_onexec()`.
