@@ -302,29 +302,17 @@ This will have added significance in certain environments.
 
 The confirmed behavior exists on both KWin and GNOME Shell/Mutter in my testing. The shared element is the newer Wayland accessibility `org.freedesktop.a11y.KeyboardMonitor` path used for Orca keyboard monitoring.
 
-This affects KWin v6.3.90+ / Plasma 6.4+ and GNOME/Mutter 48.0+ unless downstream distribution patches change the authorization behavior.
-
-I personally confirmed this on:
-- Fedora 44 KDE Plasma / KWin 6.6.4-2
-- Ubuntu 26.04 LTS GNOME / Mutter 50.1-0ubuntu2
-
-I have not tested every compositor or every GNOME/KDE release, distribution build, or downstream patch set.
-
----
-
-Likely affected, based on upstream/package versions at the time of writing:
-
 KDE/KWin:
-- Fedora KDE Plasma systems shipping KWin 6.4+
-- openSUSE Tumbleweed / Leap KDE Plasma systems shipping KWin 6.4+
-- Manjaro KDE systems shipping KWin 6.4+
-- Arch Linux systems using the packaged KDE Plasma / KWin stack at KWin 6.4+
-- KDE neon systems shipping Plasma/KWin 6.4+
-- SteamOS 3.8 Beta / Preview Desktop Mode, based on Valve’s release notes showing Plasma 6.4.3 and Wayland-by-default
+- KWin v6.3.90+ / Plasma 6.4+ when `org.freedesktop.a11y.KeyboardMonitor` is exposed and authorized through `org.gnome.Orca.KeyboardMonitor`
+- Commonly shipped by current KDE Plasma environments in Fedora KDE, Arch Linux KDE, openSUSE Tumbleweed KDE, KDE neon, Manjaro KDE, and SteamOS 3.8 Beta / Preview Desktop Mode
 
 GNOME/Mutter:
-- GNOME/Mutter 48.0+
+- GNOME/Mutter 48.0+ when `org.freedesktop.a11y.KeyboardMonitor` is exposed and authorized through `org.gnome.Orca.KeyboardMonitor`
+- Commonly shipped by current GNOME environments in Fedora Workstation, Ubuntu GNOME, Debian 13/Trixie GNOME, Arch Linux GNOME, and openSUSE Tumbleweed GNOME
 
+These are version-based likely-affected entries, not exhaustive testing. I personally confirmed this on:
+- Fedora 44 KDE Plasma / KWin 6.6.4-2
+- Ubuntu 26.04 LTS GNOME / Mutter 50.1-0ubuntu2
 
 ## Fix Direction
 
