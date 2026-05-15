@@ -1,0 +1,43 @@
+flowchart TD
+
+    KB[/"⌨️ Keyboard (USB HID)"/]
+
+    IRQ["(Kernel)<br/>IRQ -> USB HID Driver"]
+    EVDEV["(Kernel)<br/> Input Subsystem (/dev/input/eventN)"]
+
+    TRADITIONAL["⚠️ Traditional Keyloggers<br/>(requires root<br/>or<br/>input group)"]
+    EVDEV -. "common tap point" .-> TRADITIONAL
+    LIBINPUT["(Userspace)<br/>libinput"]
+    WYLNDC["Wayland Compositor"]
+    
+    WYLNDC --> FILTER_CHAIN
+
+    subgraph FILTER_CHAIN["Compositor Input Processing<br />KWin / Mutter / etc"]
+        direction TB
+        KBM["🔴 KeyboardMonitor<br/>(D-Bus tap)"]
+        GLOBAL["Global Shortcuts / Grabs<br/>"]
+        XKB["XKB Processing<br/>(scancode → keysym → character)"]
+        ROUTE["Input Routing<br/>(determine focused client)"]
+        KBM --> GLOBAL --> XKB --> ROUTE
+    end
+
+    ATTACKER["🔴 Attacker Process<br/>(unprivileged, no group, no CAP)<br />(claiming org.gnome.Orca.KeyboardMonitor)"]
+    DBUS[("Session D-Bus")]
+    APP["Focused Application<br/>(receives wl_keyboard events)"]
+    OTHER["Unfocused Applications<br/>(receive nothing)"]
+
+    KB --> IRQ
+    IRQ --> EVDEV
+    EVDEV --> LIBINPUT
+    LIBINPUT --> WYLNDC
+    KBM -. "KeyEvent signal<br/>(raw scancodes)" .-> DBUS
+    DBUS -. "every keystroke" .-> ATTACKER
+    ROUTE -- "wl_keyboard protocol" --> APP
+    ROUTE -. "❌ no events" .-> OTHER
+
+    style KBM fill:#dc2626,color:#fff,stroke:#991b1b
+    style ATTACKER fill:#dc2626,color:#fff,stroke:#991b1b
+    style OTHER fill:#6b7280,color:#fff,stroke:#4b5563
+    style APP fill:#16a34a,color:#fff,stroke:#166534
+    style WYLNDC fill:#2563eb,color:#fff,stroke:#1e40af
+    style DBUS fill:#f59e0b,color:#000,stroke:#d97706
