@@ -347,6 +347,76 @@ I am not covering that deeply here. It is a related detection surface for AT-SPI
 
 I am exploring D-Bus-aware monitoring but I am early in that process still. The useful signal here is not “a process wrote to a Unix socket,” but the D-Bus operation and metadata: `RequestName("org.gnome.Orca.KeyboardMonitor")`, `WatchKeyboard`, or `GrabKeyboard`. I am also exploring eBPF/uprobe-based approaches with Tetragon. That is out of scope for this post.
 
+## Prevention
+
+### D-Bus policy
+
+If you do not use a screen reader, the cleanest local mitigation I found is to block the D-Bus name that the compositor currently treats as proof that the caller is Orca. In `/etc/dbus-1/session.d/block-orca-impersonation.conf`:
+
+```xml
+<busconfig>
+  <policy context="default">
+    <deny own="org.gnome.Orca.KeyboardMonitor"/>
+  </policy>
+</busconfig>
+```
+
+After installing that policy, Glimmer can no longer claim the well-known name required to pass the compositor authorization check:
+
+```bash
+k@devbox:~/glimmer$ ./dump_keypress 
+Error: MethodError(OwnedErrorName("org.freedesktop.DBus.Error.AccessDenied"), Some("Request to own name refused by policy"), Msg { type: Error, serial: 4294967295, sender: UniqueName("org.freedesktop.DBus"), reply-serial: 4, body: Str, fds: [] })
+```
+
+That blocks the impersonation path directly - an arbitrary same-user D-Bus connection can no longer claim the name the compositor is checking.
+
+For my own workstation, I go one layer further. I do not use a screen reader, so my local hardening policy intentionally disables the `KeyboardMonitor` interface path entirely. This is not an accessibility-compatible mitigation. It is a workstation hardening choice for systems where global keyboard monitoring by assistive technology is not required.
+
+```xml
+<busconfig>
+  <policy context="default">
+    <deny send_destination="org.freedesktop.a11y.Manager"
+          send_path="/org/freedesktop/a11y/Manager"
+          send_interface="org.freedesktop.a11y.KeyboardMonitor"/>
+  </policy>
+</busconfig>
+```
+
+With the interface-level deny in place, the call fails before any keyboard events are delivered:
+
+```bash
+k@devbox:~/glimmer$ ./dump_keypress 
+Error: MethodError(OwnedErrorName("org.freedesktop.DBus.Error.AccessDenied"), Some("Sender is not authorized to send message"), Msg { type: Error, serial: 4294967295, sender: UniqueName("org.freedesktop.DBus"), reply-serial: 5, body: Str, fds: [] })
+```
+
+I also tested addressing the service by unique name rather than by the `org.freedesktop.a11y.Manager` well-known name. The policy still denied the call by properly mapping the unique name to the well-known name.
+
+The full combined config, placed into `/etc/dbus-1/session.d/block-orca-impersonation.conf`:
+
+```xml
+<busconfig>
+  <policy context="default">
+    <deny own="org.gnome.Orca.KeyboardMonitor"/>
+  </policy>
+
+  <policy context="default">
+    <deny send_destination="org.freedesktop.a11y.Manager"
+          send_path="/org/freedesktop/a11y/Manager"
+          send_interface="org.freedesktop.a11y.KeyboardMonitor"/>
+  </policy>
+</busconfig>
+```
+
+In my testing these configs do not destabilize the desktop and take effect immediately without a service restart or logging out of the current session. It causes unauthorized callers to receive D-Bus AccessDenied errors. The expected compatibility impact is loss of functionality for screen readers or components that depend on org.freedesktop.a11y.KeyboardMonitor.
+
+As always, test carefully in your environment before you deploy.
+
+### Claim the name
+
+D-Bus well-known names are unique on a given bus. Another possible mitigation is to run a small user service that claims `org.gnome.Orca.KeyboardMonitor` early and holds it, preventing another same-user process from claiming the name.
+
+I do not consider this a serious protection. It is race-prone, fragile, and conflicts with the stronger D-Bus policy above. I am including it only as an observation - if ownership of a D-Bus name is being treated as identity, pre-claiming that name changes the outcome.
+
 ## Reproducing
 
 Tested on Fedora 44 Plasma with KDE KWin 6.6.4-2.fc44 and Ubuntu 26.04 LTS with GNOME Mutter 50.1-0ubuntu2. Default install configuration, no changes to a11y or other settings required.
