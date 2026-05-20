@@ -24,6 +24,8 @@ crun (complain)
 
 I landed on [SiCk's bypass-pwn post](https://afflicted.sh/blog/posts/bypass-pwn.html) by chance a few days ago, which demonstrates a two-hop profile transition that defeats Ubuntu's AppArmor-based restrictions on unprivileged user namespaces from an unprivileged user, with both sysctls enabled, on stock Ubuntu 26.04 LTS. The write-up is thorough and the analysis is clean. The PoC is a compiled C binary using `change_onexec()`.
 
+**Update**: There is existing earlier high-quality research into this from [DEVCORE](https://devco.re/blog/2025/06/26/the-journey-of-bypassing-ubuntus-unprivileged-namespace-restriction-en/) I discovered after writing this post.
+
 The `Dirty Frag` vulnerability was disclosed this week. While [porting the exploit to arm64](/posts/porting-dirtyfrag-arm64) to test my servers I found only the xfrm/ESP CVE-2026-43284 path was viable in my test environment. That path requires `CAP_NET_ADMIN`, and the unprivileged route to that capability is a user+network namespace. I wanted to see if `aa-exec`, which was present by default on every standard Ubuntu cloud and installer image I tested, works to bypass the current Ubuntu restrictions.
 
 It does.
@@ -148,7 +150,7 @@ The label transitions from the tests above show exactly where the patch fires an
 
 ## Why this works
 
-SiCk's post has a complete kernel-side analysis and the label transitions visible in the demo output. He wrote an elegant self re-executing binary that uses `change_onexec` to move between profiles demonstrating exactly what is going on without relying on system tools.
+SiCk's post and the separate DEVCORE writeup have complete kernel-side analysis and the label transitions visible in the demo output. SiCk wrote an elegant self re-executing binary that uses `change_onexec` to move between profiles demonstrating exactly what is going on without relying on system tools.
 
 In this post I am using the built-in `aa-exec` for simplicity which uses `change_profile`, both go through the same kernel check.
 
@@ -175,3 +177,5 @@ For the broader class of `ns_capable()` kernel bugs that need capabilities insid
 
 - **SiCk** ([afflicted.sh](https://afflicted.sh/)) - bypass-pwn: the two-hop analysis, the kernel code walkthrough, the PoC, putting out top-tier research
 - **V4bel** ([github.com/V4bel](https://github.com/V4bel)) - DirtyFrag: the research and discovery of CVE-2026-43284 and the PoC referenced throughout this post
+- **DEVCORE** ([dev.core](https://devco.re/blog/2025/06/26/the-journey-of-bypassing-ubuntus-unprivileged-namespace-restriction-en/)) - some of the earliest research
+- **roddux** ([x.com/roddux](https://x.com/roddux)) - first discovery of the issue
