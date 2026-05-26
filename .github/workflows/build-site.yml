@@ -20,16 +20,16 @@ jobs:
           echo "${PWD}/tools" >> $GITHUB_PATH
 
           # Install hugo pinned version
-          HUGO_VERSION="0.155.1"
-          HUGO_SHA256="6056ac054f7a159c8c95c8d5cf4f5ee255f27c3aada9b302bc3197d94305d8a7"
+          HUGO_VERSION="0.160.1"
+          HUGO_SHA256="2f72fefa6ce944907f74c36c35abcaa306cdd22e64647a9ee5b328fc0bfb67be"
           curl -sSL "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_linux-amd64.tar.gz" -o /tmp/hugo.tar.gz
           echo "${HUGO_SHA256} /tmp/hugo.tar.gz" | sha256sum -c -
           tar -zxf /tmp/hugo.tar.gz -C tools hugo
           chmod +x tools/hugo
 
           # Install tailwindcss pinned version
-          TAILWIND_VERSION="4.1.18"
-          TAILWIND_SHA256="737becf8d4ad1115ea98df69fa94026d402ca8feb91306a035b5b004167da8dd"
+          TAILWIND_VERSION="4.3.0"
+          TAILWIND_SHA256="73f0e5459054e5cfaa8ab6f3b940f3fbe0f13cc7fd83bc24e7c655033c203400"
           curl -sSL "https://github.com/tailwindlabs/tailwindcss/releases/download/v${TAILWIND_VERSION}/tailwindcss-linux-x64" -o tools/tailwindcss
           echo "${TAILWIND_SHA256} tools/tailwindcss" | sha256sum -c -
           chmod +x tools/tailwindcss
@@ -38,14 +38,14 @@ jobs:
           sudo apt-get -y install tidy
 
           # Install cosign pinned version
-          curl -sSL https://github.com/sigstore/cosign/releases/download/v3.0.4/cosign-linux-amd64 -o /usr/local/bin/cosign
-          echo "10dab2fd2170b5aa0d5c0673a9a2793304960220b314f6a873bf39c2f08287aa /usr/local/bin/cosign" | sha256sum -c -
+          curl -sSL https://github.com/sigstore/cosign/releases/download/v3.0.6/cosign-linux-amd64 -o /usr/local/bin/cosign
+          echo "c956e5dfcac53d52bcf058360d579472f0c1d2d9b69f55209e256fe7783f4c74 /usr/local/bin/cosign" | sha256sum -c -
           chmod +x /usr/local/bin/cosign
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::682033464915:role/app-linnemanlabs-web-content
+          role-to-assume: arn:aws:iam::148142827637:role/app-linnemanlabs-web-content
           aws-region: us-east-2
 
       - name: Build and release site bundle
