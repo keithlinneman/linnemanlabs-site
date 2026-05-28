@@ -12,7 +12,7 @@ source "${REPO_ROOT}/release.conf"
 echo "==> Starting generate-provenance-manifest"
 
 # output file
-PROVENANCE_FILE="${REPO_ROOT}/${CONTENT_DIR}/provenance.json"
+PROVENANCE_FILE="${REPO_ROOT}/${CONTENT_DIR}/release.json"
 
 # verify content directory exists
 [[ ! -d "${REPO_ROOT}/${CONTENT_DIR}/" ]] && { echo "error: missing ${CONTENT_DIR}/ directory - build the site first" >&2; exit 1; }
