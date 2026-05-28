@@ -74,7 +74,15 @@ fi
 
 # verify the signature by checking the keyless bundle with cosign
 echo "==> Verifying keyless bundle signature with cosign"
-cosign verify-blob --bundle "${BUNDLE_SIG_FILE_KEYLESS}" --trusted-root "${COSIGN_TRUSTED_ROOT}" "${BUNDLE_FILE}" || { echo "error: failed to verify keyless bundle signature with cosign" >&2; exit 1; }
+cosign verify-blob \
+  --bundle "${BUNDLE_SIG_FILE_KEYLESS}" \
+  --trusted-root "${COSIGN_TRUSTED_ROOT}" \
+  --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+  --certificate-identity-regexp="^https://github\.com/keithlinneman/linnemanlabs-site/\.github/workflows/build\.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$" \
+  --certificate-github-workflow-trigger="push" \
+  --certificate-github-workflow-repository="keithlinneman/linnemanlabs-site" \
+  --certificate-github-workflow-name="Build and release site bundle" \
+  "${BUNDLE_FILE}" || { echo "error: failed to verify keyless bundle signature with cosign" >&2; exit 1; }
 
 # copy the kms bundle to the old name also for temporary backwards compatibility while transitioning
 cp "${BUNDLE_SIG_FILE_KMS}" "${BUNDLE_SIG_FILE_OLD}"
