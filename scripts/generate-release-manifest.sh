@@ -17,10 +17,18 @@ PROVENANCE_FILE="${REPO_ROOT}/${CONTENT_DIR}/provenance.json"
 # verify content directory exists
 [[ ! -d "${REPO_ROOT}/${CONTENT_DIR}/" ]] && { echo "error: missing ${CONTENT_DIR}/ directory - build the site first" >&2; exit 1; }
 
+# remove generated metadata from previous runs before scanning/hashing content
+rm -f "${PROVENANCE_FILE}"
+
 # build metadata
 build_time="$( date -u +"%Y-%m-%dT%H:%M:%SZ" )"
 build_host="$( hostname -f 2>/dev/null || hostname )"
 build_user="${USER:-unknown}"
+build_identity="$( aws sts get-caller-identity --query Arn --output text 2>/dev/null || echo "unknown" )"
+build_actor="${GITHUB_ACTOR:-unknown}"
+build_system="github-actions"
+build_run_id="${GITHUB_RUN_ID:-unknown}"
+build_run_url="${GITHUB_RUN_ID:+https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}}"
 
 # git information
 git_commit="$( git -C "${REPO_ROOT}" rev-parse HEAD )"
@@ -69,13 +77,18 @@ fi
 
 # git (source control)
 if command -v git &>/dev/null; then
+  git_tool_path="$( command -v git )"
+  git_tool_checksum="$( sha256sum "${git_tool_path}" 2>/dev/null | awk '{ print $1 }' || echo "unknown" )"
   git_tool_version="$( git --version | awk '{ print $NF }' )"
 else
   git_tool_version="unknown"
+  git_tool_checksum="unknown"
 fi
 
 # bash version
 bash_version="${BASH_VERSION:-unknown}"
+bash_path="$( command -v bash )"
+bash_checksum="$( sha256sum "${bash_path}" 2>/dev/null | awk '{ print $1 }' || echo "unknown" )"
 
 # create temporary array to store file info
 files_json="[]"
@@ -98,9 +111,6 @@ echo "==> Scanning files in ${CONTENT_DIR}/"
 # loop through files in public/
 while IFS= read -r -d '' file; do
   rel_path="${file#"${REPO_ROOT}"/"${CONTENT_DIR}/"}"
-  
-  # skip manifest.json, release.json if they exist from previous runs
-  [[ "${rel_path}" == "manifest.json" || "${rel_path}" == "release.json" ]] && continue
   
   # file metadata
   file_size="$( stat -c%s "${file}" 2>/dev/null || stat -f%z "${file}" 2>/dev/null || echo "0" )"
@@ -203,9 +213,16 @@ jq -n \
   --arg tidy_version "${tidy_version}" \
   --arg tidy_checksum "${tidy_checksum}" \
   --arg git_tool_version "${git_tool_version}" \
+  --arg git_tool_checksum "${git_tool_checksum}" \
   --arg bash_version "${bash_version}" \
+  --arg bash_checksum "${bash_checksum}" \
   --arg build_host "${build_host}" \
   --arg build_user "${build_user}" \
+  --arg build_identity "${build_identity}" \
+  --arg build_actor "${build_actor}" \
+  --arg build_system "${build_system}" \
+  --arg build_run_id "${build_run_id}" \
+  --arg build_run_url "${build_run_url}" \
   --argjson total_files "${total_files}" \
   --argjson total_size "${total_size}" \
   --argjson html_files "${html_files}" \
@@ -219,7 +236,7 @@ jq -n \
   --argjson other_files "${other_files}" \
   --argjson files "${files_json}" \
   '{
-    "schema": "com.linnemanlabs.manifest.site.content.bundle.v1",
+    "schema": "com.linnemanlabs.release.site.content.bundle.v1",
     "type": "content-bundle",
     "version": $version,
     "content_id": $content_id,
@@ -236,9 +253,14 @@ jq -n \
     },
 
     "build": {
+      "system": $build_system,
+      "actor": $build_actor,
+      "builder_identity": $build_identity,
       "host": $build_host,
       "user": $build_user,
-      "timestamp": $created_at
+      "timestamp": $created_at,
+      "run_id": $build_run_id,
+      "run_url": $build_run_url
     },
 
     "summary": {
@@ -273,10 +295,12 @@ jq -n \
         "sha256": $tidy_checksum
       },
       "git": {
-        "version": $git_tool_version
+        "version": $git_tool_version,
+	      "sha256": $git_tool_checksum
       },
       "bash": {
-        "version": $bash_version
+        "version": $bash_version,
+      	"sha256": $bash_checksum
       }
     }
   }' >  \
@@ -289,5 +313,9 @@ if ! jq empty "${PROVENANCE_FILE}" 2>/dev/null; then
 fi
 
 release_size="$( stat -c%s "${PROVENANCE_FILE}" 2>/dev/null )"
-echo "==> Provenance manifest generated: ${PROVENANCE_FILE} (${release_size} bytes)"
+echo "==> Release manifest generated: ${PROVENANCE_FILE} (${release_size} bytes)"
+
+echo "==> (TEMP) Copying manifest to old name for backwards compatibility during transition"
+cp "${PROVENANCE_FILE}" "provenance.json"
+
 echo "==> generate-provenance-manifest done"
