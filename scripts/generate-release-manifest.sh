@@ -316,6 +316,6 @@ release_size="$( stat -c%s "${PROVENANCE_FILE}" 2>/dev/null )"
 echo "==> Release manifest generated: ${PROVENANCE_FILE} (${release_size} bytes)"
 
 echo "==> (TEMP) Copying manifest to old name for backwards compatibility during transition"
-cp "${PROVENANCE_FILE}" "provenance.json"
+cp "${PROVENANCE_FILE}" ${REPO_ROOT}/${CONTENT_DIR}/provenance.json
 
 echo "==> generate-provenance-manifest done"
