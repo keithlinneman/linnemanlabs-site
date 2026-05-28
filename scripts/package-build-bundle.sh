@@ -81,7 +81,7 @@ cosign verify-blob \
   --certificate-identity-regexp="^https://github\.com/keithlinneman/linnemanlabs-site/\.github/workflows/build\.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$" \
   --certificate-github-workflow-trigger="push" \
   --certificate-github-workflow-repository="keithlinneman/linnemanlabs-site" \
-  --certificate-github-workflow-name="Build and release site bundle" \
+  --certificate-github-workflow-name="Build Site" \
   "${BUNDLE_FILE}" || { echo "error: failed to verify keyless bundle signature with cosign" >&2; exit 1; }
 
 # copy the kms bundle to the old name also for temporary backwards compatibility while transitioning
