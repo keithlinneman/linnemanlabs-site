@@ -158,10 +158,27 @@ function bindData(container, data) {
     if (falseClass) el.classList.toggle(falseClass, !value);
   });
 
-  // data-bind-list: render arrays or object key:value pairs as badges
+  // data-bind-list: render arrays or object key:value pairs as badges.
+  const CHIP_COLOR_CLASSES = {
+    good:   'text-[rgb(var(--good))]',
+    bad:    'text-[rgb(var(--bad))]',
+    warn:   'text-[rgb(var(--warn))]',
+    accent: 'text-[rgb(var(--accent))]',
+  };
   container.querySelectorAll('[data-bind-list]').forEach(el => {
     const value = resolve(data, el.dataset.bindList);
     if (!value) return;
+
+    const fixedColor = el.dataset.bindListColor;
+    const allow = el.dataset.bindListAllow ? (resolve(data, el.dataset.bindListAllow) || []) : null;
+    const deny  = el.dataset.bindListDeny  ? (resolve(data, el.dataset.bindListDeny)  || []) : null;
+    const colorFor = name => {
+      if (fixedColor) return CHIP_COLOR_CLASSES[fixedColor] || CHIP_COLOR_CLASSES.accent;
+      if (deny  && deny.includes(name))  return CHIP_COLOR_CLASSES.bad;
+      if (allow && allow.includes(name)) return CHIP_COLOR_CLASSES.good;
+      if (allow || deny)                 return CHIP_COLOR_CLASSES.warn;
+      return CHIP_COLOR_CLASSES.accent;
+    };
 
     el.replaceChildren();
 
@@ -170,9 +187,10 @@ function bindData(container, data) {
         el.append(h('span', { class: 'text-xs text-[rgb(var(--muted))]', text: 'None' }));
       } else {
         value.forEach(item => {
+          const name = String(item);
           el.append(
             h('span', { class: 'text-xs px-2 py-1 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]' },
-              h('span', { class: 'text-[rgb(var(--accent))]', text: String(item) })
+              h('span', { class: colorFor(name), text: name })
             )
           );
         });
@@ -181,7 +199,7 @@ function bindData(container, data) {
       for (const [type, count] of Object.entries(value)) {
         el.append(
           h('span', { class: 'text-xs px-2 py-1 rounded border border-[rgb(var(--border))] bg-[rgb(var(--bg))]' },
-            h('span', { class: 'text-[rgb(var(--accent))]', text: type }),
+            h('span', { class: colorFor(type), text: type }),
             h('span', { class: 'text-[rgb(var(--muted))] ml-1', text: String(count) })
           )
         );
@@ -656,7 +674,7 @@ async function initApp() {
   const summary = rel.summary || {};
   const vulns = summary.vulnerabilities || {};
   const signing = summary.signing || {};
-  const signatures = summary.signatures || {};
+  const signatures = apiData.signatures || {};
   const artifact = rel.artifacts?.[0] || {};
 
   const data = {
@@ -670,6 +688,7 @@ async function initApp() {
       build_actor: apiData.build?.build_actor,
       build_system: apiData.build?.build_system,
       build_run_url: apiData.build?.build_run_url,
+      build_run_id: apiData.build?.build_run_id,
       builder_identity: apiData.build?.builder_identity,
       go_version: apiData.build?.go_version,
       'status-text': vulns.gate_result === 'pass' ? 'Verified' : 'Warning',
@@ -678,6 +697,10 @@ async function initApp() {
         commit: rel.source?.commit,
         commit_short: rel.source?.commit_short,
         commit_date: rel.source?.commit_date,
+        branch: rel.source?.branch,
+        commit_url: rel.source?.repo && rel.source?.commit
+          ? `${rel.source.repo}/commit/${rel.source.commit}`
+          : undefined,
         tag: rel.source?.base_tag,
         dirty: rel.source?.dirty
       },
@@ -691,7 +714,7 @@ async function initApp() {
       },
       signing: signing,
       signatures: signatures,
-      tooling: summary.tooling || {},
+      tooling: apiData.tooling || {},
       trusted_root_url: apiData.trusted_root_url,
       attestations: apiData.attestations || {},
       policy: apiData.policy || {},

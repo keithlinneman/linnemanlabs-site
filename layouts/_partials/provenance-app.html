@@ -77,11 +77,11 @@
         <span class="prov-leader" aria-hidden="true"></span>
         <span class="prov-row__value">
           <span class="inline-flex flex-wrap gap-x-4 gap-y-1">
-            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.signing.artifacts_attested:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>artifacts</span>
-            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.signing.index_attested:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>index</span>
-            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.signing.inventory_signed:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>inventory</span>
-            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.signing.release_signed:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>release</span>
-            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.signing.release_sigstore_bundled:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>sigstore bundle</span>
+            <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.signing.artifacts_attested:prov-check--ok:prov-check--bad"></span>artifacts</span>
+            <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.signing.index_attested:prov-check--ok:prov-check--bad"></span>index</span>
+            <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.signing.inventory_signed:prov-check--ok:prov-check--bad"></span>inventory</span>
+            <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.signing.release_signed:prov-check--ok:"></span>release</span>
+            <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.signing.release_sigstore_bundled:prov-check--ok:"></span>sigstore bundle</span>
           </span>
         </span>
       </div>
@@ -295,7 +295,7 @@
         <a data-bind-href="app.source.repository" data-bind-title="app.source.repository" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">application source</a>
       </div>
       <div class="prov-flow__meta">
-        @<span data-bind="app.source.commit_short" data-bind-title="app.source.commit">—</span>
+        <span data-bind="app.source.branch">—</span>@<a data-bind-href="app.source.commit_url" data-bind-title="app.source.commit" target="_blank" rel="noopener"><span data-bind="app.source.commit_short">—</span></a>
         <span data-bind-show="app.source.dirty" class="text-[rgb(var(--warn))] hidden">·dirty</span>
       </div>
     </div>
@@ -303,11 +303,10 @@
     <div class="prov-flow__node">
       <div class="prov-flow__kind">build</div>
       <div class="prov-flow__title">
-        <a data-bind="app.build_system" data-bind-href="app.build_run_url" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">build system</a>
+        <a data-bind-href="app.build_run_url" data-bind-title="app.build_run_url" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">github actions</a>
       </div>
       <div class="prov-flow__meta">
-        builder @<span data-bind="app.builder.commit_short" data-bind-title="app.builder.commit">—</span>
-        · <span data-bind="app.build_actor">—</span>
+        <span data-bind="app.build_actor">—</span> · run #<span data-bind="app.build_run_id">—</span>
       </div>
     </div>
     <div class="prov-flow__arrow"><span class="hidden md:inline">→</span><span class="md:hidden">↓</span></div>
@@ -475,13 +474,11 @@
 
       {{/* Vulnerability detail */}}
       <div class="prov-ledger__sub">vulnerability scan</div>
-      <table class="prov-table">
-        <tbody>
-          <tr><td>scope</td><td data-bind="app.vulnerabilities.scope">—</td></tr>
-          <tr><td>deduplication</td><td data-bind="app.vulnerabilities.deduplication">—</td></tr>
-          <tr><td>gate threshold</td><td data-bind="app.vulnerabilities.gate_threshold">—</td></tr>
-        </tbody>
-      </table>
+      <div class="prov-cert">
+        <div class="prov-row"><span class="prov-row__label">scope</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.vulnerabilities.scope">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">deduplication</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.vulnerabilities.deduplication">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">gate threshold</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.vulnerabilities.gate_threshold">—</span></div>
+      </div>
       <div class="prov-kicker mt-3 mb-1">scanners</div>
       <div class="flex flex-wrap gap-1" data-bind-list="app.vulnerabilities.scanners_used"></div>
       <div class="prov-kicker mt-3 mb-1">per-scanner results</div>
@@ -516,7 +513,7 @@
       {{/* License detail */}}
       <div class="prov-ledger__sub">licenses</div>
       <div class="prov-kicker mb-1">licenses found</div>
-      <div class="flex flex-wrap gap-1" data-bind-list="app.licenses.license_counts"></div>
+      <div class="flex flex-wrap gap-1" data-bind-list="app.licenses.license_counts" data-bind-list-allow="app.policy.license.allowed" data-bind-list-deny="app.policy.license.denied"></div>
       <details class="prov-expand group">
         <summary>
           <span class="group-open:hidden">show packages by license</span>
@@ -527,33 +524,29 @@
 
       {{/* Policy */}}
       <div class="prov-ledger__sub">release policy</div>
-      <table class="prov-table">
-        <tbody>
-          <tr><td>enforcement</td><td data-bind="app.policy.enforcement">—</td></tr>
-          <tr><td>allow if VEX</td><td data-bind="app.computed.allow_vex_text">—</td></tr>
-          <tr><td>unknown licenses</td><td data-bind="app.computed.allow_unknown_text">—</td></tr>
-        </tbody>
-      </table>
+      <div class="prov-cert">
+        <div class="prov-row"><span class="prov-row__label">enforcement</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.policy.enforcement">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">allow if VEX</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.computed.allow_vex_text">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">unknown licenses</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.computed.allow_unknown_text">—</span></div>
+      </div>
       <div class="prov-kicker mt-3 mb-1">block on severity</div>
       <div class="flex flex-wrap gap-1" data-bind-list="app.policy.vulnerability.block_on"></div>
       <div class="prov-kicker mt-3 mb-1">allowed licenses</div>
-      <div class="flex flex-wrap gap-1" data-bind-list="app.policy.license.allowed"></div>
+      <div class="flex flex-wrap gap-1" data-bind-list="app.policy.license.allowed" data-bind-list-color="good"></div>
       <div class="prov-kicker mt-3 mb-1">denied licenses</div>
-      <div class="flex flex-wrap gap-1" data-bind-list="app.policy.license.denied"></div>
+      <div class="flex flex-wrap gap-1" data-bind-list="app.policy.license.denied" data-bind-list-color="bad"></div>
 
       {{/* Attestations */}}
       <div class="prov-ledger__sub">attestations</div>
-      <table class="prov-table">
-        <tbody>
-          <tr><td>total</td><td class="prov-num" data-bind="app.attestations.total">—</td></tr>
-          <tr><td>source</td><td class="prov-num" data-bind="app.attestations.source">—</td></tr>
-          <tr><td>artifact</td><td class="prov-num" data-bind="app.attestations.artifact">—</td></tr>
-        </tbody>
-      </table>
+      <div class="prov-cert">
+        <div class="prov-row"><span class="prov-row__label">total</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.attestations.total">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">source</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.attestations.source">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">artifact</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.attestations.artifact">—</span></div>
+      </div>
       <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs mono">
-        <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.attestations.sbom_attested:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>SBOM</span>
-        <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.attestations.scan_attested:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>scan</span>
-        <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.attestations.license_attested:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>license</span>
+        <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.attestations.sbom_attested:prov-check--ok:prov-check--bad"></span>SBOM</span>
+        <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.attestations.scan_attested:prov-check--ok:prov-check--bad"></span>scan</span>
+        <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.attestations.license_attested:prov-check--ok:prov-check--bad"></span>license</span>
       </div>
       <details class="prov-expand group">
         <summary>
@@ -661,20 +654,18 @@
 
       {{/* Artifacts */}}
       <div class="prov-ledger__sub">artifacts</div>
-      <table class="prov-table">
-        <tbody>
-          <tr><td>platform</td><td data-bind="app.container.platform">—</td></tr>
-          <tr><td>binary size</td><td data-bind="app.binary.size" data-format="bytes">—</td></tr>
-          <tr><td>binary sha-256</td><td data-bind="app.binary.sha256">—</td></tr>
-          <tr><td>image repository</td><td data-bind="app.container.repository">—</td></tr>
-          <tr><td>image tag</td><td data-bind="app.container.tag">—</td></tr>
-          <tr><td>image digest</td><td data-bind="app.container.digest">—</td></tr>
-          <tr><td>digest reference</td><td data-bind="app.container.digest_ref">—</td></tr>
-          <tr><td>media type</td><td data-bind="app.container.media_type">—</td></tr>
-          <tr><td>artifact type</td><td data-bind="app.container.artifact_type">—</td></tr>
-          <tr><td>pushed at</td><td data-bind="app.container.pushed_at" data-format="datetime">—</td></tr>
-        </tbody>
-      </table>
+      <div class="prov-cert">
+        <div class="prov-row"><span class="prov-row__label">platform</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.container.platform">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">binary size</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.binary.size" data-format="bytes">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">binary sha-256</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.binary.sha256" data-bind-title="app.binary.sha256">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">image repository</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.container.repository" data-bind-title="app.container.repository">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">image tag</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.container.tag">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">image digest</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.container.digest" data-bind-title="app.container.digest">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">digest reference</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.container.digest_ref" data-bind-title="app.container.digest_ref">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">media type</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.container.media_type" data-bind-title="app.container.media_type">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">artifact type</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.container.artifact_type" data-bind-title="app.container.artifact_type">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">pushed at</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.container.pushed_at" data-format="datetime">—</span></div>
+      </div>
 
       {{/* Raw JSON */}}
       <div class="prov-ledger__sub">raw release manifest</div>

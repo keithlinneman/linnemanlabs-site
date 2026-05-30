@@ -894,11 +894,13 @@
   }
   .prov-ledger__sub {
     font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: rgb(var(--muted));
-    margin: 1.25rem 0 0.5rem;
+    color: rgb(var(--accent));
+    margin: 1.5rem 0 0.6rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px dashed rgb(var(--accent) / 0.3);
   }
   .prov-ledger__sub:first-child {
     margin-top: 0;
