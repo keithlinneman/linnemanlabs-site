@@ -673,7 +673,9 @@ async function initApp() {
   const rel = apiData.release || {};
   const summary = rel.summary || {};
   const vulns = summary.vulnerabilities || {};
-  const signing = summary.signing || {};
+  // top-level signing is the runtime-reconciled view
+  // release.summary.signing is the build-time claim
+  const signing = apiData.signing || summary.signing || {};
   const signatures = apiData.signatures || {};
   const artifact = rel.artifacts?.[0] || {};
 
