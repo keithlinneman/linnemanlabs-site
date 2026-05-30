@@ -1,611 +1,692 @@
-{{/* App Provenance Partial - populated by main.js from /api/provenance/app */}}
-<div id="provenance-app" class="space-y-8">
+{{/* Application provenance — three-layer progressive disclosure.
+     Populated by initApp() in main.js (namespace: app.*).
+     Container id, app.* data-bind paths, and the renderer target ids
+     (vuln-scanner-breakdown, vuln-findings-list, sbom-package-list,
+     license-package-list, denied-found-list) are the JS contract.
+     Forward-looking signing paths (app.signing.certificate / .rekor /
+     .tsa) stay at their default text until the feed carries them. */}}
+<div id="provenance-app" class="space-y-3">
 
-  {{/* Status Banner */}}
-  <div class="attestation-card">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <span class="status-dot" data-bind="app.status-dot"></span>
-        <div>
-          <div class="font-medium">Application <span data-bind="app.status-text">Loading...</span></div>
-          <div class="text-xs text-[rgb(var(--muted))]">
-            Track: <span data-bind="app.track">—</span> · Built <span data-bind="app.created_at" data-format="date">—</span>
-          </div>
+  {{/* LAYER 1 - verify hero (TL;DR) */}}
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <div class="prov-kicker">tl;dr · what verifies today</div>
+    <div class="prov-kicker">
+      app <span class="text-[rgb(var(--fg))]" data-bind="app.version">—</span>
+      · <span data-bind="app.track">—</span>
+    </div>
+  </div>
+  <div class="prov-term">
+    <div class="prov-term__cmd">verify --bundle app --summary</div>
+    <div class="prov-term__line">
+      <span class="prov-check" data-bind-class="app.signing.inventory_signed:prov-check--ok:prov-check--bad"></span>
+      <span class="prov-term__label">kms signature</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-term__val" data-bind="app.signatures.kms.key_ref" data-bind-title="app.signatures.kms.key_ref">aws-kms</span>
+    </div>
+    <div class="prov-term__line">
+      <span class="prov-check" data-bind-class="app.signatures.keyless.certificate.build_signer_uri:prov-check--ok:"></span>
+      <span class="prov-term__label">keyless signature</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-term__val" data-bind="app.signatures.keyless.certificate.issuer">fulcio · pending</span>
+    </div>
+    <div class="prov-term__line">
+      <span class="prov-check" data-bind-class="app.signatures.keyless.rekor.log_index:prov-check--ok:"></span>
+      <span class="prov-term__label">transparency log</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-term__val">rekor #<span data-bind="app.signatures.keyless.rekor.log_index">pending</span>, #<span data-bind="app.signatures.kms.rekor.log_index">—</span></span>
+    </div>
+    <div class="prov-term__line">
+      <span class="prov-check" data-bind-class="app.signatures.keyless.timestamp.gen_time:prov-check--ok:"></span>
+      <span class="prov-term__label">timestamp</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-term__val" data-bind="app.signatures.keyless.timestamp.gen_time" data-format="datetime">rfc3161 · pending</span>
+    </div>
+    <div class="prov-term__line">
+      <span class="prov-check" data-bind-class="app.container.digest:prov-check--ok:prov-check--bad"></span>
+      <span class="prov-term__label">artifact digest</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-term__val" data-bind="app.container.digest" data-bind-title="app.container.digest">—</span>
+    </div>
+    <div class="prov-term__result">
+      <span data-bind="app.status-text">verifying…</span>
+      <span class="text-[rgb(var(--muted))]"> at <span data-bind="app.fetched_at" data-format="datetime">—</span></span>
+    </div>
+  </div>
+
+  {{/* LAYER 2 - certificate of provenance */}}
+
+  {{/* Trust attestation - elevated first, dual-signed (KMS + keyless) */}}
+  <div class="prov-frame" role="heading" aria-level="3">
+    <span class="prov-frame__edge" aria-hidden="true">└─[ </span><span class="prov-frame__name">trust attestation</span><span class="prov-frame__edge" aria-hidden="true"> ]</span>
+    <span class="prov-leader prov-leader--dash" aria-hidden="true"></span>
+    <span class="prov-frame__corner" aria-hidden="true">┐</span>
+  </div>
+  <div class="prov-cert">
+    <p class="text-sm text-[rgb(var(--muted))] mb-3">
+      Every release is dual-signed: an AWS&nbsp;KMS key signs the artifacts and inventory, and a
+      keyless Fulcio certificate - minted from the workflow's GitHub OIDC identity - is logged to
+      Rekor and anchored with an RFC&nbsp;3161 timestamp. Both chains root in the self-hosted stack at
+      <a href="https://trust.linnemanlabs.com/" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">trust.linnemanlabs.com</a>.
+    </p>
+
+    {{/* AWS KMS signature */}}
+    <div class="prov-sig prov-sig--kms">
+      <div class="prov-sig__head">aws kms signature</div>
+      <div class="prov-row prov-row--break">
+        <span class="prov-row__label">signed</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span class="inline-flex flex-wrap gap-x-4 gap-y-1">
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.signing.artifacts_attested:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>artifacts</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.signing.index_attested:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>index</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.signing.inventory_signed:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>inventory</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.signing.release_signed:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>release</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.signing.release_sigstore_bundled:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>sigstore bundle</span>
+          </span>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="app.signatures.kms.key_ref">
+        <span class="prov-row__label">key reference</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="app.signatures.kms.key_ref" data-bind-title="app.signatures.kms.key_ref">—</span>
+      </div>
+      <div class="prov-row hidden" data-bind-show="app.signatures.kms.rekor.log_index">
+        <span class="prov-row__label">logged in</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          rekor #<span data-bind="app.signatures.kms.rekor.log_index">—</span>
+          <a class="prov-proof hidden" data-bind-show="app.signatures.kms.rekor.pubkey_url" data-bind-href="app.signatures.kms.rekor.pubkey_url" target="_blank" rel="noopener" title="Open checkpoint public key">[key]</a>
+        </span>
+      </div>
+      <div class="prov-row hidden" data-bind-show="app.signatures.kms.timestamp.gen_time">
+        <span class="prov-row__label">timestamped</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="app.signatures.kms.timestamp.gen_time" data-format="datetime">—</span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="app.signatures.kms.timestamp.tsa_subject">
+        <span class="prov-row__label" title="Time Stamp Authority (RFC 3161)">tsa</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="app.signatures.kms.timestamp.tsa_subject" data-bind-title="app.signatures.kms.timestamp.tsa_subject">—</span>
+          <a class="prov-proof hidden" data-bind-show="app.signatures.kms.timestamp.tsa_cert_url" data-bind-href="app.signatures.kms.timestamp.tsa_cert_url" target="_blank" rel="noopener" title="Open certificate (PEM)">[cert]</a>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="app.signatures.kms.timestamp.tsa_fingerprint_sha256">
+        <span class="prov-row__label" title="SHA-256 fingerprint of the TSA's signing certificate">tsa fingerprint</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="app.signatures.kms.timestamp.tsa_fingerprint_sha256" data-bind-title="app.signatures.kms.timestamp.tsa_fingerprint_sha256">—</span>
+      </div>
+    </div>
+
+    {{/* Fulcio keyless signature - bound to app.signatures.keyless.* */}}
+    <div class="prov-sig prov-sig--keyless hidden" data-bind-show="app.signatures.keyless.certificate.build_signer_uri">
+      <div class="prov-sig__head">keyless signature · fulcio</div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="app.signatures.keyless.certificate.build_signer_uri">
+        <span class="prov-row__label">signed by</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="app.signatures.keyless.certificate.build_signer_uri" data-bind-title="app.signatures.keyless.certificate.build_signer_uri">—</span>
+          <a class="prov-proof hidden" data-bind-show="app.signatures.keyless.certificate.run_invocation_uri" data-bind-href="app.signatures.keyless.certificate.run_invocation_uri" target="_blank" rel="noopener" title="Open workflow run on GitHub Actions">[run]</a>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="app.signatures.keyless.certificate.issuer">
+        <span class="prov-row__label">issued by</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="app.signatures.keyless.certificate.issuer" data-bind-title="app.signatures.keyless.certificate.issuer">—</span>
+          <a class="prov-proof hidden" data-bind-show="app.signatures.keyless.chain.issuer_cert_url" data-bind-href="app.signatures.keyless.chain.issuer_cert_url" target="_blank" rel="noopener" title="Open certificate (PEM)">[cert]</a>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="app.signatures.keyless.chain.issuer_fingerprint_sha256">
+        <span class="prov-row__label">fulcio fingerprint</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="app.signatures.keyless.chain.issuer_fingerprint_sha256" data-bind-title="app.signatures.keyless.chain.issuer_fingerprint_sha256">—</span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="app.signatures.keyless.certificate.oidc_issuer">
+        <span class="prov-row__label" title="OpenID Connect identity provider">oidc issuer</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="app.signatures.keyless.certificate.oidc_issuer" data-bind-title="app.signatures.keyless.certificate.oidc_issuer">—</span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="app.signatures.keyless.certificate.github_workflow_name">
+        <span class="prov-row__label">workflow</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="app.signatures.keyless.certificate.github_workflow_name">—</span>
+          · <span data-bind="app.signatures.keyless.certificate.github_workflow_ref" data-bind-title="app.signatures.keyless.certificate.github_workflow_ref">—</span>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="app.signatures.keyless.certificate.source_repository">
+        <span class="prov-row__label">attested source</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="app.signatures.keyless.certificate.source_repository" data-bind-title="app.signatures.keyless.certificate.source_repository">—</span>
+          @<span data-bind="app.signatures.keyless.certificate.source_revision" data-format="hash" data-bind-title="app.signatures.keyless.certificate.source_revision">—</span>
+        </span>
+      </div>
+      <div class="prov-row hidden" data-bind-show="app.signatures.keyless.certificate.not_after">
+        <span class="prov-row__label">cert valid</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="app.signatures.keyless.certificate.not_before" data-format="datetime">—</span>
+          → <span data-bind="app.signatures.keyless.certificate.not_after" data-format="datetime">—</span>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="app.signatures.keyless.certificate.fingerprint_sha256">
+        <span class="prov-row__label">leaf fingerprint</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="app.signatures.keyless.certificate.fingerprint_sha256" data-bind-title="app.signatures.keyless.certificate.fingerprint_sha256">—</span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="app.signatures.keyless.certificate.serial_number">
+        <span class="prov-row__label">serial</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="app.signatures.keyless.certificate.serial_number" data-bind-title="app.signatures.keyless.certificate.serial_number">—</span>
+      </div>
+      <div class="prov-row hidden" data-bind-show="app.signatures.keyless.rekor.log_index">
+        <span class="prov-row__label">logged in</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          rekor #<span data-bind="app.signatures.keyless.rekor.log_index">—</span>
+          <a class="prov-proof hidden" data-bind-show="app.signatures.keyless.rekor.pubkey_url" data-bind-href="app.signatures.keyless.rekor.pubkey_url" target="_blank" rel="noopener" title="Open checkpoint public key">[key]</a>
+        </span>
+      </div>
+      <div class="prov-row hidden" data-bind-show="app.signatures.keyless.timestamp.gen_time">
+        <span class="prov-row__label">timestamped</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="app.signatures.keyless.timestamp.gen_time" data-format="datetime">—</span>
+      </div>
+      <div class="prov-row hidden" data-bind-show="app.signatures.keyless.ct_log.timestamp">
+        <span class="prov-row__label" title="Certificate Transparency log entry for the Fulcio cert">ct log</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="app.signatures.keyless.ct_log.timestamp" data-format="datetime">—</span>
+          <a class="prov-proof hidden" data-bind-show="app.signatures.keyless.ct_log.pubkey_url" data-bind-href="app.signatures.keyless.ct_log.pubkey_url" target="_blank" rel="noopener" title="Open checkpoint public key">[key]</a>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="app.signatures.keyless.timestamp.tsa_subject">
+        <span class="prov-row__label" title="Time Stamp Authority (RFC 3161)">tsa</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="app.signatures.keyless.timestamp.tsa_subject" data-bind-title="app.signatures.keyless.timestamp.tsa_subject">—</span>
+          <a class="prov-proof hidden" data-bind-show="app.signatures.keyless.timestamp.tsa_cert_url" data-bind-href="app.signatures.keyless.timestamp.tsa_cert_url" target="_blank" rel="noopener" title="Open certificate (PEM)">[cert]</a>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="app.signatures.keyless.timestamp.tsa_fingerprint_sha256">
+        <span class="prov-row__label" title="SHA-256 fingerprint of the TSA's signing certificate">tsa fingerprint</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="app.signatures.keyless.timestamp.tsa_fingerprint_sha256" data-bind-title="app.signatures.keyless.timestamp.tsa_fingerprint_sha256">—</span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="app.signatures.keyless.chain.root_subject">
+        <span class="prov-row__label">root ca</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="app.signatures.keyless.chain.root_subject" data-bind-title="app.signatures.keyless.chain.root_subject">—</span>
+          <a class="prov-proof hidden" data-bind-show="app.trusted_root_url" data-bind-href="app.trusted_root_url" target="_blank" rel="noopener" title="Open trusted_root.json sigstore bundle">[trust]</a>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="app.signatures.keyless.chain.root_fingerprint_sha256">
+        <span class="prov-row__label">root fingerprint</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="app.signatures.keyless.chain.root_fingerprint_sha256" data-bind-title="app.signatures.keyless.chain.root_fingerprint_sha256">—</span>
+      </div>
+    </div>
+  </div>
+
+  {{/* Identity */}}
+  <div class="prov-frame" role="heading" aria-level="3">
+    <span class="prov-frame__edge" aria-hidden="true">└─[ </span><span class="prov-frame__name">identity</span><span class="prov-frame__edge" aria-hidden="true"> ]</span>
+    <span class="prov-leader prov-leader--dash" aria-hidden="true"></span>
+    <span class="prov-frame__corner" aria-hidden="true">┐</span>
+  </div>
+  <div class="prov-cert">
+    <div class="prov-grid prov-grid--2">
+      <div class="prov-row">
+        <span class="prov-row__label">version</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="app.version">—</span>
+      </div>
+      <div class="prov-row">
+        <span class="prov-row__label">track</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="app.track">—</span>
+      </div>
+      <div class="prov-row">
+        <span class="prov-row__label">built</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="app.created_at" data-format="datetime">—</span>
+      </div>
+      <div class="prov-row">
+        <span class="prov-row__label">go</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="app.go_version">—</span>
+      </div>
+    </div>
+    <div class="prov-row prov-row--break">
+      <span class="prov-row__label">release id</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value" data-bind="app.release_id" data-bind-title="app.release_id">—</span>
+    </div>
+    <div class="prov-row prov-row--break">
+      <span class="prov-row__label">build id</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value" data-bind="app.build_id" data-bind-title="app.build_id">—</span>
+    </div>
+    <div class="prov-row prov-row--break">
+      <span class="prov-row__label">binary sha-256</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value" data-bind="app.binary.sha256" data-bind-title="app.binary.sha256">—</span>
+    </div>
+    <div class="prov-row prov-row--break">
+      <span class="prov-row__label">artifact digest</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value" data-bind="app.container.digest" data-bind-title="app.container.digest">—</span>
+    </div>
+  </div>
+
+  {{/* Source → build → artifact */}}
+  <div class="prov-frame" role="heading" aria-level="3">
+    <span class="prov-frame__edge" aria-hidden="true">└─[ </span><span class="prov-frame__name">source → build → artifact</span><span class="prov-frame__edge" aria-hidden="true"> ]</span>
+    <span class="prov-leader prov-leader--dash" aria-hidden="true"></span>
+    <span class="prov-frame__corner" aria-hidden="true">┐</span>
+  </div>
+  <div class="prov-flow">
+    <div class="prov-flow__node">
+      <div class="prov-flow__kind">source</div>
+      <div class="prov-flow__title">
+        <a data-bind-href="app.source.repository" data-bind-title="app.source.repository" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">application source</a>
+      </div>
+      <div class="prov-flow__meta">
+        @<span data-bind="app.source.commit_short" data-bind-title="app.source.commit">—</span>
+        <span data-bind-show="app.source.dirty" class="text-[rgb(var(--warn))] hidden">·dirty</span>
+      </div>
+    </div>
+    <div class="prov-flow__arrow"><span class="hidden md:inline">→</span><span class="md:hidden">↓</span></div>
+    <div class="prov-flow__node">
+      <div class="prov-flow__kind">build</div>
+      <div class="prov-flow__title">
+        <a data-bind="app.build_system" data-bind-href="app.build_run_url" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">build system</a>
+      </div>
+      <div class="prov-flow__meta">
+        builder @<span data-bind="app.builder.commit_short" data-bind-title="app.builder.commit">—</span>
+        · <span data-bind="app.build_actor">—</span>
+      </div>
+    </div>
+    <div class="prov-flow__arrow"><span class="hidden md:inline">→</span><span class="md:hidden">↓</span></div>
+    <div class="prov-flow__node">
+      <div class="prov-flow__kind">artifact</div>
+      <div class="prov-flow__title">container image</div>
+      <div class="prov-flow__meta" data-bind="app.container.digest" data-bind-title="app.container.digest_ref">—</div>
+    </div>
+  </div>
+
+  {{/* Posture - single gate result callout at the top */}}
+  <div class="prov-frame" role="heading" aria-level="3">
+    <span class="prov-frame__edge" aria-hidden="true">└─[ </span><span class="prov-frame__name">posture</span><span class="prov-frame__edge" aria-hidden="true"> ]</span>
+    <span class="prov-leader prov-leader--dash" aria-hidden="true"></span>
+    <span class="prov-frame__corner" aria-hidden="true">┐</span>
+  </div>
+  <div class="prov-callout mb-3">
+    <span class="prov-callout__verb">policy gate</span>
+    <span data-bind="app.vulnerabilities.gate_result">—</span>
+    <span class="text-[rgb(var(--muted))]">
+      · worst <span data-bind="app.vulnerabilities.worst_severity">—</span>
+      · enforcement <span data-bind="app.policy.enforcement">—</span>
+    </span>
+  </div>
+  <div class="prov-cert space-y-4">
+    {{/* Severity grid */}}
+    <div>
+      <div class="prov-kicker mb-2">vulnerabilities</div>
+      <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+        <div class="text-center">
+          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--bad))]/20 text-[rgb(var(--bad))] font-semibold text-lg mono" data-bind="app.vulnerabilities.counts.critical">—</div>
+          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">critical</div>
+        </div>
+        <div class="text-center">
+          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--warn))]/20 text-[rgb(var(--warn))] font-semibold text-lg mono" data-bind="app.vulnerabilities.counts.high">—</div>
+          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">high</div>
+        </div>
+        <div class="text-center">
+          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--accent))]/20 text-[rgb(var(--accent))] font-semibold text-lg mono" data-bind="app.vulnerabilities.counts.medium">—</div>
+          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">medium</div>
+        </div>
+        <div class="text-center">
+          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--muted))]/20 text-[rgb(var(--muted))] font-semibold text-lg mono" data-bind="app.vulnerabilities.counts.low">—</div>
+          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">low</div>
+        </div>
+        <div class="text-center">
+          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))] font-semibold text-lg mono" data-bind="app.vulnerabilities.counts.negligible">—</div>
+          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">negligible</div>
+        </div>
+        <div class="text-center">
+          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))] font-semibold text-lg mono" data-bind="app.vulnerabilities.counts.unknown">—</div>
+          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">unknown</div>
         </div>
       </div>
-      <div class="text-right">
-        <div class="text-lg font-medium mono" data-bind="app.version">—</div>
-        <div class="text-xs text-[rgb(var(--muted))]">
-          Gate: <span data-bind="app.vulnerabilities.gate_result">—</span>
+      <div class="prov-grid prov-grid--2 mt-2">
+        <div class="prov-row">
+          <span class="prov-row__label">total findings</span>
+          <span class="prov-leader" aria-hidden="true"></span>
+          <span class="prov-row__value" data-bind="app.vulnerabilities.total">—</span>
+        </div>
+        <div class="prov-row">
+          <span class="prov-row__label">scanned</span>
+          <span class="prov-leader" aria-hidden="true"></span>
+          <span class="prov-row__value" data-bind="app.vulnerabilities.scanned_at" data-format="datetime">—</span>
+        </div>
+      </div>
+    </div>
+
+    {{/* License compliance */}}
+    <div class="border-t border-[rgb(var(--border))] pt-3">
+      <div class="prov-kicker mb-2">licenses</div>
+      <div class="prov-row">
+        <span class="prov-row__label">status</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span class="inline-block w-2 h-2 rounded-full align-middle mr-1 bg-[rgb(var(--muted))]" data-bind-class="app.licenses.compliant:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
+          <span data-bind="app.computed.license_status">—</span>
+        </span>
+      </div>
+      <div class="prov-row">
+        <span class="prov-row__label">without license</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="app.licenses.without_license_count">—</span>
+      </div>
+      <div class="prov-row prov-row--break">
+        <span class="prov-row__label">denied found</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span class="inline-flex flex-wrap gap-1 justify-end" id="denied-found-list">
+            <span class="text-xs text-[rgb(var(--good))]">none</span>
+          </span>
+        </span>
+      </div>
+    </div>
+
+    {{/* SBOM at a glance */}}
+    <div class="border-t border-[rgb(var(--border))] pt-3">
+      <div class="prov-kicker mb-2">software bill of materials</div>
+      <div class="prov-grid prov-grid--2">
+        <div class="prov-row">
+          <span class="prov-row__label">source packages</span>
+          <span class="prov-leader" aria-hidden="true"></span>
+          <span class="prov-row__value" data-bind="app.sbom.source_package_count">—</span>
+        </div>
+        <div class="prov-row">
+          <span class="prov-row__label">artifact packages</span>
+          <span class="prov-leader" aria-hidden="true"></span>
+          <span class="prov-row__value" data-bind="app.sbom.artifact_package_count">—</span>
         </div>
       </div>
     </div>
   </div>
 
-  {{/* Build Context */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Build</h2>
-    <div class="blueprint-card">
-      <div class="grid md:grid-cols-2 gap-4">
-        <div>
-          <div class="attestation-label">Release ID</div>
-          <div class="attestation-value text-xs break-all mono" data-bind="app.release_id">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Build ID</div>
-          <div class="attestation-value text-xs break-all mono" data-bind="app.build_id">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Build Actor</div>
-          <div class="attestation-value" data-bind="app.build_actor">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Build System</div>
-          <div class="attestation-value">
-            <a data-bind="app.build_system" data-bind-href="app.build_run_url" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">—</a>
-          </div>
-        </div>
-        <div>
-          <div class="attestation-label">Builder Identity</div>
-          <div class="attestation-value text-[10px] break-all mono" data-bind="app.builder_identity">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Go Version</div>
-          <div class="attestation-value mono" data-bind="app.go_version">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Built At</div>
-          <div class="attestation-value tabular" data-bind="app.created_at" data-format="datetime">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Fetched At</div>
-          <div class="attestation-value tabular" data-bind="app.fetched_at" data-format="datetime">—</div>
-        </div>
-      </div>
-    </div>
-  </section>
+  {{/* LAYER 3 - evidence ledger (collapsed) */}}
+  <div class="prov-frame" role="heading" aria-level="3">
+    <span class="prov-frame__edge" aria-hidden="true">└─[ </span><span class="prov-frame__name">evidence ledger</span><span class="prov-frame__edge" aria-hidden="true"> ]</span>
+    <span class="prov-leader prov-leader--dash" aria-hidden="true"></span>
+    <span class="prov-frame__corner" aria-hidden="true">┐</span>
+  </div>
+  <details class="prov-ledger">
+    <summary>
+      application evidence - findings, SBOM packages, licenses, policy, attestations, artifacts
+      <span class="prov-ledger__hint">for auditors</span>
+    </summary>
+    <div class="prov-ledger__body space-y-2">
 
-  {{/* Source */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Source</h2>
-    <div class="blueprint-card">
-      <div class="grid md:grid-cols-2 gap-4">
-        <div class="md:col-span-2">
-          <div class="attestation-label">Repository</div>
-          <div class="attestation-value text-xs">
-            <a data-bind="app.source.repository" data-bind-href="app.source.repository" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">—</a>
-          </div>
-        </div>
-        <div>
-          <div class="attestation-label">Commit</div>
-          <div class="attestation-value text-xs break-all mono" data-bind="app.source.commit">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Tag</div>
-          <div class="attestation-value mono">
-            <span data-bind="app.source.tag">—</span>
-            <span data-bind-show="app.source.dirty" class="text-[rgb(var(--warn))] text-xs ml-1 hidden">(dirty)</span>
-          </div>
-        </div>
-        <div>
-          <div class="attestation-label">Commit Date</div>
-          <div class="attestation-value tabular" data-bind="app.source.commit_date" data-format="datetime">—</div>
-        </div>
-      </div>
-    </div>
-  </section>
+      <div class="prov-ledger__sub">build tooling</div>
+      <table class="prov-table">
+        <thead>
+          <tr><th>tool</th><th>role</th><th>version</th><th>sha-256</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Go</td><td>binary toolchain</td>
+            <td data-bind="app.tooling.go.version">—</td>
+            <td data-bind="app.tooling.go.sha256">—</td>
+          </tr>
+          <tr>
+            <td>cosign</td><td>signing</td>
+            <td data-bind="app.tooling.cosign.version">—</td>
+            <td data-bind="app.tooling.cosign.sha256">—</td>
+          </tr>
+          <tr>
+            <td>syft</td><td>sbom generator</td>
+            <td data-bind="app.tooling.syft.version">—</td>
+            <td data-bind="app.tooling.syft.sha256">—</td>
+          </tr>
+          <tr>
+            <td>grype</td><td>vuln scanner</td>
+            <td data-bind="app.tooling.grype.version">—</td>
+            <td data-bind="app.tooling.grype.sha256">—</td>
+          </tr>
+          <tr>
+            <td>trivy</td><td>vuln scanner</td>
+            <td data-bind="app.tooling.trivy.version">—</td>
+            <td data-bind="app.tooling.trivy.sha256">—</td>
+          </tr>
+          <tr>
+            <td>govulncheck</td><td>vuln scanner (Go)</td>
+            <td data-bind="app.tooling.govulncheck.version">—</td>
+            <td data-bind="app.tooling.govulncheck.sha256">—</td>
+          </tr>
+        </tbody>
+      </table>
 
-  {{/* Builder */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Builder</h2>
-    <div class="blueprint-card">
-      <div class="grid md:grid-cols-2 gap-4">
-        <div class="md:col-span-2">
-          <div class="attestation-label">Repository</div>
-          <div class="attestation-value text-xs">
-            <a data-bind="app.builder.repository" data-bind-href="app.builder.repository" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">—</a>
-          </div>
-        </div>
-        <div>
-          <div class="attestation-label">Commit</div>
-          <div class="attestation-value text-xs break-all mono" data-bind="app.builder.commit">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Branch</div>
-          <div class="attestation-value mono">
-            <span data-bind="app.builder.branch">—</span>
-            <span data-bind-show="app.builder.dirty" class="text-[rgb(var(--warn))] text-xs ml-1 hidden">(dirty)</span>
-          </div>
-        </div>
-        <div>
-          <div class="attestation-label">Commit Date</div>
-          <div class="attestation-value tabular" data-bind="app.builder.commit_date" data-format="datetime">—</div>
-        </div>
-      </div>
-    </div>
-  </section>
+      {{/* Vulnerability detail */}}
+      <div class="prov-ledger__sub">vulnerability scan</div>
+      <table class="prov-table">
+        <tbody>
+          <tr><td>scope</td><td data-bind="app.vulnerabilities.scope">—</td></tr>
+          <tr><td>deduplication</td><td data-bind="app.vulnerabilities.deduplication">—</td></tr>
+          <tr><td>gate threshold</td><td data-bind="app.vulnerabilities.gate_threshold">—</td></tr>
+        </tbody>
+      </table>
+      <div class="prov-kicker mt-3 mb-1">scanners</div>
+      <div class="flex flex-wrap gap-1" data-bind-list="app.vulnerabilities.scanners_used"></div>
+      <div class="prov-kicker mt-3 mb-1">per-scanner results</div>
+      <div id="vuln-scanner-breakdown" class="space-y-2"></div>
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show findings</span>
+          <span class="hidden group-open:inline">hide findings</span>
+        </summary>
+        <div class="mt-2 space-y-2 max-h-96 overflow-y-auto" id="vuln-findings-list"></div>
+      </details>
 
-  {{/* Signing */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Signing</h2>
-    <div class="blueprint-card">
-      <div class="grid md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <div class="attestation-label">Method</div>
-          <div class="attestation-value mono" data-bind="app.signing.method">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Key Reference</div>
-          <div class="attestation-value text-[10px] break-all mono" data-bind="app.signing.key_ref">—</div>
-        </div>
-      </div>
-      <div class="border-t border-[rgb(var(--border))] pt-3">
-        <div class="attestation-label mb-2">Signed Artifacts</div>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.signing.artifacts_attested:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
-            <span>Artifacts</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.signing.index_attested:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
-            <span>Index</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.signing.inventory_signed:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
-            <span>Inventory</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.signing.release_signed:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>
-            <span>Release</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+      {{/* SBOM detail */}}
+      <div class="prov-ledger__sub">software bill of materials</div>
+      <table class="prov-table">
+        <tbody>
+          <tr><td>generated at</td><td data-bind="app.sbom.generated_at" data-format="datetime">—</td></tr>
+        </tbody>
+      </table>
+      <div class="prov-kicker mt-3 mb-1">generators</div>
+      <div class="flex flex-wrap gap-1" data-bind-list="app.sbom.generators"></div>
+      <div class="prov-kicker mt-3 mb-1">formats produced</div>
+      <div class="flex flex-wrap gap-1" data-bind-list="app.sbom.formats_produced"></div>
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show all packages</span>
+          <span class="hidden group-open:inline">hide packages</span>
+        </summary>
+        <div class="mt-2 max-h-96 overflow-y-auto" id="sbom-package-list"></div>
+      </details>
 
-  {{/* Attestations */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Attestations</h2>
-    <div class="blueprint-card">
-      <div class="grid grid-cols-3 gap-4 mb-4">
-        <div class="text-center">
-          <div class="text-2xl font-semibold" data-bind="app.attestations.total">—</div>
-          <div class="text-xs text-[rgb(var(--muted))]">Total</div>
-        </div>
-        <div class="text-center">
-          <div class="text-2xl font-semibold" data-bind="app.attestations.source">—</div>
-          <div class="text-xs text-[rgb(var(--muted))]">Source</div>
-        </div>
-        <div class="text-center">
-          <div class="text-2xl font-semibold" data-bind="app.attestations.artifact">—</div>
-          <div class="text-xs text-[rgb(var(--muted))]">Artifact</div>
-        </div>
-      </div>
-      <div class="border-t border-[rgb(var(--border))] pt-3">
-        <div class="attestation-label mb-2">Attested Categories</div>
-        <div class="grid grid-cols-3 gap-3 text-sm">
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.attestations.sbom_attested:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
-            <span>SBOM</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.attestations.scan_attested:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
-            <span>Scan</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.attestations.license_attested:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
-            <span>License</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+      {{/* License detail */}}
+      <div class="prov-ledger__sub">licenses</div>
+      <div class="prov-kicker mb-1">licenses found</div>
+      <div class="flex flex-wrap gap-1" data-bind-list="app.licenses.license_counts"></div>
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show packages by license</span>
+          <span class="hidden group-open:inline">hide packages by license</span>
+        </summary>
+        <div class="mt-2 space-y-2 max-h-96 overflow-y-auto" id="license-package-list"></div>
+      </details>
 
-  {{/* Policy */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Policy</h2>
-    <div class="space-y-3">
+      {{/* Policy */}}
+      <div class="prov-ledger__sub">release policy</div>
+      <table class="prov-table">
+        <tbody>
+          <tr><td>enforcement</td><td data-bind="app.policy.enforcement">—</td></tr>
+          <tr><td>allow if VEX</td><td data-bind="app.computed.allow_vex_text">—</td></tr>
+          <tr><td>unknown licenses</td><td data-bind="app.computed.allow_unknown_text">—</td></tr>
+        </tbody>
+      </table>
+      <div class="prov-kicker mt-3 mb-1">block on severity</div>
+      <div class="flex flex-wrap gap-1" data-bind-list="app.policy.vulnerability.block_on"></div>
+      <div class="prov-kicker mt-3 mb-1">allowed licenses</div>
+      <div class="flex flex-wrap gap-1" data-bind-list="app.policy.license.allowed"></div>
+      <div class="prov-kicker mt-3 mb-1">denied licenses</div>
+      <div class="flex flex-wrap gap-1" data-bind-list="app.policy.license.denied"></div>
 
-      {{/* Enforcement Mode */}}
-      <div class="blueprint-card">
-        <div class="flex items-center justify-between mb-3">
-          <div class="font-medium">Enforcement</div>
-          <div class="mono text-sm px-2 py-0.5 rounded border border-[rgb(var(--border))]" data-bind="app.policy.enforcement">—</div>
-        </div>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.policy.signing.require_inventory_signature:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>
-            <span>Inventory signature</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.policy.signing.require_subject_signatures:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>
-            <span>Subject signatures</span>
-          </div>
-        </div>
+      {{/* Attestations */}}
+      <div class="prov-ledger__sub">attestations</div>
+      <table class="prov-table">
+        <tbody>
+          <tr><td>total</td><td class="prov-num" data-bind="app.attestations.total">—</td></tr>
+          <tr><td>source</td><td class="prov-num" data-bind="app.attestations.source">—</td></tr>
+          <tr><td>artifact</td><td class="prov-num" data-bind="app.attestations.artifact">—</td></tr>
+        </tbody>
+      </table>
+      <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs mono">
+        <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.attestations.sbom_attested:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>SBOM</span>
+        <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.attestations.scan_attested:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>scan</span>
+        <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[rgb(var(--muted))]" data-bind-class="app.attestations.license_attested:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>license</span>
       </div>
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show attestation files</span>
+          <span class="hidden group-open:inline">hide attestation files</span>
+        </summary>
+        <div class="mt-2 max-h-96 overflow-auto" id="attestation-file-list"></div>
+      </details>
 
-      {{/* Evidence Requirements */}}
-      <div class="blueprint-card">
-        <div class="font-medium mb-3">Evidence Requirements</div>
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.policy.evidence.sbom_required:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>
-            <span>SBOM</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.policy.evidence.scan_required:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>
-            <span>Scan</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.policy.evidence.license_required:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>
-            <span>License</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.policy.evidence.provenance_required:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>
-            <span>Provenance</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.policy.evidence.attestations_required:bg-[rgb(var(--good))]:bg-[rgb(var(--muted))]"></span>
-            <span>Attestations</span>
-          </div>
-        </div>
+      {{/* Evidence files */}}
+      <div class="prov-ledger__sub">evidence files</div>
+      <table class="prov-table">
+        <tbody>
+          <tr><td>file count</td><td class="prov-num" data-bind="app.evidence.file_count">—</td></tr>
+        </tbody>
+      </table>
+      <div class="prov-kicker mt-3 mb-1">categories</div>
+      <div class="flex flex-wrap gap-1" data-bind-list="app.evidence.categories"></div>
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show evidence files</span>
+          <span class="hidden group-open:inline">hide evidence files</span>
+        </summary>
+        <div class="mt-2 max-h-96 overflow-auto" id="evidence-file-list"></div>
+      </details>
+
+      <div class="prov-ledger__sub">transparency · keyless</div>
+      <div class="prov-cert">
+        <div class="prov-row"><span class="prov-row__label">rekor origin</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.rekor.origin">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">rekor log id</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.rekor.log_id" data-bind-title="app.signatures.keyless.rekor.log_id">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">rekor log index</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.rekor.log_index">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">rekor tree size</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.rekor.tree_size">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">rekor root hash</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.rekor.root_hash" data-bind-title="app.signatures.keyless.rekor.root_hash">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">entry kind</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.rekor.entry_kind">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">entry version</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.rekor.entry_version">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">ct log id</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.ct_log.log_id" data-bind-title="app.signatures.keyless.ct_log.log_id">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">ct log timestamp</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.ct_log.timestamp" data-format="datetime">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">ct log hash algo</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.ct_log.hash_algorithm">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">tsa imprint algo</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.timestamp.message_imprint.algorithm">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">tsa imprint hash</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.timestamp.message_imprint.hash" data-bind-title="app.signatures.keyless.timestamp.message_imprint.hash">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">tsa serial</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.timestamp.serial_number" data-bind-title="app.signatures.keyless.timestamp.serial_number">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">tsa policy oid</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.timestamp.policy_oid">—</span></div>
       </div>
-
-      {{/* Vulnerability Gating */}}
-      <div class="blueprint-card">
-        <div class="font-medium mb-3">Vulnerability Gating</div>
-        <div class="grid md:grid-cols-2 gap-4">
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show rekor inclusion proof</span>
+          <span class="hidden group-open:inline">hide inclusion proof</span>
+        </summary>
+        <div class="mt-2 flex flex-wrap gap-1" data-bind-list="app.signatures.keyless.rekor.inclusion_proof_hashes"></div>
+      </details>
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show signed checkpoint + raw TSR</span>
+          <span class="hidden group-open:inline">hide signed checkpoint + raw TSR</span>
+        </summary>
+        <div class="mt-2 space-y-3">
           <div>
-            <div class="attestation-label">Block On</div>
-            <div class="flex flex-wrap gap-1 mt-1" data-bind-list="app.policy.vulnerability.block_on"></div>
+            <div class="prov-kicker mb-1">rekor signed checkpoint</div>
+            <pre class="sig-block text-[10px] overflow-x-auto" data-bind="app.signatures.keyless.rekor.checkpoint_envelope"></pre>
           </div>
           <div>
-            <div class="attestation-label">Allow if VEX</div>
-            <div class="attestation-value" data-bind="app.computed.allow_vex_text">—</div>
+            <div class="prov-kicker mb-1">RFC 3161 TimeStampResp · DER · base64</div>
+            <pre class="sig-block text-[10px] overflow-x-auto" data-bind="app.signatures.keyless.timestamp.raw_tsr"></pre>
           </div>
         </div>
-      </div>
+      </details>
 
-      {{/* License Policy */}}
-      <div class="blueprint-card">
-        <div class="font-medium mb-3">License Policy</div>
-        <div class="space-y-3">
+      <div class="prov-ledger__sub">transparency · kms</div>
+      <div class="prov-cert">
+        <div class="prov-row"><span class="prov-row__label">rekor origin</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.kms.rekor.origin">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">rekor log id</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.kms.rekor.log_id" data-bind-title="app.signatures.kms.rekor.log_id">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">rekor log index</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.kms.rekor.log_index">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">rekor tree size</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.kms.rekor.tree_size">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">rekor root hash</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.kms.rekor.root_hash" data-bind-title="app.signatures.kms.rekor.root_hash">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">entry kind</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.kms.rekor.entry_kind">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">entry version</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.kms.rekor.entry_version">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">tsa imprint algo</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.kms.timestamp.message_imprint.algorithm">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">tsa imprint hash</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.kms.timestamp.message_imprint.hash" data-bind-title="app.signatures.kms.timestamp.message_imprint.hash">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">tsa serial</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.kms.timestamp.serial_number" data-bind-title="app.signatures.kms.timestamp.serial_number">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">tsa policy oid</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.kms.timestamp.policy_oid">—</span></div>
+      </div>
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show rekor inclusion proof</span>
+          <span class="hidden group-open:inline">hide inclusion proof</span>
+        </summary>
+        <div class="mt-2 flex flex-wrap gap-1" data-bind-list="app.signatures.kms.rekor.inclusion_proof_hashes"></div>
+      </details>
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show signed checkpoint + raw TSR</span>
+          <span class="hidden group-open:inline">hide signed checkpoint + raw TSR</span>
+        </summary>
+        <div class="mt-2 space-y-3">
           <div>
-            <div class="attestation-label">Allowed Licenses</div>
-            <div class="flex flex-wrap gap-1 mt-1" data-bind-list="app.policy.license.allowed"></div>
+            <div class="prov-kicker mb-1">rekor signed checkpoint</div>
+            <pre class="sig-block text-[10px] overflow-x-auto" data-bind="app.signatures.kms.rekor.checkpoint_envelope"></pre>
           </div>
           <div>
-            <div class="attestation-label">Denied Licenses</div>
-            <div class="flex flex-wrap gap-1 mt-1" data-bind-list="app.policy.license.denied"></div>
-          </div>
-          <div class="flex items-center gap-2 text-sm">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.policy.license.allow_unknown:bg-[rgb(var(--warn))]:bg-[rgb(var(--good))]"></span>
-            <span>Unknown licenses: <span data-bind="app.computed.allow_unknown_text">—</span></span>
+            <div class="prov-kicker mb-1">RFC 3161 TimeStampResp · DER · base64</div>
+            <pre class="sig-block text-[10px] overflow-x-auto" data-bind="app.signatures.kms.timestamp.raw_tsr"></pre>
           </div>
         </div>
-      </div>
-    </div>
-  </section>
+      </details>
 
-  {{/* Vulnerabilities */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Vulnerabilities</h2>
-    <div class="blueprint-card">
+      {{/* Artifacts */}}
+      <div class="prov-ledger__sub">artifacts</div>
+      <table class="prov-table">
+        <tbody>
+          <tr><td>platform</td><td data-bind="app.container.platform">—</td></tr>
+          <tr><td>binary size</td><td data-bind="app.binary.size" data-format="bytes">—</td></tr>
+          <tr><td>binary sha-256</td><td data-bind="app.binary.sha256">—</td></tr>
+          <tr><td>image repository</td><td data-bind="app.container.repository">—</td></tr>
+          <tr><td>image tag</td><td data-bind="app.container.tag">—</td></tr>
+          <tr><td>image digest</td><td data-bind="app.container.digest">—</td></tr>
+          <tr><td>digest reference</td><td data-bind="app.container.digest_ref">—</td></tr>
+          <tr><td>media type</td><td data-bind="app.container.media_type">—</td></tr>
+          <tr><td>artifact type</td><td data-bind="app.container.artifact_type">—</td></tr>
+          <tr><td>pushed at</td><td data-bind="app.container.pushed_at" data-format="datetime">—</td></tr>
+        </tbody>
+      </table>
 
-      {{/* Severity Grid */}}
-      <div class="grid grid-cols-6 gap-2 mb-4">
-        <div class="text-center">
-          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--bad))]/20 text-[rgb(var(--bad))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.critical">—</div>
-          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">Critical</div>
-        </div>
-        <div class="text-center">
-          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--warn))]/20 text-[rgb(var(--warn))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.high">—</div>
-          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">High</div>
-        </div>
-        <div class="text-center">
-          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--accent))]/20 text-[rgb(var(--accent))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.medium">—</div>
-          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">Medium</div>
-        </div>
-        <div class="text-center">
-          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--muted))]/20 text-[rgb(var(--muted))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.low">—</div>
-          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">Low</div>
-        </div>
-        <div class="text-center">
-          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.negligible">—</div>
-          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">Negligible</div>
-        </div>
-        <div class="text-center">
-          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))] font-semibold text-lg" data-bind="app.vulnerabilities.counts.unknown">—</div>
-          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">Unknown</div>
-        </div>
-      </div>
-
-      {{/* Metadata */}}
-      <div class="border-t border-[rgb(var(--border))] pt-3 grid md:grid-cols-3 gap-4 mb-4">
-        <div>
-          <div class="attestation-label">Total</div>
-          <div class="attestation-value" data-bind="app.vulnerabilities.total">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Worst Severity</div>
-          <div class="attestation-value" data-bind="app.vulnerabilities.worst_severity">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Gate Result</div>
-          <div class="attestation-value">
-            <span data-bind="app.vulnerabilities.gate_result">—</span>
-            <span class="text-[rgb(var(--muted))] text-xs ml-1">(threshold: <span data-bind="app.vulnerabilities.gate_threshold">—</span>)</span>
-          </div>
-        </div>
-        <div>
-          <div class="attestation-label">Scope</div>
-          <div class="attestation-value" data-bind="app.vulnerabilities.scope">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Deduplication</div>
-          <div class="attestation-value text-xs" data-bind="app.vulnerabilities.deduplication">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Scanned At</div>
-          <div class="attestation-value tabular" data-bind="app.vulnerabilities.scanned_at" data-format="datetime">—</div>
-        </div>
-      </div>
-
-      {{/* Scanners Used */}}
-      <div class="border-t border-[rgb(var(--border))] pt-3 mb-4">
-        <div class="attestation-label mb-2">Scanners</div>
-        <div class="flex flex-wrap gap-1" data-bind-list="app.vulnerabilities.scanners_used"></div>
-      </div>
-
-      {{/* Per-Scanner Breakdown */}}
-      <div class="border-t border-[rgb(var(--border))] pt-3">
-        <div class="attestation-label mb-2">Per-Scanner Results</div>
-        <div id="vuln-scanner-breakdown" class="space-y-2">
-          {{/* JS will populate per-scanner cards */}}
-        </div>
-      </div>
-
-      {{/* Individual Findings */}}
-      <div class="border-t border-[rgb(var(--border))] pt-3">
-        <details class="group">
-          <summary class="cursor-pointer text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))] transition-colors flex items-center gap-2">
-            <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-            <span class="group-open:hidden">Show findings</span>
-            <span class="hidden group-open:inline">Hide findings</span>
-          </summary>
-          <div class="mt-3 space-y-2 max-h-96 overflow-y-auto" id="vuln-findings-list">
-            {{/* JS will populate findings */}}
-          </div>
-        </details>
-      </div>
+      {{/* Raw JSON */}}
+      <div class="prov-ledger__sub">raw release manifest</div>
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show release json</span>
+          <span class="hidden group-open:inline">hide release json</span>
+        </summary>
+        <pre class="sig-block text-[10px] overflow-x-auto max-h-96 mt-2" data-bind="app.raw-json"></pre>
+      </details>
 
     </div>
-  </section>
-
-  {{/* SBOM */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Software Bill of Materials</h2>
-    <div class="blueprint-card">
-      <div class="grid md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <div class="attestation-label">Source Packages</div>
-          <div class="attestation-value text-lg font-semibold" data-bind="app.sbom.source_package_count">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Artifact Packages</div>
-          <div class="attestation-value text-lg font-semibold" data-bind="app.sbom.artifact_package_count">—</div>
-        </div>
-      </div>
-      <div class="border-t border-[rgb(var(--border))] pt-3 grid md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <div class="attestation-label">Generators</div>
-          <div class="flex flex-wrap gap-1 mt-1" data-bind-list="app.sbom.generators"></div>
-        </div>
-        <div>
-          <div class="attestation-label">Formats Produced</div>
-          <div class="flex flex-wrap gap-1 mt-1" data-bind-list="app.sbom.formats_produced"></div>
-        </div>
-      </div>
-      <div class="border-t border-[rgb(var(--border))] pt-3 mb-4">
-        <div class="attestation-label">Generated At</div>
-        <div class="attestation-value tabular" data-bind="app.sbom.generated_at" data-format="datetime">—</div>
-      </div>
-
-      {{/* Expandable Package List */}}
-      <div class="border-t border-[rgb(var(--border))] pt-3">
-        <details class="group">
-          <summary class="cursor-pointer text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))] transition-colors flex items-center gap-2">
-            <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-            <span class="group-open:hidden">Show all packages</span>
-            <span class="hidden group-open:inline">Hide packages</span>
-          </summary>
-          <div class="mt-3 max-h-96 overflow-y-auto" id="sbom-package-list">
-            {{/* JS will populate package list */}}
-          </div>
-        </details>
-      </div>
-    </div>
-  </section>
-
-  {{/* Licenses */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Licenses</h2>
-    <div class="blueprint-card">
-      <div class="flex items-center gap-3 mb-4">
-        <span class="w-3 h-3 rounded-full" data-bind-class="app.licenses.compliant:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
-        <span class="font-medium" data-bind="app.computed.license_status">—</span>
-      </div>
-      <div class="space-y-3">
-        <div>
-          <div class="attestation-label">Licenses Found</div>
-          <div class="flex flex-wrap gap-1 mt-1" data-bind-list="app.licenses.license_counts"></div>
-        </div>
-        <div>
-          <div class="attestation-label">Denied Licenses Found</div>
-          <div class="flex flex-wrap gap-1 mt-1" id="denied-found-list">
-            <span class="text-xs text-[rgb(var(--good))]">None</span>
-          </div>
-        </div>
-        <div class="grid md:grid-cols-2 gap-4">
-          <div>
-            <div class="attestation-label">Packages Without License</div>
-            <div class="attestation-value" data-bind="app.licenses.without_license_count">—</div>
-          </div>
-        </div>
-
-        {{/* Expandable License Package Breakdown */}}
-        <div class="border-t border-[rgb(var(--border))] pt-3">
-          <details class="group">
-            <summary class="cursor-pointer text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))] transition-colors flex items-center gap-2">
-              <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-              </svg>
-              <span class="group-open:hidden">Show packages by license</span>
-              <span class="hidden group-open:inline">Hide packages by license</span>
-            </summary>
-            <div class="mt-3 space-y-2 max-h-96 overflow-y-auto" id="license-package-list">
-              {{/* JS will populate license breakdown */}}
-            </div>
-          </details>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  {{/* Evidence */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Evidence</h2>
-    <div class="blueprint-card">
-      <div class="mb-4">
-        <div class="text-center">
-          <div class="text-2xl font-semibold" data-bind="app.evidence.file_count">—</div>
-          <div class="text-xs text-[rgb(var(--muted))]">Evidence Files</div>
-        </div>
-      </div>
-
-      {{/* Completeness */}}
-      <div class="border-t border-[rgb(var(--border))] pt-3 mb-4">
-        <div class="attestation-label mb-2">Completeness</div>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.evidence.completeness.sbom_source:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
-            <span>SBOM (source)</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.evidence.completeness.sbom_artifacts:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
-            <span>SBOM (artifacts)</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.evidence.completeness.scan_source:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
-            <span>Scan (source)</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.evidence.completeness.scan_artifacts:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
-            <span>Scan (artifacts)</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.evidence.completeness.license_source:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
-            <span>License (source)</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.evidence.completeness.license_artifacts:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
-            <span>License (artifacts)</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" data-bind-class="app.evidence.completeness.attestations_attached:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
-            <span>Attestations</span>
-          </div>
-        </div>
-      </div>
-
-      {{/* Categories Breakdown */}}
-      <div class="border-t border-[rgb(var(--border))] pt-3">
-        <div class="attestation-label mb-2">Categories</div>
-        <div class="flex flex-wrap gap-1" data-bind-list="app.evidence.categories"></div>
-      </div>
-    </div>
-  </section>
-
-  {{/* Binary & Container */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Artifacts</h2>
-    <div class="space-y-3">
-
-      {{/* Binary */}}
-      <div class="blueprint-card">
-        <div class="font-medium mb-3">Binary</div>
-        <div class="grid md:grid-cols-2 gap-4">
-          <div>
-            <div class="attestation-label">Platform</div>
-            <div class="attestation-value mono" data-bind="app.container.platform">—</div>
-          </div>
-          <div>
-            <div class="attestation-label">Size</div>
-            <div class="attestation-value" data-bind="app.binary.size" data-format="bytes">—</div>
-          </div>
-          <div class="md:col-span-2">
-            <div class="attestation-label">SHA256</div>
-            <div class="attestation-value text-[10px] break-all mono" data-bind="app.binary.sha256">—</div>
-          </div>
-        </div>
-      </div>
-
-      {{/* Container */}}
-      <div class="blueprint-card">
-        <div class="font-medium mb-3">Container</div>
-        <div class="space-y-3">
-          <div>
-            <div class="attestation-label">Repository</div>
-            <div class="attestation-value text-xs break-all mono" data-bind="app.container.repository">—</div>
-          </div>
-          <div class="grid md:grid-cols-2 gap-4">
-            <div>
-              <div class="attestation-label">Tag</div>
-              <div class="attestation-value mono" data-bind="app.container.tag">—</div>
-            </div>
-            <div>
-              <div class="attestation-label">Pushed At</div>
-              <div class="attestation-value tabular" data-bind="app.container.pushed_at" data-format="datetime">—</div>
-            </div>
-          </div>
-          <div>
-            <div class="attestation-label">Digest</div>
-            <div class="attestation-value text-[10px] break-all mono" data-bind="app.container.digest">—</div>
-          </div>
-          <div>
-            <div class="attestation-label">Digest Reference</div>
-            <div class="attestation-value text-[10px] break-all mono" data-bind="app.container.digest_ref">—</div>
-          </div>
-          <div class="grid md:grid-cols-2 gap-4">
-            <div>
-              <div class="attestation-label">Media Type</div>
-              <div class="attestation-value text-xs mono" data-bind="app.container.media_type">—</div>
-            </div>
-            <div>
-              <div class="attestation-label">Artifact Type</div>
-              <div class="attestation-value text-xs mono" data-bind="app.container.artifact_type">—</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  {{/* Raw JSON */}}
-  <section>
-    <details class="group">
-      <summary class="cursor-pointer text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))] transition-colors">
-        <span class="group-open:hidden">Show raw JSON</span>
-        <span class="hidden group-open:inline">Hide raw JSON</span>
-      </summary>
-      <div class="mt-4">
-        <pre class="sig-block text-[10px] overflow-x-auto max-h-96" data-bind="app.raw-json"></pre>
-      </div>
-    </details>
-  </section>
+  </details>
 
 </div>

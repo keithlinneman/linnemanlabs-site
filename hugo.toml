@@ -86,3 +86,29 @@ publishDir = "public"
     name = "Provenance"
     pageRef = "/about/provenance/"
     weight = 4
+
+[server]
+
+[[server.redirects]]
+fromRe = "^/api/provenance/app/?$"
+to = "/dev-api/provenance/app.json"
+status = 200
+force = true
+
+[[server.redirects]]
+fromRe = "^/api/provenance/app/summary/?$"
+to = "/dev-api/provenance/app-summary.json"
+status = 200
+force = true
+
+[[server.redirects]]
+fromRe = "^/api/provenance/content/?$"
+to = "/dev-api/provenance/content.json"
+status = 200
+force = true
+
+[[server.redirects]]
+fromRe = "^/api/provenance/content/summary/?$"
+to = "/dev-api/provenance/content-summary.json"
+status = 200
+force = true

@@ -1,0 +1,36 @@
+{{/* Layer 1 - verification chain banner.
+     Static: silicon -> firmware -> OS -> runtime -> app -> content.
+     Filled (--good) = verifiable today, hollow (--muted) = roadmap.
+     The roadmap layers track the "what's next" narrative below. */}}
+<div>
+  <div class="prov-kicker mb-2">verification chain · silicon -> content</div>
+  <div class="prov-chain" role="list" aria-label="verification chain from silicon to content">
+    <span class="prov-chain__node prov-chain__node--roadmap" role="listitem" title="TPM-based hardware attestation - roadmap">
+      <span class="prov-chain__dot"></span>silicon
+    </span>
+    <span class="prov-chain__arrow" aria-hidden="true">-></span>
+    <span class="prov-chain__node prov-chain__node--roadmap" role="listitem" title="UEFI Secure Boot - roadmap">
+      <span class="prov-chain__dot"></span>firmware
+    </span>
+    <span class="prov-chain__arrow" aria-hidden="true">-></span>
+    <span class="prov-chain__node prov-chain__node--roadmap" role="listitem" title="IMA/EVM signed execution, dm-verity, kernel lockdown - roadmap">
+      <span class="prov-chain__dot"></span>os
+    </span>
+    <span class="prov-chain__arrow" aria-hidden="true">-></span>
+    <span class="prov-chain__node prov-chain__node--roadmap" role="listitem" title="verified runtime anchored to the OS below it - roadmap">
+      <span class="prov-chain__dot"></span>runtime
+    </span>
+    <span class="prov-chain__arrow" aria-hidden="true">-></span>
+    <span class="prov-chain__node prov-chain__node--good" role="listitem" title="application build provenance - verifiable today">
+      <span class="prov-chain__dot"></span>app
+    </span>
+    <span class="prov-chain__arrow" aria-hidden="true">-></span>
+    <span class="prov-chain__node prov-chain__node--good" role="listitem" title="content bundle provenance - verifiable today">
+      <span class="prov-chain__dot"></span>content
+    </span>
+  </div>
+  <div class="prov-chain__legend">
+    <span><span class="prov-chain__dot prov-chain__dot--good"></span> verified today</span>
+    <span><span class="prov-chain__dot prov-chain__dot--roadmap"></span> roadmap</span>
+  </div>
+</div>

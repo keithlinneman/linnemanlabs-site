@@ -420,6 +420,572 @@
   }
 }
 
+@layer components {
+
+  /* --- Generic leader fills (dotted + box-dash) ------------- */
+  .prov-leader {
+    flex: 1 1 auto;
+    min-width: 1.25rem;
+    overflow: hidden;
+    white-space: nowrap;
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: rgb(var(--muted));
+    opacity: 0.4;
+    user-select: none;
+  }
+  .prov-leader::after {
+    content: " . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .";
+    letter-spacing: 0.04em;
+  }
+  .prov-leader--dash {
+    opacity: 0.45;
+  }
+  .prov-leader--dash::after {
+    content: "──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────";
+    letter-spacing: 0;
+  }
+
+  /* --- ASCII frame section header  └─[ name ]──────────┐ ---- */
+  .prov-frame {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    min-width: 0;
+    overflow: hidden;
+    margin: 2.25rem 0 1rem;
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+    line-height: 1;
+    color: rgb(var(--muted));
+  }
+  .prov-frame__edge {
+    white-space: pre;
+    opacity: 0.55;
+  }
+  .prov-frame__name {
+    white-space: pre;
+    color: rgb(var(--accent));
+    letter-spacing: 0.08em;
+    text-transform: lowercase;
+  }
+  .prov-frame__corner {
+    white-space: pre;
+    opacity: 0.55;
+  }
+  /* mobile: drop the ASCII, fall back to a left rule + label */
+  @media (max-width: 767px) {
+    .prov-frame {
+      gap: 0.5rem;
+      padding-left: 0.625rem;
+      border-left: 2px solid rgb(var(--accent));
+    }
+    .prov-frame__edge,
+    .prov-frame__corner,
+    .prov-frame .prov-leader--dash {
+      display: none;
+    }
+  }
+
+  /* Certificate container */
+  .prov-cert {
+    border: 1px solid rgb(var(--border));
+    background: rgb(var(--panel));
+    padding: 1.1rem 1.25rem 1.25rem;
+    overflow: hidden;
+  }
+
+  /* --- Dotted-leader row (about-me style): label .......... value  */
+  .prov-row,
+  .prov-term__line {
+    --prov-label-col: 12rem;
+  }
+  .prov-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    padding: 0.3rem 0;
+  }
+  .prov-row__label {
+    flex: 0 0 var(--prov-label-col);
+    overflow: hidden;
+    white-space: nowrap;
+    color: rgb(var(--muted));
+  }
+  .prov-row__label::after {
+    content: " ............................................................";
+    margin-left: 0.5ch;
+    color: rgb(var(--muted));
+    opacity: 0.4;
+    letter-spacing: 0.04em;
+  }
+  .prov-row__value {
+    flex: 0 1 auto;
+    min-width: 0;
+    text-align: left;
+    color: rgb(var(--fg));
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .prov-row__value a {
+    color: rgb(var(--accent));
+  }
+  .prov-row__value a:hover {
+    text-decoration: underline;
+  }
+  /* standalone leader span*/
+  .prov-row .prov-leader {
+    display: none;
+  }
+  /* --break is a no-op, values wrap natively at the value column */
+  .prov-row--break .prov-row__value {
+    flex-basis: auto;
+    max-width: none;
+    padding-left: 0;
+    margin-top: 0;
+  }
+  /* row groups stack full-width (the leader needs the room) */
+  .prov-grid {
+    display: block;
+  }
+  @media (max-width: 640px) {
+    .prov-row,
+    .prov-term__line {
+      --prov-label-col: 8.5rem;
+    }
+  }
+
+  /* [proof] affordance  */
+  .prov-proof {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0 0.3rem;
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.625rem;
+    line-height: 1.4;
+    letter-spacing: 0.03em;
+    color: rgb(var(--accent));
+    border: 1px solid rgb(var(--accent) / 0.5);
+    text-decoration: none;
+    vertical-align: 1px;
+  }
+  .prov-proof:hover {
+    background: rgb(var(--accent) / 0.12);
+    border-color: rgb(var(--accent));
+  }
+
+  /* Terminal verify block (TL;DR) */
+  .prov-term {
+    border: 1px solid rgb(var(--border));
+    background: rgb(var(--panel));
+    padding: 0.9rem 1.1rem 1rem;
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    color: rgb(var(--fg));
+    overflow-x: auto;
+  }
+  .prov-term__cmd {
+    color: rgb(var(--fg));
+  }
+  .prov-term__cmd::before {
+    content: "$ ";
+    color: rgb(var(--good));
+  }
+  .prov-term__line {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding-left: 1.4rem;
+  }
+  .prov-term__line .prov-leader {
+    display: none;
+  }
+  .prov-term__label {
+    flex: 0 0 var(--prov-label-col);
+    overflow: hidden;
+    white-space: nowrap;
+    color: rgb(var(--muted));
+  }
+  .prov-term__label::after {
+    content: " ............................................................";
+    margin-left: 0.5ch;
+    color: rgb(var(--muted));
+    opacity: 0.4;
+    letter-spacing: 0.04em;
+  }
+  .prov-term__val {
+    flex: 0 1 auto;
+    min-width: 0;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .prov-term__result {
+    margin-top: 0.55rem;
+    padding-top: 0.5rem;
+    padding-left: 1.4rem;
+    border-top: 1px dashed rgb(var(--border));
+    color: rgb(var(--good));
+  }
+  .prov-term__result::before {
+    content: "=> ";
+    color: rgb(var(--muted));
+  }
+
+  /* check glyph: pass (✓ good) / pending (· muted) / fail (✗ bad)
+     state class is toggled by data-bind-class; default = pending */
+  .prov-check {
+    flex: 0 0 auto;
+    align-self: center;
+    width: 1ch;
+    text-align: center;
+    font-weight: 600;
+  }
+  .prov-check::before {
+    content: "\00B7";
+    color: rgb(var(--muted));
+  }
+  .prov-check--ok::before {
+    content: "\2713";
+    color: rgb(var(--good));
+  }
+  .prov-check--bad::before {
+    content: "\2717";
+    color: rgb(var(--bad));
+  }
+
+  /* Layer 1 verification chain banner */
+  .prov-chain {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid rgb(var(--border));
+    background: rgb(var(--panel));
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+  }
+  .prov-chain__node {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid rgb(var(--border));
+    white-space: nowrap;
+  }
+  .prov-chain__dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+  }
+  .prov-chain__node--good {
+    border-color: rgb(var(--good) / 0.6);
+    color: rgb(var(--fg));
+  }
+  .prov-chain__node--good .prov-chain__dot {
+    background: rgb(var(--good));
+  }
+  .prov-chain__node--roadmap {
+    border-style: dashed;
+    color: rgb(var(--muted));
+  }
+  .prov-chain__node--roadmap .prov-chain__dot {
+    background: transparent;
+    border: 1px solid rgb(var(--muted));
+  }
+  .prov-chain__dot--good {
+    background: rgb(var(--good));
+  }
+  .prov-chain__dot--roadmap {
+    background: transparent;
+    border: 1px solid rgb(var(--muted));
+  }
+  .prov-chain__arrow {
+    color: rgb(var(--muted));
+    opacity: 0.55;
+  }
+  .prov-chain__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.6rem;
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.6875rem;
+    color: rgb(var(--muted));
+  }
+  .prov-chain__legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  /*  source -> build -> artifact flow  */
+  .prov-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  @media (min-width: 768px) {
+    .prov-flow {
+      flex-direction: row;
+      align-items: stretch;
+      gap: 0;
+    }
+  }
+  .prov-flow__node {
+    flex: 1 1 0;
+    min-width: 0;
+    border: 1px solid rgb(var(--border));
+    background: rgb(var(--bg));
+    padding: 0.7rem 0.85rem;
+  }
+  .prov-flow__kind {
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgb(var(--muted));
+  }
+  .prov-flow__title {
+    margin-top: 0.2rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .prov-flow__title a {
+    color: rgb(var(--accent));
+  }
+  .prov-flow__meta {
+    margin-top: 0.15rem;
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.6875rem;
+    color: rgb(var(--muted));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .prov-flow__meta a {
+    color: rgb(var(--accent));
+  }
+  .prov-flow__arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.6rem;
+    color: rgb(var(--muted));
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  /* dual-signing sub-panels (kms / keyless) */
+  .prov-sig {
+    border-left: 2px solid rgb(var(--border));
+    padding-left: 0.9rem;
+    margin-top: 1.1rem;
+  }
+  .prov-sig:first-of-type {
+    margin-top: 0.25rem;
+  }
+  .prov-sig--kms {
+    border-left-color: rgb(var(--good) / 0.55);
+  }
+  .prov-sig--keyless {
+    border-left-color: rgb(var(--accent) / 0.55);
+  }
+  .prov-sig__head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgb(var(--muted));
+  }
+  .prov-sig__head .prov-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    background: rgb(var(--muted));
+  }
+
+  /* gate / posture callout */
+  .prov-callout {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.75rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid rgb(var(--border));
+    border-left-width: 3px;
+    border-left-color: rgb(var(--accent));
+    background: rgb(var(--accent) / 0.06);
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+  }
+  .prov-callout__verb {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    color: rgb(var(--fg));
+  }
+  .prov-callout--pass {
+    border-left-color: rgb(var(--good));
+    background: rgb(var(--good) / 0.08);
+  }
+  .prov-callout--warn {
+    border-left-color: rgb(var(--warn));
+    background: rgb(var(--warn) / 0.08);
+  }
+  .prov-callout--bad {
+    border-left-color: rgb(var(--bad));
+    background: rgb(var(--bad) / 0.08);
+  }
+
+  /* Layer 3 evidence ledger */
+  .prov-ledger {
+    border: 1px solid rgb(var(--border));
+    background: rgb(var(--panel));
+  }
+  .prov-ledger > summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.8rem 1rem;
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+    color: rgb(var(--fg));
+  }
+  .prov-ledger > summary::-webkit-details-marker {
+    display: none;
+  }
+  .prov-ledger > summary::before {
+    content: "▸";
+    color: rgb(var(--accent));
+    transition: transform 120ms ease;
+  }
+  .prov-ledger[open] > summary::before {
+    content: "▾";
+  }
+  .prov-ledger > summary:hover {
+    background: rgb(var(--accent) / 0.06);
+  }
+  .prov-ledger__hint {
+    margin-left: auto;
+    color: rgb(var(--muted));
+    font-size: 0.6875rem;
+  }
+  .prov-ledger__body {
+    border-top: 1px solid rgb(var(--border));
+    padding: 1rem;
+  }
+  .prov-ledger__sub {
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgb(var(--muted));
+    margin: 1.25rem 0 0.5rem;
+  }
+  .prov-ledger__sub:first-child {
+    margin-top: 0;
+  }
+
+  /* --- inner expandable block (clearly clickable button feel)
+     Used for "show all files", "show rekor inclusion proof",
+     "show signed checkpoint + raw TSR", "show provenance.json",
+     and the app-side vuln findings / sbom / license toggles. */
+  .prov-expand {
+    margin-top: 0.85rem;
+    border: 1px dashed rgb(var(--border));
+    background: rgb(var(--bg));
+  }
+  .prov-expand[open] {
+    border-style: solid;
+    border-color: rgb(var(--accent) / 0.5);
+  }
+  .prov-expand > summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.5rem 0.85rem;
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    color: rgb(var(--accent));
+    transition: background 120ms ease;
+  }
+  .prov-expand > summary::-webkit-details-marker {
+    display: none;
+  }
+  .prov-expand > summary::before {
+    content: "▸";
+    color: rgb(var(--accent));
+  }
+  .prov-expand[open] > summary::before {
+    content: "▾";
+  }
+  .prov-expand > summary:hover {
+    background: rgb(var(--accent) / 0.1);
+  }
+  .prov-expand[open] > *:not(summary) {
+    border-top: 1px dashed rgb(var(--border));
+    padding: 0.75rem 0.85rem;
+  }
+
+  /* --- dense table (auditor data) --------------------------- */
+  .prov-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+  }
+  .prov-table th,
+  .prov-table td {
+    text-align: left;
+    vertical-align: top;
+    padding: 0.4rem 0.6rem;
+    overflow-wrap: anywhere;
+  }
+  .prov-table thead th {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgb(var(--muted));
+    border-bottom: 1px dashed rgb(var(--border));
+  }
+  .prov-table tbody tr:nth-child(even) {
+    background: rgb(var(--panel) / 0.55);
+  }
+  .prov-table td.prov-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* small uppercase kicker label */
+  .prov-kicker {
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgb(var(--muted));
+  }
+}
+
 /* Fonts */
 
 /* source-sans-3-regular - latin */

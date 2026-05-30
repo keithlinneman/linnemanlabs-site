@@ -1,256 +1,552 @@
-{{/* Content Provenance Partial - populated by provenance.js */}}
-<div id="provenance-content" class="space-y-8">
+{{/* Content bundle provenance - three-layer progressive disclosure.
+     Populated by initContent() in main.js (namespace: content.*). */}}
+<div id="provenance-content" class="space-y-3">
 
-  {{/* Status Banner */}}
-  <div class="attestation-card">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <span class="status-dot" data-bind="content.status-dot"></span>
-        <div>
-          <div class="font-medium">Content Bundle <span data-bind="content.status-text">Loading...</span></div>
-          <div class="text-xs text-[rgb(var(--muted))]">
-            Loaded from <span data-bind="content.runtime.source">—</span> at <span data-bind="content.runtime.loaded_at">—</span>
-          </div>
-        </div>
+  {{/* LAYER 1 - verify hero (TL;DR) */}}
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <div class="prov-kicker">tl;dr · what verifies today</div>
+    <div class="prov-kicker">
+      content <span class="text-[rgb(var(--fg))]" data-bind="content.bundle.version">—</span>
+    </div>
+  </div>
+  <div class="prov-term">
+    <div class="prov-term__cmd">verify --bundle content --summary</div>
+    <div class="prov-term__line">
+      <span class="prov-check prov-check--ok" data-bind-class="content.bundle.content_hash:prov-check--ok:prov-check--bad"></span>
+      <span class="prov-term__label">content hash</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-term__val">sha384 · verified at load</span>
+    </div>
+    <div class="prov-term__line">
+      <span class="prov-check" data-bind-class="content.signatures.kms.key_ref:prov-check--ok:"></span>
+      <span class="prov-term__label">kms signature</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-term__val" data-bind="content.signatures.kms.key_ref" data-bind-title="content.signatures.kms.key_ref">pending</span>
+    </div>
+    <div class="prov-term__line">
+      <span class="prov-check" data-bind-class="content.signatures.keyless.certificate.build_signer_uri:prov-check--ok:"></span>
+      <span class="prov-term__label">keyless signature</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-term__val" data-bind="content.signatures.keyless.certificate.issuer">fulcio · pending</span>
+    </div>
+    <div class="prov-term__line">
+      <span class="prov-check" data-bind-class="content.signatures.keyless.rekor.log_index:prov-check--ok:"></span>
+      <span class="prov-term__label">transparency log</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-term__val">rekor #<span data-bind="content.signatures.keyless.rekor.log_index">pending</span>, #<span data-bind="content.signatures.kms.rekor.log_index">—</span></span>
+    </div>
+    <div class="prov-term__line">
+      <span class="prov-check" data-bind-class="content.signatures.keyless.timestamp.gen_time:prov-check--ok:"></span>
+      <span class="prov-term__label">timestamp</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-term__val" data-bind="content.signatures.keyless.timestamp.gen_time" data-format="datetime">rfc3161 · pending</span>
+    </div>
+    <div class="prov-term__result">
+      <span data-bind="content.status-text">integrity verified</span>
+      <span class="text-[rgb(var(--muted))]"> at <span data-bind="content.runtime.loaded_at" data-format="datetime">—</span></span>
+    </div>
+  </div>
+
+  {{/* LAYER 2 - certificate of provenance */}}
+
+  {{/* Trust attestation - elevated first */}}
+  <div class="prov-frame" role="heading" aria-level="3">
+    <span class="prov-frame__edge" aria-hidden="true">└─[ </span><span class="prov-frame__name">trust attestation</span><span class="prov-frame__edge" aria-hidden="true"> ]</span>
+    <span class="prov-leader prov-leader--dash" aria-hidden="true"></span>
+    <span class="prov-frame__corner" aria-hidden="true">┐</span>
+  </div>
+  <div class="prov-cert">
+    <p class="text-sm text-[rgb(var(--muted))] mb-3">
+      The server recomputes the bundle's sha384 at load and refuses to serve on mismatch. Each
+      bundle is also dual-signed at build time - an AWS&nbsp;KMS key plus a keyless Fulcio
+      certificate - and each signature is independently logged to Rekor and RFC&nbsp;3161
+      timestamped, all rooted in the self-hosted stack at
+      <a href="https://trust.linnemanlabs.com/" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">trust.linnemanlabs.com</a>.
+    </p>
+    <div class="prov-row">
+      <span class="prov-row__label">verified by</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value">sha384 recomputation at load</span>
+    </div>
+    <div class="prov-row prov-row--break">
+      <span class="prov-row__label">content digest</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value" data-bind="content.bundle.content_hash" data-bind-title="content.bundle.content_hash">—</span>
+    </div>
+
+    {{/* AWS KMS signature - bound to the real content.signatures.kms.* block */}}
+    <div class="prov-sig prov-sig--kms hidden" data-bind-show="content.signatures.kms.key_ref">
+      <div class="prov-sig__head">aws kms signature</div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="content.signatures.kms.key_ref">
+        <span class="prov-row__label">key reference</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="content.signatures.kms.key_ref" data-bind-title="content.signatures.kms.key_ref">—</span>
       </div>
-      <div class="text-right">
-        <div class="text-lg font-medium mono" data-bind="content.bundle.version">—</div>
-        <div class="text-xs text-[rgb(var(--muted))]">Content Version</div>
+      <div class="prov-row hidden" data-bind-show="content.signatures.kms.rekor.log_index">
+        <span class="prov-row__label">logged in</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          rekor #<span data-bind="content.signatures.kms.rekor.log_index">—</span>
+          <a class="prov-proof hidden" data-bind-show="content.signatures.kms.rekor.pubkey_url" data-bind-href="content.signatures.kms.rekor.pubkey_url" target="_blank" rel="noopener" title="Open checkpoint public key">[key]</a>
+        </span>
+      </div>
+      <div class="prov-row hidden" data-bind-show="content.signatures.kms.timestamp.gen_time">
+        <span class="prov-row__label">timestamped</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="content.signatures.kms.timestamp.gen_time" data-format="datetime">—</span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="content.signatures.kms.timestamp.tsa_subject">
+        <span class="prov-row__label" title="Time Stamp Authority (RFC 3161)">tsa</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="content.signatures.kms.timestamp.tsa_subject" data-bind-title="content.signatures.kms.timestamp.tsa_subject">—</span>
+          <a class="prov-proof hidden" data-bind-show="content.signatures.kms.timestamp.tsa_cert_url" data-bind-href="content.signatures.kms.timestamp.tsa_cert_url" target="_blank" rel="noopener" title="Open certificate (PEM)">[cert]</a>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="content.signatures.kms.timestamp.tsa_fingerprint_sha256">
+        <span class="prov-row__label" title="SHA-256 fingerprint of the TSA's signing certificate">tsa fingerprint</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="content.signatures.kms.timestamp.tsa_fingerprint_sha256" data-bind-title="content.signatures.kms.timestamp.tsa_fingerprint_sha256">—</span>
+      </div>
+    </div>
+
+    {{/* Fulcio keyless signature - bound to the real content.signatures.keyless.certificate.* block */}}
+    <div class="prov-sig prov-sig--keyless hidden" data-bind-show="content.signatures.keyless.certificate.build_signer_uri">
+      <div class="prov-sig__head">keyless signature · fulcio</div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="content.signatures.keyless.certificate.build_signer_uri">
+        <span class="prov-row__label">signed by</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="content.signatures.keyless.certificate.build_signer_uri" data-bind-title="content.signatures.keyless.certificate.build_signer_uri">—</span>
+          <a class="prov-proof hidden" data-bind-show="content.signatures.keyless.certificate.run_invocation_uri" data-bind-href="content.signatures.keyless.certificate.run_invocation_uri" target="_blank" rel="noopener" title="Open workflow run on GitHub Actions">[run]</a>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="content.signatures.keyless.certificate.issuer">
+        <span class="prov-row__label">issued by</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="content.signatures.keyless.certificate.issuer" data-bind-title="content.signatures.keyless.certificate.issuer">—</span>
+          <a class="prov-proof hidden" data-bind-show="content.signatures.keyless.chain.issuer_cert_url" data-bind-href="content.signatures.keyless.chain.issuer_cert_url" target="_blank" rel="noopener" title="Open certificate (PEM)">[cert]</a>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="content.signatures.keyless.chain.issuer_fingerprint_sha256">
+        <span class="prov-row__label">fulcio fingerprint</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="content.signatures.keyless.chain.issuer_fingerprint_sha256" data-bind-title="content.signatures.keyless.chain.issuer_fingerprint_sha256">—</span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="content.signatures.keyless.certificate.oidc_issuer">
+        <span class="prov-row__label" title="OpenID Connect identity provider">oidc issuer</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="content.signatures.keyless.certificate.oidc_issuer" data-bind-title="content.signatures.keyless.certificate.oidc_issuer">—</span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="content.signatures.keyless.certificate.github_workflow_name">
+        <span class="prov-row__label">workflow</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="content.signatures.keyless.certificate.github_workflow_name">—</span>
+          · <span data-bind="content.signatures.keyless.certificate.github_workflow_ref" data-bind-title="content.signatures.keyless.certificate.github_workflow_ref">—</span>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="content.signatures.keyless.certificate.source_repository">
+        <span class="prov-row__label">attested source</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="content.signatures.keyless.certificate.source_repository" data-bind-title="content.signatures.keyless.certificate.source_repository">—</span>
+          @<span data-bind="content.signatures.keyless.certificate.source_revision" data-format="hash" data-bind-title="content.signatures.keyless.certificate.source_revision">—</span>
+        </span>
+      </div>
+      <div class="prov-row hidden" data-bind-show="content.signatures.keyless.certificate.not_after">
+        <span class="prov-row__label">cert valid</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="content.signatures.keyless.certificate.not_before" data-format="datetime">—</span>
+          → <span data-bind="content.signatures.keyless.certificate.not_after" data-format="datetime">—</span>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="content.signatures.keyless.certificate.fingerprint_sha256">
+        <span class="prov-row__label">leaf fingerprint</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="content.signatures.keyless.certificate.fingerprint_sha256" data-bind-title="content.signatures.keyless.certificate.fingerprint_sha256">—</span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="content.signatures.keyless.certificate.serial_number">
+        <span class="prov-row__label">serial</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="content.signatures.keyless.certificate.serial_number" data-bind-title="content.signatures.keyless.certificate.serial_number">—</span>
+      </div>
+      {{/* Rekor + TSA + CT log + chain - bound to content.signatures.keyless.* */}}
+      <div class="prov-row hidden" data-bind-show="content.signatures.keyless.rekor.log_index">
+        <span class="prov-row__label">logged in</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          rekor #<span data-bind="content.signatures.keyless.rekor.log_index">—</span>
+          <a class="prov-proof hidden" data-bind-show="content.signatures.keyless.rekor.pubkey_url" data-bind-href="content.signatures.keyless.rekor.pubkey_url" target="_blank" rel="noopener" title="Open checkpoint public key">[key]</a>
+        </span>
+      </div>
+      <div class="prov-row hidden" data-bind-show="content.signatures.keyless.timestamp.gen_time">
+        <span class="prov-row__label">timestamped</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="content.signatures.keyless.timestamp.gen_time" data-format="datetime">—</span>
+      </div>
+      <div class="prov-row hidden" data-bind-show="content.signatures.keyless.ct_log.timestamp">
+        <span class="prov-row__label" title="Certificate Transparency log entry for the Fulcio cert">ct log</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="content.signatures.keyless.ct_log.timestamp" data-format="datetime">—</span>
+          <a class="prov-proof hidden" data-bind-show="content.signatures.keyless.ct_log.pubkey_url" data-bind-href="content.signatures.keyless.ct_log.pubkey_url" target="_blank" rel="noopener" title="Open checkpoint public key">[key]</a>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="content.signatures.keyless.timestamp.tsa_subject">
+        <span class="prov-row__label" title="Time Stamp Authority (RFC 3161)">tsa</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="content.signatures.keyless.timestamp.tsa_subject" data-bind-title="content.signatures.keyless.timestamp.tsa_subject">—</span>
+          <a class="prov-proof hidden" data-bind-show="content.signatures.keyless.timestamp.tsa_cert_url" data-bind-href="content.signatures.keyless.timestamp.tsa_cert_url" target="_blank" rel="noopener" title="Open certificate (PEM)">[cert]</a>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="content.signatures.keyless.timestamp.tsa_fingerprint_sha256">
+        <span class="prov-row__label" title="SHA-256 fingerprint of the TSA's signing certificate">tsa fingerprint</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="content.signatures.keyless.timestamp.tsa_fingerprint_sha256" data-bind-title="content.signatures.keyless.timestamp.tsa_fingerprint_sha256">—</span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="content.signatures.keyless.chain.root_subject">
+        <span class="prov-row__label">root ca</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="content.signatures.keyless.chain.root_subject" data-bind-title="content.signatures.keyless.chain.root_subject">—</span>
+          <a class="prov-proof hidden" data-bind-show="content.trusted_root_url" data-bind-href="content.trusted_root_url" target="_blank" rel="noopener" title="Open trusted_root.json sigstore bundle">[trust]</a>
+        </span>
+      </div>
+      <div class="prov-row prov-row--break hidden" data-bind-show="content.signatures.keyless.chain.root_fingerprint_sha256">
+        <span class="prov-row__label">root fingerprint</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="content.signatures.keyless.chain.root_fingerprint_sha256" data-bind-title="content.signatures.keyless.chain.root_fingerprint_sha256">—</span>
       </div>
     </div>
   </div>
 
-  {{/* Bundle Identity */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Bundle Identity</h2>
-    <div class="blueprint-card">
-      <div class="grid md:grid-cols-2 gap-4">
-        <div>
-          <div class="attestation-label">Content ID</div>
-          <div class="attestation-value text-xs break-all" data-bind="content.bundle.content_id">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Content Hash</div>
-          <div class="attestation-value text-xs break-all" data-bind="content.bundle.content_hash">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Schema</div>
-          <div class="attestation-value text-xs" data-bind="content.bundle.schema">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Type</div>
-          <div class="attestation-value" data-bind="content.bundle.type">—</div>
-        </div>
+  {{/* How to verify (collapsed cosign snippet templated with live values) */}}
+  <div class="prov-frame" role="heading" aria-level="3">
+    <span class="prov-frame__edge" aria-hidden="true">└─[ </span><span class="prov-frame__name">how to verify</span><span class="prov-frame__edge" aria-hidden="true"> ]</span>
+    <span class="prov-leader prov-leader--dash" aria-hidden="true"></span>
+    <span class="prov-frame__corner" aria-hidden="true">┐</span>
+  </div>
+  <details class="prov-expand group">
+    <summary>
+      <span class="group-open:hidden">show how to verify this bundle yourself</span>
+      <span class="hidden group-open:inline">hide how to verify</span>
+    </summary>
+    <div>
+      <p class="text-sm text-[rgb(var(--muted))] mb-2">
+        Re-verify this bundle locally with <a href="https://docs.sigstore.dev/cosign/" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">cosign</a>.
+        The trust root, signer identity, and OIDC issuer below are the actual values that signed the bundle you are looking at right now.
+      </p>
+      <pre class="sig-block text-[11px] overflow-x-auto"># 1. fetch the trust root (bundles the LinnemanLabs Fulcio CA + Rekor + TSA keys)
+$ curl -O <span data-bind="content.trusted_root_url">https://trust.linnemanlabs.com/.well-known/trusted_root.json</span>
+
+# 2. with the content tarball and its sigstore bundle in hand, verify:
+$ cosign verify-blob \
+    --new-bundle-format \
+    --bundle         content.sigstore-bundle.json \
+    --trusted-root   trusted_root.json \
+    --certificate-identity     '<span data-bind="content.signatures.keyless.certificate.build_signer_uri">https://github.com/keithlinneman/linnemanlabs-site/.github/workflows/build.yml@refs/tags/&lt;tag&gt;</span>' \
+    --certificate-oidc-issuer  '<span data-bind="content.signatures.keyless.certificate.oidc_issuer">https://token.actions.githubusercontent.com</span>' \
+    content.tar.gz</pre>
+    </div>
+  </details>
+
+  {{/* Identity */}}
+  <div class="prov-frame" role="heading" aria-level="3">
+    <span class="prov-frame__edge" aria-hidden="true">└─[ </span><span class="prov-frame__name">identity</span><span class="prov-frame__edge" aria-hidden="true"> ]</span>
+    <span class="prov-leader prov-leader--dash" aria-hidden="true"></span>
+    <span class="prov-frame__corner" aria-hidden="true">┐</span>
+  </div>
+  <div class="prov-cert">
+    <div class="prov-grid prov-grid--2">
+      <div class="prov-row">
+        <span class="prov-row__label">version</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="content.bundle.version">—</span>
+      </div>
+      <div class="prov-row">
+        <span class="prov-row__label">type</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="content.bundle.type">—</span>
+      </div>
+      <div class="prov-row">
+        <span class="prov-row__label">built</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value" data-bind="content.bundle.created_at" data-format="datetime">—</span>
+      </div>
+      <div class="prov-row">
+        <span class="prov-row__label">files · size</span>
+        <span class="prov-leader" aria-hidden="true"></span>
+        <span class="prov-row__value">
+          <span data-bind="content.summary.total_files">—</span>
+          · <span data-bind="content.summary.total_size" data-format="bytes">—</span>
+        </span>
       </div>
     </div>
-  </section>
+    <div class="prov-row prov-row--break">
+      <span class="prov-row__label">content id</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value" data-bind="content.bundle.content_id" data-bind-title="content.bundle.content_id">—</span>
+    </div>
+    <div class="prov-row prov-row--break">
+      <span class="prov-row__label">schema</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value" data-bind="content.bundle.schema" data-bind-title="content.bundle.schema">—</span>
+    </div>
+    <div class="prov-row">
+      <span class="prov-row__label">commit</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value">
+        <span data-bind="content.source.commit_short" data-bind-title="content.source.commit">—</span>
+        <a class="prov-proof hidden" data-bind-show="content.source.commit_url" data-bind-href="content.source.commit_url" target="_blank" rel="noopener" title="Open commit on GitHub">[git]</a>
+      </span>
+    </div>
+  </div>
 
-  {{/* Source Information */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Source</h2>
-    <div class="blueprint-card">
-      <div class="grid md:grid-cols-2 gap-4">
-        <div class="md:col-span-2">
-          <div class="attestation-label">Repository</div>
-          <div class="attestation-value text-xs">
-            <a data-bind="content.source.repository" data-bind-href="content.source.repository" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">—</a>
-          </div>
-        </div>
-        <div>
-          <div class="attestation-label">Commit</div>
-          <div class="attestation-value text-xs break-all" data-bind="content.source.commit">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Branch</div>
-          <div class="attestation-value">
-            <span data-bind="content.source.branch">—</span>
-            <span data-bind-show="content.source.dirty" class="text-[rgb(var(--warn))] text-xs ml-1 hidden">(dirty)</span>
-          </div>
-        </div>
-        <div>
-          <div class="attestation-label">Commit Date</div>
-          <div class="attestation-value tabular" data-bind="content.source.commit_date" data-format="datetime">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Build Time</div>
-          <div class="attestation-value tabular" data-bind="content.bundle.created_at" data-format="datetime">—</div>
-        </div>
+  {{/* Build */}}
+  <div class="prov-frame" role="heading" aria-level="3">
+    <span class="prov-frame__edge" aria-hidden="true">└─[ </span><span class="prov-frame__name">build</span><span class="prov-frame__edge" aria-hidden="true"> ]</span>
+    <span class="prov-leader prov-leader--dash" aria-hidden="true"></span>
+    <span class="prov-frame__corner" aria-hidden="true">┐</span>
+  </div>
+  <div class="prov-cert">
+    <div class="prov-row">
+      <span class="prov-row__label">actor</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value" data-bind="content.build.actor">—</span>
+    </div>
+    <div class="prov-row">
+      <span class="prov-row__label">system</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value" data-bind="content.build.system">—</span>
+    </div>
+    <div class="prov-row">
+      <span class="prov-row__label">build run</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value">
+        #<span data-bind="content.build.run_id">—</span>
+        <a class="prov-proof hidden" data-bind-show="content.build.run_url" data-bind-href="content.build.run_url" target="_blank" rel="noopener" title="Open workflow run on GitHub Actions">[run]</a>
+      </span>
+    </div>
+    <div class="prov-row prov-row--break">
+      <span class="prov-row__label">builder identity</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value" data-bind="content.build.builder_identity" data-bind-title="content.build.builder_identity">—</span>
+    </div>
+    <div class="prov-row prov-row--break">
+      <span class="prov-row__label">host</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value" data-bind="content.build.host" data-bind-title="content.build.host">—</span>
+    </div>
+    <div class="prov-row">
+      <span class="prov-row__label">user</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value" data-bind="content.build.user">—</span>
+    </div>
+    <div class="prov-row">
+      <span class="prov-row__label">build time</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value" data-bind="content.build.timestamp" data-format="datetime">—</span>
+    </div>
+    <div class="prov-row">
+      <span class="prov-row__label">commit date</span>
+      <span class="prov-leader" aria-hidden="true"></span>
+      <span class="prov-row__value" data-bind="content.source.commit_date" data-format="datetime">—</span>
+    </div>
+  </div>
+
+  {{/* Source → build → artifact */}}
+  <div class="prov-frame" role="heading" aria-level="3">
+    <span class="prov-frame__edge" aria-hidden="true">└─[ </span><span class="prov-frame__name">source → build → artifact</span><span class="prov-frame__edge" aria-hidden="true"> ]</span>
+    <span class="prov-leader prov-leader--dash" aria-hidden="true"></span>
+    <span class="prov-frame__corner" aria-hidden="true">┐</span>
+  </div>
+  <div class="prov-flow">
+    <div class="prov-flow__node">
+      <div class="prov-flow__kind">source</div>
+      <div class="prov-flow__title">
+        <a data-bind-href="content.source.repository" data-bind-title="content.source.repository" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">site source</a>
+      </div>
+      <div class="prov-flow__meta">
+        <span data-bind="content.source.branch">—</span>@<a data-bind-href="content.source.commit_url" data-bind-title="content.source.commit" target="_blank" rel="noopener"><span data-bind="content.source.commit_short">—</span></a>
+        <span data-bind-show="content.source.dirty" class="text-[rgb(var(--warn))] hidden">·dirty</span>
       </div>
     </div>
-  </section>
-
-  {{/* Build Environment */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Build Environment</h2>
-    <div class="blueprint-card">
-      <div class="grid md:grid-cols-2 gap-4">
-        <div>
-          <div class="attestation-label">Build Host</div>
-          <div class="attestation-value text-xs break-all" data-bind="content.build.host">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Build User</div>
-          <div class="attestation-value" data-bind="content.build.user">—</div>
-        </div>
+    <div class="prov-flow__arrow"><span class="hidden md:inline">→</span><span class="md:hidden">↓</span></div>
+    <div class="prov-flow__node">
+      <div class="prov-flow__kind">build</div>
+      <div class="prov-flow__title">
+        <a data-bind-href="content.build.run_url" data-bind-title="content.build.run_url" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">github actions</a>
+      </div>
+      <div class="prov-flow__meta">
+        <span data-bind="content.build.actor">—</span> · run #<span data-bind="content.build.run_id">—</span>
       </div>
     </div>
-  </section>
-
-  {{/* Content Summary */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Content Summary</h2>
-    <div class="blueprint-card">
-      <div class="grid grid-cols-3 gap-4 mb-4">
-        <div class="text-center">
-          <div class="text-2xl font-semibold" data-bind="content.summary.total_files">—</div>
-          <div class="text-xs text-[rgb(var(--muted))]">Total Files</div>
-        </div>
-        <div class="text-center">
-          <div class="text-2xl font-semibold" data-bind="content.summary.total_size" data-format="bytes">—</div>
-          <div class="text-xs text-[rgb(var(--muted))]">Total Size</div>
-        </div>
-        <div class="text-center">
-          <div class="text-2xl font-semibold" data-bind="content.summary.type_count">—</div>
-          <div class="text-xs text-[rgb(var(--muted))]">File Types</div>
-        </div>
-      </div>
-      <div class="border-t border-[rgb(var(--border))] pt-4">
-        <div class="attestation-label mb-2">File Type Breakdown</div>
-        <div class="flex flex-wrap gap-2" data-bind-list="content.summary.file_types"></div>
-      </div>
+    <div class="prov-flow__arrow"><span class="hidden md:inline">→</span><span class="md:hidden">↓</span></div>
+    <div class="prov-flow__node">
+      <div class="prov-flow__kind">artifact</div>
+      <div class="prov-flow__title">content bundle</div>
+      <div class="prov-flow__meta" data-bind="content.bundle.content_id" data-bind-title="content.bundle.content_id">—</div>
     </div>
-  </section>
+  </div>
 
-  {{/* Tooling */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Build Tooling</h2>
-    <div class="space-y-3">
-      <div class="blueprint-card">
-        <div class="flex items-start justify-between">
+  {{/*LAYER 3 - evidence ledger (collapsed) */}}
+  <div class="prov-frame" role="heading" aria-level="3">
+    <span class="prov-frame__edge" aria-hidden="true">└─[ </span><span class="prov-frame__name">evidence ledger</span><span class="prov-frame__edge" aria-hidden="true"> ]</span>
+    <span class="prov-leader prov-leader--dash" aria-hidden="true"></span>
+    <span class="prov-frame__corner" aria-hidden="true">┐</span>
+  </div>
+  <details class="prov-ledger">
+    <summary>
+      content evidence - tooling checksums, file inventory, runtime, raw manifest
+      <span class="prov-ledger__hint">for auditors</span>
+    </summary>
+    <div class="prov-ledger__body space-y-2">
+
+      <div class="prov-ledger__sub">build tooling</div>
+      <table class="prov-table">
+        <thead>
+          <tr><th>tool</th><th>role</th><th>version</th><th>sha-256</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Hugo</td><td>static site generator</td>
+            <td data-bind="content.tooling.hugo.version">—</td>
+            <td data-bind="content.tooling.hugo.sha256">—</td>
+          </tr>
+          <tr>
+            <td>Tailwind CSS</td><td>css engine</td>
+            <td data-bind="content.tooling.tailwindcss.version">—</td>
+            <td data-bind="content.tooling.tailwindcss.sha256">—</td>
+          </tr>
+          <tr>
+            <td>HTML Tidy</td><td>html validation</td>
+            <td data-bind="content.tooling.tidy.version">—</td>
+            <td data-bind="content.tooling.tidy.sha256">—</td>
+          </tr>
+          <tr>
+            <td>Git</td><td>version control</td>
+            <td data-bind="content.tooling.git.version">—</td>
+            <td data-bind="content.tooling.git.sha256">—</td>
+          </tr>
+          <tr>
+            <td>Bash</td><td>build shell</td>
+            <td data-bind="content.tooling.bash.version">—</td>
+            <td data-bind="content.tooling.bash.sha256">—</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="prov-ledger__sub">file inventory</div>
+      <div class="flex flex-wrap gap-2" data-bind-list="content.summary.file_types"></div>
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show all files</span>
+          <span class="hidden group-open:inline">hide files</span>
+        </summary>
+        <div class="mt-2 max-h-96 overflow-auto" id="content-file-list"></div>
+      </details>
+
+      <div class="prov-ledger__sub">transparency · keyless</div>
+      <div class="prov-cert">
+        <div class="prov-row"><span class="prov-row__label">rekor origin</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.keyless.rekor.origin">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">rekor log id</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.keyless.rekor.log_id" data-bind-title="content.signatures.keyless.rekor.log_id">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">rekor log index</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.keyless.rekor.log_index">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">rekor tree size</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.keyless.rekor.tree_size">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">rekor root hash</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.keyless.rekor.root_hash" data-bind-title="content.signatures.keyless.rekor.root_hash">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">entry kind</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.keyless.rekor.entry_kind">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">entry version</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.keyless.rekor.entry_version">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">ct log id</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.keyless.ct_log.log_id" data-bind-title="content.signatures.keyless.ct_log.log_id">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">ct log timestamp</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.keyless.ct_log.timestamp" data-format="datetime">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">ct log hash algo</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.keyless.ct_log.hash_algorithm">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">tsa imprint algo</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.keyless.timestamp.message_imprint.algorithm">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">tsa imprint hash</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.keyless.timestamp.message_imprint.hash" data-bind-title="content.signatures.keyless.timestamp.message_imprint.hash">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">tsa serial</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.keyless.timestamp.serial_number" data-bind-title="content.signatures.keyless.timestamp.serial_number">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">tsa policy oid</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.keyless.timestamp.policy_oid">—</span></div>
+      </div>
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show rekor inclusion proof</span>
+          <span class="hidden group-open:inline">hide inclusion proof</span>
+        </summary>
+        <div class="mt-2 flex flex-wrap gap-1" data-bind-list="content.signatures.keyless.rekor.inclusion_proof_hashes"></div>
+      </details>
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show signed checkpoint + raw TSR</span>
+          <span class="hidden group-open:inline">hide signed checkpoint + raw TSR</span>
+        </summary>
+        <div class="mt-2 space-y-3">
           <div>
-            <div class="font-medium">Hugo</div>
-            <div class="text-xs text-[rgb(var(--muted))]">Static site generator</div>
+            <div class="prov-kicker mb-1">rekor signed checkpoint</div>
+            <pre class="sig-block text-[10px] overflow-x-auto" data-bind="content.signatures.keyless.rekor.checkpoint_envelope"></pre>
           </div>
-          <div class="text-right">
-            <div class="mono text-sm" data-bind="content.tooling.hugo.version">—</div>
+          <div>
+            <div class="prov-kicker mb-1">RFC 3161 TimeStampResp · DER · base64</div>
+            <pre class="sig-block text-[10px] overflow-x-auto" data-bind="content.signatures.keyless.timestamp.raw_tsr"></pre>
           </div>
         </div>
-        <div class="mt-2 pt-2 border-t border-[rgb(var(--border))]">
-          <div class="attestation-label">SHA256</div>
-          <div class="attestation-value text-[10px] break-all" data-bind="content.tooling.hugo.sha256">—</div>
+      </details>
+
+      <div class="prov-ledger__sub">transparency · kms</div>
+      <div class="prov-cert">
+        <div class="prov-row"><span class="prov-row__label">rekor origin</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.kms.rekor.origin">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">rekor log id</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.kms.rekor.log_id" data-bind-title="content.signatures.kms.rekor.log_id">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">rekor log index</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.kms.rekor.log_index">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">rekor tree size</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.kms.rekor.tree_size">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">rekor root hash</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.kms.rekor.root_hash" data-bind-title="content.signatures.kms.rekor.root_hash">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">entry kind</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.kms.rekor.entry_kind">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">entry version</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.kms.rekor.entry_version">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">tsa imprint algo</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.kms.timestamp.message_imprint.algorithm">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">tsa imprint hash</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.kms.timestamp.message_imprint.hash" data-bind-title="content.signatures.kms.timestamp.message_imprint.hash">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">tsa serial</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.kms.timestamp.serial_number" data-bind-title="content.signatures.kms.timestamp.serial_number">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">tsa policy oid</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.signatures.kms.timestamp.policy_oid">—</span></div>
+      </div>
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show rekor inclusion proof</span>
+          <span class="hidden group-open:inline">hide inclusion proof</span>
+        </summary>
+        <div class="mt-2 flex flex-wrap gap-1" data-bind-list="content.signatures.kms.rekor.inclusion_proof_hashes"></div>
+      </details>
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show signed checkpoint + raw TSR</span>
+          <span class="hidden group-open:inline">hide signed checkpoint + raw TSR</span>
+        </summary>
+        <div class="mt-2 space-y-3">
+          <div>
+            <div class="prov-kicker mb-1">rekor signed checkpoint</div>
+            <pre class="sig-block text-[10px] overflow-x-auto" data-bind="content.signatures.kms.rekor.checkpoint_envelope"></pre>
+          </div>
+          <div>
+            <div class="prov-kicker mb-1">RFC 3161 TimeStampResp · DER · base64</div>
+            <pre class="sig-block text-[10px] overflow-x-auto" data-bind="content.signatures.kms.timestamp.raw_tsr"></pre>
+          </div>
         </div>
+      </details>
+
+      <div class="prov-ledger__sub">runtime</div>
+      <div class="prov-cert">
+        <div class="prov-row"><span class="prov-row__label">source</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.runtime.source">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">loaded at</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.runtime.loaded_at" data-format="datetime">—</span></div>
+        <div class="prov-row"><span class="prov-row__label">server time</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.runtime.server_time" data-format="datetime">—</span></div>
+        <div class="prov-row prov-row--break"><span class="prov-row__label">runtime hash</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="content.runtime.hash" data-bind-title="content.runtime.hash">—</span></div>
       </div>
 
-      <div class="blueprint-card">
-        <div class="flex items-start justify-between">
-          <div>
-            <div class="font-medium">Tailwind CSS</div>
-            <div class="text-xs text-[rgb(var(--muted))]">CSS framework</div>
-          </div>
-          <div class="text-right">
-            <div class="mono text-sm" data-bind="content.tooling.tailwindcss.version">—</div>
-          </div>
-        </div>
-        <div class="mt-2 pt-2 border-t border-[rgb(var(--border))]">
-          <div class="attestation-label">SHA256</div>
-          <div class="attestation-value text-[10px] break-all" data-bind="content.tooling.tailwindcss.sha256">—</div>
-        </div>
-      </div>
+      <div class="prov-ledger__sub">raw manifest</div>
+      <details class="prov-expand group">
+        <summary>
+          <span class="group-open:hidden">show provenance.json</span>
+          <span class="hidden group-open:inline">hide provenance.json</span>
+        </summary>
+        <pre class="sig-block text-[10px] overflow-x-auto max-h-96 mt-2" data-bind="content.raw-json"></pre>
+      </details>
 
-      <div class="blueprint-card">
-        <div class="flex items-start justify-between">
-          <div>
-            <div class="font-medium">HTML Tidy</div>
-            <div class="text-xs text-[rgb(var(--muted))]">HTML validation</div>
-          </div>
-          <div class="text-right">
-            <div class="mono text-sm" data-bind="content.tooling.tidy.version">—</div>
-          </div>
-        </div>
-        <div class="mt-2 pt-2 border-t border-[rgb(var(--border))]">
-          <div class="attestation-label">SHA256</div>
-          <div class="attestation-value text-[10px] break-all" data-bind="content.tooling.tidy.sha256">—</div>
-        </div>
-      </div>
-
-      <div class="blueprint-card">
-        <div class="flex items-start justify-between">
-          <div>
-            <div class="font-medium">Git</div>
-            <div class="text-xs text-[rgb(var(--muted))]">Version control</div>
-          </div>
-          <div class="text-right">
-            <div class="mono text-sm" data-bind="content.tooling.git.version">—</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="blueprint-card">
-        <div class="flex items-start justify-between">
-          <div>
-            <div class="font-medium">Bash</div>
-            <div class="text-xs text-[rgb(var(--muted))]">Build shell</div>
-          </div>
-          <div class="text-right">
-            <div class="mono text-sm" data-bind="content.tooling.bash.version">—</div>
-          </div>
-        </div>
-      </div>
     </div>
-  </section>
-
-  {{/* Runtime */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Runtime</h2>
-    <div class="blueprint-card">
-      <div class="grid md:grid-cols-2 gap-4">
-        <div>
-          <div class="attestation-label">Source</div>
-          <div class="attestation-value" data-bind="content.runtime.source">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Loaded At</div>
-          <div class="attestation-value tabular" data-bind="content.runtime.loaded_at" data-format="datetime">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Server Time</div>
-          <div class="attestation-value tabular" data-bind="content.runtime.server_time" data-format="datetime">—</div>
-        </div>
-        <div>
-          <div class="attestation-label">Runtime Hash</div>
-          <div class="attestation-value text-xs" data-bind="content.runtime.hash" data-format="hash">—</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  {{/* Attestations */}}
-  <section>
-    <h2 class="text-lg font-semibold mb-4">Attestations</h2>
-    <div class="blueprint-card">
-      <div class="text-sm text-[rgb(var(--muted))]">
-        <p class="mb-2">Attestations (coming soon!):</p>
-        <ul class="list-disc list-inside space-y-1 text-xs">
-          <li>GitHub Actions workflow provenance (SLSA)</li>
-          <li>Sigstore signatures (keyless OIDC)</li>
-          <li>Content bundle signatures</li>
-          <li>TUF metadata verification</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  {{/* Raw JSON */}}
-  <section>
-    <details class="group">
-      <summary class="cursor-pointer text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))] transition-colors">
-        <span class="group-open:hidden">Show raw JSON</span>
-        <span class="hidden group-open:inline">Hide raw JSON</span>
-      </summary>
-      <div class="mt-4">
-        <pre class="sig-block text-[10px] overflow-x-auto max-h-96" data-bind="content.raw-json"></pre>
-      </div>
-    </details>
-  </section>
+  </details>
 
 </div>

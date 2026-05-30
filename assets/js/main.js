@@ -17,7 +17,6 @@ document.addEventListener("keydown", e => {
     }
 })
 
-// content provenance - with a little help from claude
 // Fetches app and content provenance from API and binds to data-bind attributes
 
 const API = {
@@ -145,7 +144,7 @@ function bindData(container, data) {
     if (value) el.title = value;
   });
 
-  // data-bind-show: toggle visibility
+  // data-bind-show: toggle visibility based on resolved value
   container.querySelectorAll('[data-bind-show]').forEach(el => {
     const value = resolve(data, el.dataset.bindShow);
     el.classList.toggle('hidden', !value);
@@ -348,6 +347,49 @@ function renderPackageList(container, packages) {
   }
 
   container.replaceChildren(list);
+}
+
+// Dense file table for the evidence ledgers (attestation / evidence /
+// content-bundle file inventories). Display-only: builds a .prov-table from
+// already-fetched arrays. columns: [{ key, label, format? ('bytes'|'hash') }]
+function renderFileTable(container, files, columns) {
+  if (!container) return;
+
+  if (!files || files.length === 0) {
+    container.replaceChildren(
+      h('span', { class: 'text-xs text-[rgb(var(--muted))]', text: 'No files' })
+    );
+    return;
+  }
+
+  const thead = h('thead', null,
+    h('tr', null, ...columns.map(c => h('th', { text: c.label })))
+  );
+
+  const tbody = h('tbody');
+  for (const f of files) {
+    const tr = h('tr');
+    for (const c of columns) {
+      const raw = f[c.key];
+      const props = {};
+      if (raw == null || raw === '') {
+        props.text = '';
+      } else if (c.format === 'bytes') {
+        props.class = 'prov-num';
+        props.text = fmt.bytes(raw);
+      } else if (c.format === 'hash') {
+        props.class = 'mono';
+        props.title = String(raw);
+        props.text = String(raw).slice(0, 12) + '…';
+      } else {
+        props.text = String(raw);
+      }
+      tr.append(h('td', props));
+    }
+    tbody.append(tr);
+  }
+
+  container.replaceChildren(h('table', { class: 'prov-table' }, thead, tbody));
 }
 
 // License package breakdown
@@ -563,7 +605,13 @@ async function initContent() {
     content: {
       ...apiData,
       'status-text': 'Verified',
-      source: apiData.bundle?.source,
+      // compose a commit URL so the [git] anchor can data-bind-href directly
+      source: apiData.bundle?.source ? {
+        ...apiData.bundle.source,
+        commit_url: apiData.bundle.source.repository && apiData.bundle.source.commit
+          ? `${apiData.bundle.source.repository}/commit/${apiData.bundle.source.commit}`
+          : undefined
+      } : undefined,
       build: apiData.bundle?.build,
       summary: {
         ...apiData.bundle?.summary,
@@ -577,6 +625,14 @@ async function initContent() {
   };
 
   bindData(container, data);
+
+  // content bundle file inventory (collapsed in the evidence ledger)
+  renderFileTable(document.getElementById('content-file-list'), apiData.bundle?.files, [
+    { key: 'path', label: 'path' },
+    { key: 'type', label: 'type' },
+    { key: 'size', label: 'size', format: 'bytes' },
+    { key: 'sha256', label: 'sha-256', format: 'hash' }
+  ]);
 }
 
 // App provenance section
@@ -600,6 +656,7 @@ async function initApp() {
   const summary = rel.summary || {};
   const vulns = summary.vulnerabilities || {};
   const signing = summary.signing || {};
+  const signatures = summary.signatures || {};
   const artifact = rel.artifacts?.[0] || {};
 
   const data = {
@@ -633,6 +690,9 @@ async function initApp() {
         dirty: rel.builder?.dirty
       },
       signing: signing,
+      signatures: signatures,
+      tooling: summary.tooling || {},
+      trusted_root_url: apiData.trusted_root_url,
       attestations: apiData.attestations || {},
       policy: apiData.policy || {},
       vulnerabilities: {
@@ -708,6 +768,17 @@ async function initApp() {
   if (licPkgList && apiData.packages) {
     renderLicensePackages(licPkgList, apiData.packages, apiData.policy?.license);
   }
+
+  // render attestation + evidence file inventories (collapsed in the ledger)
+  const evidenceCols = [
+    { key: 'path', label: 'path' },
+    { key: 'category', label: 'category' },
+    { key: 'scope', label: 'scope' },
+    { key: 'size', label: 'size', format: 'bytes' },
+    { key: 'sha256', label: 'sha-256', format: 'hash' }
+  ];
+  renderFileTable(document.getElementById('attestation-file-list'), apiData.attestations?.files, evidenceCols);
+  renderFileTable(document.getElementById('evidence-file-list'), apiData.evidence?.files, evidenceCols);
 }
 
 // Footer
