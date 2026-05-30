@@ -224,36 +224,6 @@
     </div>
   </div>
 
-  {{/* How to verify (collapsed cosign snippet templated with live values) */}}
-  <div class="prov-frame" role="heading" aria-level="3">
-    <span class="prov-frame__edge" aria-hidden="true">└─[ </span><span class="prov-frame__name">how to verify</span><span class="prov-frame__edge" aria-hidden="true"> ]</span>
-    <span class="prov-leader prov-leader--dash" aria-hidden="true"></span>
-    <span class="prov-frame__corner" aria-hidden="true">┐</span>
-  </div>
-  <details class="prov-expand group">
-    <summary>
-      <span class="group-open:hidden">show how to verify this bundle yourself</span>
-      <span class="hidden group-open:inline">hide how to verify</span>
-    </summary>
-    <div>
-      <p class="text-sm text-[rgb(var(--muted))] mb-2">
-        Re-verify this bundle locally with <a href="https://docs.sigstore.dev/cosign/" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">cosign</a>.
-        The trust root, signer identity, and OIDC issuer below are the actual values that signed the bundle you are looking at right now.
-      </p>
-      <pre class="sig-block text-[11px] overflow-x-auto"># 1. fetch the trust root (bundles the LinnemanLabs Fulcio CA + Rekor + TSA keys)
-$ curl -O <span data-bind="content.trusted_root_url">https://trust.linnemanlabs.com/.well-known/trusted_root.json</span>
-
-# 2. with the content tarball and its sigstore bundle in hand, verify:
-$ cosign verify-blob \
-    --new-bundle-format \
-    --bundle         content.sigstore-bundle.json \
-    --trusted-root   trusted_root.json \
-    --certificate-identity     '<span data-bind="content.signatures.keyless.certificate.build_signer_uri">https://github.com/keithlinneman/linnemanlabs-site/.github/workflows/build.yml@refs/tags/&lt;tag&gt;</span>' \
-    --certificate-oidc-issuer  '<span data-bind="content.signatures.keyless.certificate.oidc_issuer">https://token.actions.githubusercontent.com</span>' \
-    content.tar.gz</pre>
-    </div>
-  </details>
-
   {{/* Identity */}}
   <div class="prov-frame" role="heading" aria-level="3">
     <span class="prov-frame__edge" aria-hidden="true">└─[ </span><span class="prov-frame__name">identity</span><span class="prov-frame__edge" aria-hidden="true"> ]</span>
