@@ -14,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:                                                                                                                                                                                                                                                                                      
+          # full history for Hugo's enableGitInfo commit id resolving
+          fetch-depth: 0     
       
       - name: Install tools
         run: |
