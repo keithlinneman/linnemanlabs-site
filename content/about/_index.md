@@ -3,7 +3,17 @@ title: "About"
 description: "LinnemanLabs - an infrastructure lab and security research platform built on a multi-account AWS organization, documenting offensive and defensive security work across 200+ nodes."
 ---
 
-## LinnemanLabs
+## Linneman Labs
+
+Start here:
+
+| Page | Topic |
+|------|-------|
+| [About Me →](/about/me/) | background, approach, how I think |
+| [Infrastructure →](/about/infrastructure/) | the platform and the hand-built stack |
+| [Provenance →](/about/provenance/) | how every release is verified |
+
+## The Lab
 
 LinnemanLabs is my lab. It's a multi-account AWS platform - 10+ accounts, 200+ nodes, 100+ CloudFormation stacks, all hand-written - where I build things, break things, and write about both. This site is one tenant on that platform, and it's where I make the work public.
 
@@ -13,7 +23,7 @@ The work here sits at the intersection of building production systems and studyi
 
 Learn more [about me](/about/me/) or [the infrastructure](/about/infrastructure/).
 
-### What I'm working on
+## What I'm working on
 
 **Detection engineering and adversary emulation** - I run a purple-team loop against my own systems: build offensive tooling, exercise it through the lab, then write the detection rules to catch it. My Rust C2 framework [Glimmer](https://github.com/linnemanlabs/glimmer) drives the offense side. The detection side spans eBPF/Tetragon at the syscall and packet layers, Suricata for network signatures, YARA for binary-level matching, and Wazuh as the SIEM that ties them together. Every offensive design decision creates a detection surface and every detection rule reveals what to harden next.
 
@@ -31,7 +41,7 @@ Learn more [about me](/about/me/) or [the infrastructure](/about/infrastructure/
 
 - *ML model supply chain* - provenance, integrity, and verification for models the way I do them for binaries today. The same primitives apply, just to a different artifact class.
 
-### What I believe
+## What I believe
 
 I'd rather understand one system top to bottom than skim ten. Depth is the thing. First principles over cargo culting, understand the primitives end to end before you abstract or automate. I write my own CloudFormation stacks and Ansible roles because I want to know exactly what's happening and why, and because that's where you find the gaps that matter.
 
@@ -45,7 +55,7 @@ Provenance and integrity matter regardless of what the artifact is - application
 
 This site is one project on the larger LinnemanLabs platform. It's static-first, with dynamic features added deliberately and minimally:
 
-- **Static generation:** Hugo, content-first design with Tailwind CSS, minimal JS (HTMX where needed)
+- **Static generation:** Hugo, minimal JS
 - **Serving layer:** custom Go binary with observability and security as primary concerns
 - **CI/CD:** signed and attested releases with vulnerability scanning and policy gates
 - **Infrastructure:** AWS, defined as code, deployed across a multi-account Organizations layout
@@ -53,4 +63,4 @@ This site is one project on the larger LinnemanLabs platform. It's static-first,
 
 The implementation evolves as the lab evolves. The design stays auditable and repeatable. Most of the stack is open source:
  - explore the full platform details on the [infrastructure page](/about/infrastructure)
- - explore the [repos on GitHub](https://github.com/keithlinneman)
+ - explore [my repos on GitHub](https://github.com/keithlinneman) or [LinnemanLabs repos on GitHub](https://github.com/linnemanlabs) 

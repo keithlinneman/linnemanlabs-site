@@ -3,7 +3,8 @@ title: "About Me"
 description: "Keith Linneman - infrastructure and security engineer with 25+ years building, breaking, and securing production systems."
 ---
 
-``` text
+
+{{< term >}}
 ░▒▓██████████████████████████████████████████████████████████████████████████▓▒░
 
     ██▓     ██▓ ███▄    █  ███▄    █ ▓█████  ███▄ ▄███▓ ▄▄▄       ███▄    █
@@ -68,7 +69,7 @@ description: "Keith Linneman - infrastructure and security engineer with 25+ yea
    998 ./build switchboard --v1 --grpc --spiffe --runbook-proposal              │
    999 ./build hardened-workstation --ebpf --lsm --selinux --secure-boot        │
                                                                                 │
-  $ ps -u keith                                                                 │
+  $ ps -u k                                                                 │
     PID  STAT  COMMAND                                                          │
    0001  R     switchboard --version=1                                          │
    0002  S     vigil --version=1 --deployed                                     │
@@ -139,8 +140,8 @@ description: "Keith Linneman - infrastructure and security engineer with 25+ yea
 ░▒▓██████████████████████████████████████████████████████████████████████████▓▒░
                           · LinnemanLabs · est. 199x ·                          
 ░▒▓██████████████████████████████████████████████████████████████████████████▓▒░
+{{< /term >}}
 
-```
 ## Keith Linneman
 
 I've been doing this since the mid-90s - over 25 years of building, breaking, and operating systems. I started by breaking into them as a kid, living on IRC, learning how networks and operating systems actually worked by taking them apart. That offensive background shaped everything that came after. I moved into infrastructure and operations, bringing an attacker's perspective to how I design, harden, and monitor production systems. Now I'm circling back to offensive security with deep infrastructure and operations experience behind it.
@@ -153,7 +154,7 @@ Detection-coverage tooling that verifies "did we catch it?" as a continuous prop
 
 ---
 
-### How I work
+## How I work
 
 I'd rather understand one system completely than be passingly familiar with ten. Full-stack ownership means knowing how the system behaves from protocol to code to infrastructure to operations - not just the layer I'm responsible for on the org chart.
 
@@ -167,7 +168,7 @@ These principles don't change with the artifact. Provenance, integrity, and veri
 
 ---
 
-### Get in touch
+## Get in touch
 
 For the right problem, I go deep.
 

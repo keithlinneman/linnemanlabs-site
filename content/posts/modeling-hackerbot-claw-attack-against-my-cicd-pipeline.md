@@ -1,9 +1,10 @@
 ---
 date: '2026-03-20T00:00:00Z'
-title: "Modeling the hackerbot-claw Attack Against My Own CI/CD Pipeline"
-summary: "Reviewing my infrastructure's security posture against recent high-profile supply chain security compromises involving GitHub workflows using pull_request_target."
-tags: ["GitHub Actions", "Supply Chain Security", "Sigstore", "Fulcio", "OIDC", "CI/CD", "Infrastructure Security","hackerbot-claw"]
-categories: ["Engineering"]
+title: "Modeling hackerbot-claw Against My Own CI/CD"
+subtitle: "the pull_request_target supply-chain attack that hit real GitHub Actions workflows"
+summary: "A single pull_request_target misstep turns a trusted GitHub workflow into a supply-chain backdoor."
+tags: ["github actions", "supply chain security", "sigstore", "fulcio", "oidc", "ci/cd", "hackerbot-claw", "infrastructure security"]
+channels: ["provenance"]
 ---
 
 ## Background
@@ -33,7 +34,7 @@ GitHub Actions has two pull request triggers: `pull_request` and `pull_request_t
 
 In the hackerbot-claw campaign, an AI agent scanned tens of thousands of public repos looking for this exact pattern and generated tailored exploits for each target. Trivy was the worst hit - the attacker exfiltrated a PAT with broad permissions and used it to wipe every release, rename the repo, and push a malicious VSCode extension that attempted to hijack developers' local AI coding assistants to exfiltrate credentials.
 
-The full details across all targets are in the [StepSecurity write-up](https://www.stepsecurity.io/blog/hackerbot-claw-github-actions-exploitation).
+The full details across all targets are in the StepSecurity write-up.
 
 ## Attacking My Infrastructure
 

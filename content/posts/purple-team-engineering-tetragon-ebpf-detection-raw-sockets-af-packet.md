@@ -1,9 +1,10 @@
 ---
 date: '2026-04-24T00:00:00Z'
-title: "Purple Team Engineering: Detection Below the Socket Layer with eBPF and Tetragon"
-summary: "Creating Tetragon policies to catch malware - AF_INET raw sockets, AF_PACKET with manual Ethernet construction, and the combination-detection patterns that emerge. Working Tetragon policy additions, a custom event parser, and purple-team test binaries to verify detection coverage."
-tags: ["Purple Team", "Detection Engineering", "eBPF", "Tetragon", "C2", "Covert Channels", "Offensive Security", "Glimmer"]
-categories: ["Security Research"]
+title: "Detection Below the Socket Layer"
+subtitle: "eBPF and Tetragon policies that catch raw-socket and AF_PACKET C2"
+summary: "Malware that hand-builds its own packets slips past socket-level monitoring so the detection drops below the socket too."
+tags: ["purple team", "detection engineering", "ebpf", "tetragon", "c2", "covert channels", "raw sockets", "glimmer"]
+channels: ["detection"]
 ---
 
 In the [first post](/posts/purple-team-engineering-building-detecting-rust-c2-beacon/) I built Glimmer as a simple HTTP POST beacon and wrote detection rules to catch it. In the [second post](/posts/purple-team-engineering-covert-channels-dnf-numbers-station/) I researched more covert channels to communicate over and additional detection rules in YARA and Suricata. This post covers exploring the eBPF detection surface with Tetragon and building raw sockets and packets.

@@ -1,9 +1,10 @@
 ---
 date: '2026-03-18T00:00:00Z'
-title: "Running Your Own Transparency Infrastructure with Fulcio, Rekor, TesseraCT and Timestamp-Authority"
-summary: "From YubiKey CA root to trust bundles to signed artifacts - the architecture, trust decisions, and security implications behind running a self-hosted Sigstore stack."
-tags: ["Supply Chain Security", "Certificate Transparency", "Sigstore", "Rekor", "TesseraCT", "Fulcio", "Rekor-Tiles", "Timestamp-Authority", "Infrastructure Security"]
-categories: ["Engineering"]
+title: "Running Your Own Transparency Infrastructure"
+subtitle: "self-hosting Fulcio, Rekor, TesseraCT, and a Timestamp Authority, rooted in a YubiKey CA"
+summary: "The full Sigstore trust stack, self-hosted from a YubiKey CA up. No public good instance required."
+tags: ["supply chain security", "certificate transparency", "sigstore", "fulcio", "rekor", "rekor-tiles", "tesseract", "timestamp-authority", "yubikey", "infrastructure security"]
+channels: ["provenance"]
 ---
 
 ## Background

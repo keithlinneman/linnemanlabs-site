@@ -1,0 +1,18 @@
+{{ define "main" }}
+{{- $slug := .Data.Term | default (.Title | urlize) -}}
+{{- $ch := dict -}}
+{{- range hugo.Data.channels -}}{{- if eq .slug $slug -}}{{- $ch = . -}}{{- end -}}{{- end -}}
+<div class="channel"><a href="/">home</a> / channels / {{ $slug }}</div>
+<h1>{{ with $ch.name }}{{ . }}{{ else }}{{ .Title }}{{ end }}</h1>
+{{- $sub := slice -}}
+{{- with $ch.topics -}}{{- $sub = $sub | append . -}}{{- end -}}
+{{- with $ch.soon -}}{{- range . -}}{{- $sub = $sub | append (printf "%s ·soon" .) -}}{{- end -}}{{- end -}}
+{{- with $sub }}<div class="pmeta">{{ delimit . " · " }}</div>{{ end }}
+
+<section style="margin-top:16px">
+  {{- range .Pages.ByDate.Reverse -}}
+    <a class="row" href="{{ .RelPermalink }}"><span class="mark" aria-hidden="true"></span><span class="date">{{ .Date.Format "2006.01.02" }}</span><span class="col"><span class="title">{{ .Title }}</span>{{ with .Summary }}<span class="dek">{{ . }}</span>{{ end }}</span></a>
+  {{- end -}}
+</section>
+<a class="allposts" href="/posts/">view all posts →</a>
+{{ end }}

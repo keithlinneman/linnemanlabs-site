@@ -1,9 +1,10 @@
 ---
 date: '2026-04-13T00:00:00Z'
-title: "Purple Team Engineering: Covert Channels and the DNF Numbers Station"
-summary: "Building a C2 channel indistinguishable from package manager traffic, encoding tasking in Apache ETag microseconds, and surveying the surprising state of repository security on Fedora."
-tags: ["Purple Team", "Detection Engineering", "YARA", "Wazuh", "Suricata", "Rust", "C2", "Covert Channels", "DNF", "Offensive Security", "Glimmer", "SIEM"]
-categories: ["Security Research"]
+title: "The DNF Numbers Station"
+subtitle: "a C2 channel hidden in DNF traffic and what building it revealed about Fedora repo security"
+summary: "C2 traffic indistinguishable from DNF update checks, with tasking hidden in the microseconds of Apache ETags."
+tags: ["purple team", "detection engineering", "yara", "wazuh", "suricata", "rust", "c2", "covert channels", "dnf", "fedora", "glimmer", "siem"]
+channels: ["detection"]
 ---
 
 In the [first post](/posts/purple-team-engineering-building-detecting-rust-c2-beacon/) I built Glimmer as a simple HTTP POST beacon and wrote detection rules to catch it. Four independent detection layers - file integrity monitoring, YARA static analysis, auditd syscall monitoring, and Suricata network inspection - all converged on the same binary. Every detection rule I wrote revealed what to harden next. This post covers the second round of that loop: building stealthier channels and more sophisticated detection.

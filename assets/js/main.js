@@ -538,10 +538,15 @@ async function initHeader() {
   // try multiple paths for OCI data - summary endpoint may structure differently
   const oci = appData?.oci || appData?.release?.oci || appData?.components?.[0]?.oci || {};
 
+  // Derived "verified" signals for the header (the summary has no explicit field).
+  const appVerified = !!appData && (vulns.counts?.critical ?? 0) === 0 && (vulns.gate_result === 'pass' || !vulns.gate_result) && (signing.release_signed || signing.inventory_signed || signing.artifacts_attested);
+  const contentVerified = !!contentData && (contentData.verified ?? contentData.signed ?? !!contentData.content_hash);
+
   const data = {
     hdr: {
       app: {
         version: appData?.version || '—',
+        verified: appVerified,
         track: appData?.track || '—',
         build_id: appData?.build_id || '—',
         created_at: appData?.created_at || '—',
@@ -589,6 +594,7 @@ async function initHeader() {
       },
       content: {
         version: contentData?.version || '—',
+        verified: contentVerified,
         created_at: contentData?.created_at || '—',
         total_files: contentData?.total_files ?? '—',
         total_size: contentData?.total_size ?? 0,
@@ -819,6 +825,8 @@ async function initFooter() {
   const contentVer = document.getElementById('footer-content-version');
   if (appVer) appVer.textContent = appData?.version || '—';
   if (contentVer) contentVer.textContent = data?.version || '—';
+  const commit = document.getElementById('footer-commit');
+  if (commit) commit.textContent = data?.source?.commit_short || data?.commit_short || '—';
 }
 
 // init on DOM ready

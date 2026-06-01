@@ -1,0 +1,12 @@
+<ul class="dir">
+{{- range (split (trim .Inner "\n") "\n") }}
+  {{- $p := split . "|" }}
+  {{- if ge (len $p) 3 }}
+  <li>
+    <a class="dir-name" href="{{ trim (index $p 1) " " }}">{{ trim (index $p 0) " " }}</a>
+    <span class="dir-dots"></span>
+    <span class="dir-desc">{{ trim (index $p 2) " " }}</span>
+  </li>
+  {{- end }}
+{{- end }}
+</ul>

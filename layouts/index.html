@@ -1,102 +1,62 @@
 {{ define "main" }}
-<div class="space-y-12">
+<div class="grid">
+  <div>
 
-  {{/* Hero / Intro */}}
-  <section class="space-y-4">
-    <h1 class="text-3xl font-semibold tracking-tight">{{ .Site.Title }}</h1>
-    <p class="text-lg text-[rgb(var(--muted))] max-w-2xl">
-      {{ .Site.Params.description | default "Security, infrastructure, and platform engineering expertise built over 20 years of hands-on experience." }}
-    </p>
-  </section>
+    {{/* ---- research-signal tree (decorative, driven by data/channels.yaml) ---- */}}
+    {{- $tree := slice -}}
+    {{- range hugo.Data.channels -}}{{- if ne .tree false -}}{{- $tree = $tree | append . -}}{{- end -}}{{- end -}}
+    {{- $tn := len $tree -}}
+    {{- $lines := slice "research signal" "│" -}}
+    {{- range $i, $ch := $tree -}}
+      {{- $conn := cond (eq (add $i 1) $tn) "└─" "├─" -}}
+      {{- $lines = $lines | append (printf "%s <span class=\"b\">%s</span>" $conn $ch.name) -}}
+      {{- $pfx := cond (eq (add $i 1) $tn) "     " "│    " -}}
+      {{- $kids := slice -}}
+      {{- range $ch.topics -}}{{- $kids = $kids | append (dict "t" . "s" false) -}}{{- end -}}
+      {{- range $ch.soon -}}{{- $kids = $kids | append (dict "t" . "s" true) -}}{{- end -}}
+      {{- $kn := len $kids -}}
+      {{- range $j, $k := $kids -}}
+        {{- $kc := cond (eq (add $j 1) $kn) "└─" "├─" -}}
+        {{- if $k.s -}}
+          {{- $pad := "" -}}{{- if gt 30 (len $k.t) -}}{{- $pad = strings.Repeat (sub 30 (len $k.t)) " " -}}{{- end -}}
+          {{- $lines = $lines | append (printf "%s%s <span class=\"soon\">%s<span class=\"soonpad\">%s</span> ·soon</span>" $pfx $kc $k.t $pad) -}}
+        {{- else -}}
+          {{- $lines = $lines | append (printf "%s%s %s" $pfx $kc $k.t) -}}
+        {{- end -}}
+      {{- end -}}
+      {{- if ne (add $i 1) $tn -}}{{- $lines = $lines | append "│" -}}{{- end -}}
+    {{- end -}}
+    <pre class="map" aria-hidden="true">{{ delimit $lines "\n" | safeHTML }}</pre>
 
-  {{/* Recent Posts */}}
-  <section class="space-y-6">
-    <div class="flex items-center justify-between">
-      <h2 class="text-xl font-semibold tracking-tight">Recent Posts</h2>
-      <a href="/posts/" class="text-sm text-[rgb(var(--accent))] hover:underline">View all</a>
-    </div>
+    {{/* channel lanes (grouped posts) */}}
+    <section>
+      {{- range $ch := hugo.Data.channels -}}
+        {{- with index $.Site.Taxonomies.channels $ch.slug -}}
+          {{- $header := $ch.header | default $ch.name -}}
+          <div class="chead"><a href="/channels/{{ $ch.slug }}/"><span>┄┄[ {{ $header }} ]</span></a><span class="fill"></span><span class="cnt">( {{ .Count }} )</span></div>
+          {{- range .Pages.ByDate.Reverse -}}
+            <a class="row" href="{{ .RelPermalink }}"><span class="mark" aria-hidden="true"></span><span class="date">{{ .Date.Format "2006.01.02" }}</span><span class="col"><span class="title">{{ .Title }}</span>{{ with .Summary }}<span class="dek">{{ . }}</span>{{ end }}</span></a>
+          {{- end -}}
+        {{- end -}}
+      {{- end -}}
+      <a class="allposts" href="/posts/">view all posts →</a>
+    </section>
+  </div>
 
-    <div class="space-y-4">
-      {{ $posts := first 10 (where .Site.RegularPages "Section" "posts") }}
-      {{ range $posts }}
-        <article class="blueprint-card">
-          <a href="{{ .Permalink }}" class="block group">
-            <h3 class="font-medium group-hover:text-[rgb(var(--accent))] transition-colors">{{ .Title }}</h3>
-            <div class="text-sm text-[rgb(var(--muted))] mt-1 flex items-center gap-2">
-              <span class="tabular">{{ .Date.Format "2006-01-02" }}</span>
-              {{ with .Params.tags }}
-                <span>·</span>
-                {{ range first 2 . }}
-                  <span class="text-[rgb(var(--accent))]">#{{ . }}</span>
-                {{ end }}
-              {{ end }}
-            </div>
-            {{ with .Summary }}
-              <p class="text-sm text-[rgb(var(--muted))] mt-2 line-clamp-2">{{ . }}</p>
-            {{ end }}
-          </a>
-        </article>
-      {{ else }}
-        <p class="text-[rgb(var(--muted))]">No posts yet.</p>
-      {{ end }}
-    </div>
-  </section>
+  {{/* right rail */}}
+  <aside class="rail">
+    <div class="rail-h">$ whoami</div>
+    <div class="ident"><a href="/about/me/"><span class="k">{{ lower .Site.Params.author.name }}</span></a><br>every bit<br>every packet<br>every syscall<br><br>the whole stack, owned.<br><br>→ <a href="/about/">about</a> · <a href="https://github.com/{{ .Site.Params.author.github }}">github</a> · <a href="/index.xml">rss</a></div>
 
-</div>
-{{ end }}
+    <div class="rail-h two">channels</div>
+    {{- range $ch := hugo.Data.channels -}}
+      {{- with index $.Site.Taxonomies.channels $ch.slug -}}
+        <a class="rch" href="/channels/{{ $ch.slug }}/"><span><span class="hash">#</span>{{ $ch.label }}</span><span class="c">{{ .Count }}</span></a>
+      {{- end -}}
+    {{- end -}}
 
-{{ define "right-rail" }}
-<div class="sticky top-6 space-y-6 max-h-[calc(100vh-4rem)] overflow-hidden pr-2">
-  {{/* Browse by Category */}}
-  <section class="space-y-2">
-    <h2 class="text-xs uppercase tracking-wider text-[rgb(var(--muted))] font-medium">Browse by Category</h2>
-    <div class="blueprint-card">
-      {{ $categories := .Site.Taxonomies.categories }}
-      {{ if $categories }}
-        <ul class="space-y-1.5 text-sm">
-          {{ range $name, $taxonomy := $categories }}
-            <li>
-              <a
-                href="/categories/{{ $name | urlize }}/"
-                class="flex items-center justify-between group gap-2"
-              >
-                <span class="group-hover:text-[rgb(var(--accent))] transition-colors truncate">{{ $name | title }}</span>
-                <span class="text-xs text-[rgb(var(--muted))] tabular shrink-0">{{ len $taxonomy }}</span>
-              </a>
-            </li>
-          {{ end }}
-        </ul>
-      {{ else }}
-        <p class="text-[rgb(var(--muted))] text-xs">No categories yet.</p>
-      {{ end }}
-    </div>
-  </section>
-
-  {{/* Browse by Tag */}}
-  <section class="space-y-2">
-    <div class="flex items-center justify-between">
-      <h2 class="text-xs uppercase tracking-wider text-[rgb(var(--muted))] font-medium">Browse by Tag</h2>
-      <a href="/tags/" class="text-xs text-[rgb(var(--accent))] hover:underline">View all</a>
-    </div>
-    <div class="blueprint-card">
-      {{ $tags := .Site.Taxonomies.tags }}
-      {{ if $tags }}
-        <div class="flex flex-wrap gap-1.5">
-          {{ range first 30 $tags.ByCount }}
-            <a
-              href="/tags/{{ .Name | urlize }}/"
-              class="text-xs px-2 py-1 rounded-full border border-[rgb(var(--border))] hover:border-[rgb(var(--accent))] hover:text-[rgb(var(--accent))] transition-colors"
-            >
-              #{{ .Name }}
-              <span class="text-[rgb(var(--muted))] ml-1">{{ .Count }}</span>
-            </a>
-          {{ end }}
-        </div>
-      {{ else }}
-        <p class="text-[rgb(var(--muted))] text-xs">No tags yet.</p>
-      {{ end }}
-    </div>
-  </section>
-
+    <div class="rail-h two">tags</div>
+    <a class="rch" href="/tags/"><span>all tags</span><span class="c">→</span></a>
+  </aside>
 </div>
 {{ end }}

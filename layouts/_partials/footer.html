@@ -1,15 +1,6 @@
-<footer class="border-t border-[rgb(var(--border))] bg-[rgb(var(--bg))]">
-  <div class="mx-auto max-w-3xl px-6 py-6 text-xs text-[rgb(var(--muted))] flex items-center justify-between">
-    <div class="flex items-center gap-4">
-      <span>app:<span id="footer-app-version"></span></span>
-      :)
-      <span>content:<span id="footer-content-version"></span></span>
-    </div>
-    <div>
-      <span><span id="footer-trust-link"><a href="https://trust.linnemanlabs.com/">Trust Portal</a></span></span>
-    </div>
-    <div>© {{ now.Year }} {{ .Site.Title }}</div>
-  </div>
+<footer class="footer reveal">
+  <nav class="colophon"><a href="/about/">about</a>&nbsp;·&nbsp;<a href="https://trust.linnemanlabs.com/">trust</a>&nbsp;·&nbsp;<a href="/index.xml">rss</a></nav>
+  <div class="buildline"><span class="bl-grp"><span id="footer-app-version">···</span>&nbsp;·&nbsp;content&nbsp;<span id="footer-content-version">···</span></span><span class="bl-sep">&nbsp;·&nbsp;</span><span class="bl-grp"><span id="footer-commit">···</span>&nbsp;·&nbsp;<a href="/about/provenance/">provenance →</a></span></div>
 </footer>
 
 {{- $jsMain := resources.Get "js/main.js" | minify | fingerprint "sha384" -}}

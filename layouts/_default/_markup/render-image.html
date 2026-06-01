@@ -8,7 +8,7 @@
   {{- $img = resources.Get $rel -}}
 {{- end -}}
 {{- if $img -}}
-<figure class="mb-4">
+<figure class="fig">
   <a href="{{ $img.RelPermalink }}"
      data-pswp-width="{{ $img.Width }}"
      data-pswp-height="{{ $img.Height }}"
@@ -21,7 +21,7 @@
          loading="lazy">
   </a>
   {{- with $title }}
-  <figcaption class="text-center italic text-neutral-400 mt-2 text-sm">{{ . }}</figcaption>
+  <figcaption>{{ . }}</figcaption>
   {{- end }}
 </figure>
 {{- else -}}

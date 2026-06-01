@@ -5,5 +5,6 @@ title: '{{ replace .File.ContentBaseName "-" " " | title }}'
 summary: ''
 author: ''
 tags: []
-categories: []
+channels: []
+cover: ''
 ---

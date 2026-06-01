@@ -1,9 +1,10 @@
 ---
 date: '2026-03-10T00:00:00Z'
-title: "Building a Self-Hosted Observability Platform with the Grafana LGTM Stack"
-summary: "A view into the architecture of a 118-node self-hosted observability platform built on Mimir, Loki, Tempo, Pyroscope, and Grafana. All deployed and configured from official documentation with no Helm charts or managed services."
-tags: ["Observability","Grafana","Mimir","Loki","Tempo","Pyroscope","Prometheus","Alertmanager","Memcached","AWS","S3","Infrastructure","Ansible","OpenTelemetry","Vigil"]
-categories: ["Engineering"]
+title: "A Self-Hosted Observability Platform"
+subtitle: "the full Grafana observability stack: Mimir, Loki, Tempo, Pyroscope, and Grafana"
+summary: "No Helm charts, no managed services. A 118-node observability platform configured by hand from the official docs."
+tags: ["observability", "grafana", "mimir", "loki", "tempo", "pyroscope", "prometheus", "alertmanager", "aws", "s3", "ansible", "opentelemetry", "memcached", "vigil"]
+channels: ["infra"]
 ---
 
 ## Architecture

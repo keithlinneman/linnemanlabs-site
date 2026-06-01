@@ -1,77 +1,366 @@
-@import "tailwindcss";
+/* ============================================================
+   linnemanlabs.com - main stylesheet
+   Hand-authored (sort of), no Tailwind.
+   Terminal / blueprint aesthetic.
+   ============================================================ */
 
-/* Make Tailwind see classes Hugo generates */
-@source "hugo_stats.json";
-@source "../js/main.js";
+/* ---------- self-hosted fonts (latin) ---------- */
+@font-face{font-display:swap;font-family:'IBM Plex Mono';font-style:normal;font-weight:400;src:url('/fonts/ibm-plex-mono-latin-400.woff2') format('woff2');}
+@font-face{font-display:swap;font-family:'IBM Plex Mono';font-style:normal;font-weight:500;src:url('/fonts/ibm-plex-mono-latin-500.woff2') format('woff2');}
+@font-face{font-display:swap;font-family:'IBM Plex Sans';font-style:normal;font-weight:400;src:url('/fonts/ibm-plex-sans-latin-400.woff2') format('woff2');}
+@font-face{font-display:swap;font-family:'IBM Plex Sans';font-style:normal;font-weight:500;src:url('/fonts/ibm-plex-sans-latin-500.woff2') format('woff2');}
 
-/* dark mode default */
-@layer base {
-  :root {
-    --bg: 10 12 16;
-    --fg: 236 242 255;
-    --muted: 150 163 184;
-    --panel: 16 19 26;
-    --border: 30 41 59;
+/* ---------- design tokens ---------- */
+:root{
+  --bg:#0a0d0b;
+  --fg:#bac5b7;
+  --read:#c4cdc0;
+  --dek:#94a08f;
+  --dim:#6f7c6c;
+  --faint:#3a453a;
+  --amber:#e6a948;
+  --green:#86d68f;
+  --teal:#84b3ab;
+  --hover:#131a15;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular","Cascadia Code","DejaVu Sans Mono",Menlo,Consolas,monospace;
+  --body:"IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,sans-serif;
+  --maxw:1000px;
 
-    /* signature accent */
-    --accent: 120 170 255;
+  /* reading density - dense preset baked in as the default */
+  --fz:15px; --lh:1.52;
 
-    --good: 18 184 134;
-    --warn: 245 158 11;
-    --bad: 239 68 68;
-  }
-
-  html {
-    background: rgb(var(--bg));
-    color: rgb(var(--fg));
-    font-family: 'Source Sans 3', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  }
+  /* TEMPORARY legacy palette aliases (RGB triplets) for the not-yet-redesigned
+     provenance/about pages, mapped onto the new palette so existing
+     rgb(var(--x)) declarations resolve on-brand. Remove when those pages are
+     redesigned. (--bg/--fg are hex above; legacy rgb(var(--bg|--fg)) refs
+     degrade gracefully to transparent / inherited.) */
+  --accent:230 169 72;   /* amber */
+  --good:134 214 143;    /* green */
+  --warn:230 169 72;     /* amber - no separate warn color */
+  --bad:230 169 72;      /* amber - no red, per color semantics */
+  --muted:111 124 108;   /* dim */
+  --panel:15 18 16;      /* dark green-tinted panel */
+  --border:58 69 58;     /* faint */
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+*{box-sizing:border-box;}
+html{background:var(--bg);scroll-behavior:smooth;}
+body{
+  margin:0;color:var(--fg);font-family:var(--mono);
+  font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  padding:30px 22px 60px;
+  background:
+    repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px),
+    radial-gradient(130% 50% at 50% -12%,rgba(230,169,72,.05),transparent 58%),
+    var(--bg);
+  background-attachment:fixed;
+}
+a{color:inherit;text-decoration:none;}
 
-  /* Line clamp for post summaries */
-  .line-clamp-2 {
-    display: -webkit-box;
-    line-clamp: 2;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
+.wrap{max-width:var(--maxw);margin-inline:auto;}
+body.is-home{--maxw:1000px;}
+body.is-post{--maxw:1040px;}
+body.is-page{--maxw:820px;}
+
+h1{font-family:var(--mono);font-weight:500;font-size:23px;letter-spacing:.01em;color:var(--fg);margin:.5rem 0 .4rem;line-height:1.25;}
+.mono{font-family:var(--mono);}
+.tabular,.date{font-variant-numeric:tabular-nums;}
+
+/* ---------- animations ---------- */
+.reveal{opacity:0;transform:translateY(6px);animation:up .5s ease forwards;}
+@keyframes up{to{opacity:1;transform:none;}}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  .reveal{animation:none!important;opacity:1!important;transform:none!important;}
 }
 
-/* Blueprint grid background */
-@layer base {
-  body {
-    background-image:
-      linear-gradient(rgba(var(--border), 0.15) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(var(--border), 0.15) 1px, transparent 1px);
-    background-size: 24px 24px;
-  }
+/* ---------- masthead / header ---------- */
+.home{display:flex;align-items:flex-start;gap:16px;min-width:0;}
+.brand{display:flex;flex-direction:column;min-width:0;}
+.logo{display:flex;align-items:center;}
+.logo svg{width:32px;height:32px;display:block;}
+.logo svg > rect{fill:none;}
+.word{font-weight:500;letter-spacing:.34em;transition:color .12s;}
+.home:hover .word{color:var(--amber);}
+.tag{color:var(--dim);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.masthead{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;}
+.mast-left{min-width:0;flex:1 1 0;}
+.mast-right{flex:0 0 auto;text-align:right;font-size:13px;color:var(--dim);line-height:1.7;}
+body.is-home .masthead{align-items:flex-end;}
+.mast-right .vrow{white-space:nowrap;}
+.mast-right .vv{color:var(--dek);}
+.ver{color:var(--green);transition:color .12s;}
+.ver .ok{color:var(--green);}
+.ver:hover{text-decoration:underline;}
+@media(max-width:600px){ .masthead,body.is-home .masthead{flex-direction:column;gap:10px;align-items:stretch;} .mast-right{text-align:left;} .soonpad{display:none;} }
+.rule{border:0;border-top:1px solid var(--faint);margin:18px 0 22px;}
+
+/* ---------- homepage: grid + research map + lanes + rail ---------- */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 218px;gap:36px;}
+.grid > *{min-width:0;}
+@media(max-width:780px){ .grid{grid-template-columns:1fr;} .rail{order:2;border-top:1px solid var(--faint);padding-top:18px;} }
+
+.map{margin:0 0 8px;color:var(--dim);font-size:13.5px;overflow-x:auto;}
+.map a{color:var(--amber);}
+.map .b{color:var(--amber);}
+.map .soon{color:var(--faint);}
+
+.chead{display:flex;align-items:center;gap:10px;margin:24px 0 6px;color:var(--amber);font-size:13.5px;}
+.chead a{color:var(--amber);}
+.chead .fill{flex:1;height:0;border-bottom:1px dashed var(--faint);}
+.chead .cnt{color:var(--dim);}
+
+.row{display:flex;gap:14px;padding:6px 8px 6px 0;border-radius:3px;align-items:baseline;}
+.row:hover{background:var(--hover);}
+.mark{flex:0 0 1ch;color:var(--amber);text-align:center;}
+.mark::before{content:"";opacity:0;}
+.row:hover .mark::before{content:"\203A";opacity:1;}
+.date{flex:0 0 10ch;color:var(--dim);}
+.col{display:flex;flex-direction:column;min-width:0;}
+.title{color:var(--fg);transition:color .12s;text-transform:lowercase;}
+.row:hover .title{color:var(--amber);}
+.dek{color:var(--dek);max-width:64ch;font-size:13.5px;margin-top:3px;}
+.allposts{display:inline-block;margin-top:24px;color:var(--dim);transition:color .12s;}
+.allposts:hover{color:var(--amber);}
+
+.rail-h{color:var(--amber);font-size:13px;margin:0 0 8px;}
+.rail-h.two{margin-top:26px;}
+.ident{color:var(--dim);font-size:13.5px;line-height:1.55;}
+.ident .k{color:var(--amber);font-weight:500;}
+.ident a{color:var(--dek);transition:color .12s;}
+.ident a:hover{color:var(--amber);}
+.rch{display:flex;justify-content:space-between;padding:4px 0;color:var(--fg);transition:color .12s;}
+.rch:hover{color:var(--amber);}
+.rch .c{color:var(--dim);}
+.hash{color:var(--dim);margin-right:.3em;}
+.cloud{display:flex;flex-wrap:wrap;gap:5px 10px;}
+.cloud a{color:var(--dim);font-size:13px;transition:color .12s;}
+.cloud a:hover{color:var(--fg);}
+
+/* ---------- footer ---------- */
+.footer{margin-top:32px;border-top:1px solid var(--faint);padding-top:14px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px 24px;}
+.colophon a{color:var(--fg);transition:color .12s;}
+.colophon a:hover{color:var(--amber);}
+.greetz{color:var(--faint);font-size:12.5px;margin-top:8px;display:flex;justify-content:space-between;gap:1rem;}
+.kk{color:var(--dim);}
+.buildline{color:var(--dim);font-size:12.5px;display:flex;flex-wrap:wrap;align-items:baseline;min-width:0;}
+.bl-grp{white-space:nowrap;}
+.buildline a{color:var(--dim);transition:color .12s;}
+.buildline a:hover{color:var(--amber);}
+@media(max-width:460px){ .bl-sep{display:none;} }
+
+/* ---------- post page: reading column + margin TOC ---------- */
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 200px;gap:46px;}
+@media(max-width:900px){ .layout{grid-template-columns:minmax(0,1fr);} .toc{display:none;} }
+
+.toc{position:sticky;top:28px;align-self:start;font-size:12.5px;line-height:1.7;}
+.toc-h{color:var(--dim);margin-bottom:8px;letter-spacing:.08em;}
+.toc ul{list-style:none;margin:0;padding:0;}
+.toc li{margin:0;}
+.toc ul ul{padding-left:12px;}
+.toc a{display:block;color:var(--dim);padding:2px 0 2px 10px;border-left:2px solid transparent;transition:color .12s,border-color .12s;}
+.toc a:hover{color:var(--fg);}
+.toc a.active{color:var(--amber);border-left-color:var(--amber);}
+
+/* ---------- article chrome ---------- */
+.article{max-width:720px;}
+body.is-post .article > h1{text-transform:lowercase;}
+.channel{color:var(--dim);font-size:13px;}
+.channel a{color:var(--dek);}
+.channel a:hover{color:var(--amber);}
+.pmeta{color:var(--dim);font-size:13px;margin-bottom:24px;}
+.pmeta .ok{color:var(--green);}
+.pmeta a{color:var(--dek);transition:color .12s;}
+.pmeta a:hover{color:var(--amber);}
+.tags{font-family:var(--mono);color:var(--dim);font-size:13px;margin-top:2.4rem;}
+.tags a{color:var(--dek);transition:color .12s;}
+.tags a:hover{color:var(--amber);}
+.lede{font-family:var(--body);font-size:calc(var(--fz) + 1px);line-height:1.55;color:var(--dek);
+      border-left:2px solid var(--amber);padding-left:16px;margin:0 0 30px;}
+.subtitle{font-family:var(--mono);color:var(--dek);font-size:16px;line-height:1.45;margin:-.1rem 0 14px;}
+
+/* ---------- rendered markdown content ---------- */
+.post-body{font-family:var(--body);font-size:16px;line-height:1.6;color:var(--read);}
+.post-body > :first-child{margin-top:0;}
+.post-body h2{font-family:var(--mono);font-weight:500;font-size:16px;color:var(--amber);margin:2.4rem 0 .9rem;scroll-margin-top:28px;}
+.post-body h3{font-family:var(--mono);font-weight:500;font-size:14px;color:var(--fg);margin:1.8rem 0 .7rem;scroll-margin-top:28px;}
+.post-body h4{font-family:var(--mono);font-weight:500;font-size:13px;color:var(--dek);margin:1.5rem 0 .6rem;}
+.post-body p{margin:0 0 1.3em;}
+.post-body a{color:var(--teal);}
+.post-body a:hover{text-decoration:underline;}
+.post-body strong{color:var(--fg);font-weight:500;}
+.post-body em{font-style:italic;}
+.post-body ul,.post-body ol{margin:0 0 1.25rem;padding-left:1.4rem;}
+.post-body li{margin:0 0 .4rem;}
+.post-body li::marker{color:var(--dim);}
+.post-body blockquote{border-left:2px solid var(--faint);margin:0 0 1.25rem;padding-left:1rem;color:var(--dek);}
+.post-body hr{border:0;border-top:1px solid var(--faint);margin:2rem 0;}
+.post-body code{font-family:var(--mono);background:rgba(186,197,183,0.08);color:var(--fg);padding:.1em .36em;border-radius:3px;font-size:.88em;overflow-wrap:break-word;}
+.post-body pre code{background:none;padding:0;font-size:inherit;color:inherit;}
+.post-body img{max-width:100%;height:auto;}
+
+.post-body pre,pre.chroma{font-family:var(--mono);background:#0f1210;border:1px solid #283028;border-radius:4px;
+    padding:1rem 1.1rem;line-height:1.5;tab-size:4;overflow-x:auto;font-size:13px;color:var(--fg);margin:0 0 1.6rem;}
+code{font-family:var(--mono);}
+.highlight{margin:0 0 1.6rem;}
+.highlight pre{margin:0;}
+
+/* tables in content */
+.post-body table{width:100%;border-collapse:collapse;margin:0 0 1.6rem;font-size:13.5px;font-family:var(--mono);}
+.post-body th,.post-body td{text-align:left;vertical-align:top;padding:.5rem .7rem;border-bottom:1px solid var(--faint);}
+.post-body thead th{color:var(--amber);font-weight:500;border-bottom:1px solid var(--faint);}
+.post-body tbody tr:hover{background:var(--hover);}
+
+/* figures (imgmodal shortcode + markdown image render hook) */
+.fig{margin:1.6rem 0;}
+.fig a{display:block;}
+.fig img{max-width:100%;max-height:400px;height:auto;object-fit:contain;border:1px solid var(--faint);border-radius:4px;display:block;margin-inline:auto;}
+.fig img.crop{width:100%;max-height:400px;object-fit:cover;object-position:top;}
+.fig figcaption{color:var(--dim);font-size:12.5px;font-style:italic;text-align:center;margin-top:8px;}
+
+/* standard intro/cover image - framed banner placed after the lede */
+.fig-cover{margin:2rem auto;max-width:360px;border:1px solid var(--faint);border-radius:3px;padding:10px;background:#0f1210;}
+.fig-cover img{display:block;width:100%;height:auto;}
+.fig-cover figcaption{font-family:var(--mono);color:var(--dim);font-size:.8rem;text-align:center;margin-top:9px;}
+
+/* ============================================================
+   TEMPORARY compatibility shim
+   Minimal plain-CSS stand-ins for the Tailwind utility classes the
+   not-yet-redesigned provenance/about templates still reference, so
+   layout stays coherent. Deleting when those pages are redesigned.
+   ============================================================ */
+.hidden{display:none !important;}
+.block{display:block;}
+.inline-block{display:inline-block;}
+.flex{display:flex;}
+.inline-flex{display:inline-flex;}
+.grid{display:grid;}
+.relative{position:relative;}
+.absolute{position:absolute;}
+.items-center{align-items:center;}
+.items-start{align-items:flex-start;}
+.justify-between{justify-content:space-between;}
+.justify-center{justify-content:center;}
+.flex-wrap{flex-wrap:wrap;}
+.flex-1{flex:1 1 0%;}
+.shrink-0{flex-shrink:0;}
+.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr));}
+.gap-1{gap:.25rem;}
+.gap-1\.5{gap:.375rem;}
+.gap-2{gap:.5rem;}
+.gap-3{gap:.75rem;}
+.gap-4{gap:1rem;}
+.space-y-1 > * + *{margin-top:.25rem;}
+.space-y-1\.5 > * + *{margin-top:.375rem;}
+.space-y-2 > * + *{margin-top:.5rem;}
+.space-y-3 > * + *{margin-top:.75rem;}
+.space-y-4 > * + *{margin-top:1rem;}
+.space-y-6 > * + *{margin-top:1.5rem;}
+.mt-1{margin-top:.25rem;}
+.mt-2{margin-top:.5rem;}
+.mb-2{margin-bottom:.5rem;}
+.mb-3{margin-bottom:.75rem;}
+.pt-3{padding-top:.75rem;}
+.p-4{padding:1rem;}
+.border{border:1px solid var(--faint);}
+.border-t{border-top:1px solid var(--faint);}
+.rounded{border-radius:3px;}
+.rounded-lg{border-radius:6px;}
+.uppercase{text-transform:uppercase;}
+.tracking-wide{letter-spacing:.04em;}
+.tracking-wider{letter-spacing:.06em;}
+.font-medium{font-weight:500;}
+.font-semibold{font-weight:600;}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.break-all{word-break:break-all;}
+.text-xs{font-size:.75rem;}
+.text-sm{font-size:.875rem;}
+.text-\[10px\]{font-size:10px;}
+.text-\[11px\]{font-size:11px;}
+.max-w-none{max-width:none;}
+.text-balance{text-wrap:balance;}
+.line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+
+/* ---- shim batch 2: remaining utilities the provenance templates use ---- */
+/* font-size / tracking / text-align (Tailwind default scale) */
+.text-lg{font-size:1.125rem;line-height:1.75rem;}
+.text-xl{font-size:1.25rem;line-height:1.75rem;}
+.text-3xl{font-size:1.875rem;line-height:2.25rem;}
+.tracking-tight{letter-spacing:-.01em;}
+.text-center{text-align:center;}
+/* spacing */
+.mt-3{margin-top:.75rem;}
+.mt-6{margin-top:1.5rem;}
+.mt-8{margin-top:2rem;}
+.mb-1{margin-bottom:.25rem;}
+.mr-1{margin-right:.25rem;}
+.pt-4{padding-top:1rem;}
+.pt-8{padding-top:2rem;}
+.pb-4{padding-bottom:1rem;}
+/* flex / align / gaps */
+.items-baseline{align-items:baseline;}
+.justify-end{justify-content:flex-end;}
+.align-middle{vertical-align:middle;}
+.gap-x-4{column-gap:1rem;}
+.gap-y-1{row-gap:.25rem;}
+/* sizing / overflow */
+.h-2{height:.5rem;}
+.h-10{height:2.5rem;}
+.w-2{width:.5rem;}
+.max-h-96{max-height:24rem;}
+.overflow-auto{overflow:auto;}
+.overflow-x-auto{overflow-x:auto;}
+.overflow-y-auto{overflow-y:auto;}
+/* borders / radius */
+.border-b{border-bottom:1px solid var(--faint);}
+.rounded-full{border-radius:9999px;}
+/* arbitrary [rgb(var(--x))] text colors -> on-brand tokens
+   (--fg is a hex token, so rgb(var(--fg)) is invalid; map straight to var(--fg)) */
+.text-\[rgb\(var\(--muted\)\)\]{color:var(--dim);}
+.text-\[rgb\(var\(--fg\)\)\]{color:var(--fg);}
+.text-\[rgb\(var\(--accent\)\)\]{color:var(--amber);}
+.text-\[rgb\(var\(--good\)\)\]{color:var(--green);}
+.text-\[rgb\(var\(--bad\)\)\]{color:var(--amber);}
+.text-\[rgb\(var\(--warn\)\)\]{color:var(--amber);}
+.hover\:text-\[rgb\(var\(--fg\)\)\]:hover{color:var(--fg);}
+.hover\:underline:hover{text-decoration:underline;}
+/* arbitrary [rgb(var(--x))] backgrounds (rgb-triplet aliases let /opacity resolve) */
+.bg-\[rgb\(var\(--muted\)\)\]{background-color:rgb(var(--muted));}
+.bg-\[rgb\(var\(--muted\)\)\]\/10{background-color:rgb(var(--muted) / .1);}
+.bg-\[rgb\(var\(--muted\)\)\]\/20{background-color:rgb(var(--muted) / .2);}
+.bg-\[rgb\(var\(--accent\)\)\]\/20{background-color:rgb(var(--accent) / .2);}
+.bg-\[rgb\(var\(--bad\)\)\]\/20{background-color:rgb(var(--bad) / .2);}
+.bg-\[rgb\(var\(--warn\)\)\]\/20{background-color:rgb(var(--warn) / .2);}
+.bg-\[rgb\(var\(--good\)\)\]{background-color:rgb(var(--good));}
+.bg-\[rgb\(var\(--bad\)\)\]{background-color:rgb(var(--bad));}
+.border-\[rgb\(var\(--border\)\)\]{border-color:rgb(var(--border));}
+/* responsive variants - placed after the base utilities so they beat
+   .hidden{...!important} by source order (and use !important to match it) */
+@media (min-width:640px){
+  .sm\:grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr));}
 }
-
-/* Technical typography */
-@layer base {
-
-  h1,
-  h2,
-  h3 {
-    letter-spacing: -0.02em;
-  }
-
-  code,
-  pre,
-  .mono {
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  }
-
-  .tabular {
-    font-variant-numeric: tabular-nums;
-  }
+@media (min-width:768px){
+  .md\:hidden{display:none !important;}
+  .md\:inline{display:inline !important;}
 }
+/* <details class="… group"> open-state label toggles */
+.group[open] .group-open\:hidden{display:none !important;}
+.group[open] .group-open\:inline{display:inline !important;}
+
+/* provenance pages: a little more vertical breathing room, applied at the
+   parent (the provenance root is uniquely `article.space-y-6`; the main
+   about pages use `article.article`, so they're untouched). Tune here. */
+article.space-y-6 > header > h1{padding-bottom:.3rem;}   /* title not crowding the description */
+article.space-y-6 > * + *{margin-top:1.9rem;}            /* description + every top-level block gets more air (was 1.5rem) */
+article.space-y-6 .space-y-3 > * + *{margin-top:1rem;}   /* gentle loosening of inner section rhythm (was .75rem) */
+
+/* ============================================================
+   LEGACY provenance/attestation components - preserved verbatim,
+   recolored via the :root aliases above. To be redesigned into the
+   new aesthetic in a follow-up, after which this whole section and
+   the shim/aliases can be removed.
+   ============================================================ */
 
 /* Attestation card component */
 @layer components {
@@ -115,19 +404,19 @@
   }
 
   .attestation-value {
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     color: rgb(var(--fg));
     word-break: break-all;
   }
 }
 
-/* Signature block styling (v2 ready) */
+/* Signature block styling */
 @layer components {
   .sig-block {
     border: 1px dashed rgb(var(--border));
     background: rgb(var(--panel));
     padding: 1rem;
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.75rem;
     white-space: pre-wrap;
     word-break: break-all;
@@ -174,219 +463,6 @@
   }
 }
 
-/* Prose typography for markdown content */
-@layer components {
-  .prose {
-    font-size: 18px;
-  }
-
-  @media (max-width: 767px) {
-    .prose {
-      font-size: 17px;
-    }
-  }
-
-  .prose > :first-child {
-    margin-top: 0;
-  }
-
-  .prose h2 {
-    margin-top: 1.5em;
-    margin-bottom: 0.75em;
-    padding-bottom: 0.35em;
-    border-bottom: 2px dashed rgb(var(--border));
-    font-size: 1.5rem;
-    font-weight: 700;
-    line-height: 1.25;
-  }
-
-  .prose h3 {
-    margin-top: 1.5em;
-    margin-bottom: 0.5em;
-    font-size: 1.25rem;
-    font-weight: 700;
-    line-height: 1.3;
-  }
-
-  .prose p {
-    margin-bottom: 1.25em;
-    line-height: 1.7;
-  }
-
-  .prose ul,
-  .prose ol {
-    margin-bottom: 1.25em;
-    padding-left: 1.5rem;
-    line-height: 1.55;
-  }
-
-  .prose ul {
-    list-style-type: disc;
-  }
-
-  .prose ol {
-    list-style-type: decimal;
-  }
-
-  .prose li {
-    margin-bottom: 0.5em;
-  }
-
-  .prose li > p {
-    margin: 0;
-    line-height: inherit;
-  }
-
-  .prose li > p + p {
-    margin-top: 0.5em;
-  }
-
-  .prose strong {
-    font-weight: 600;
-  }
-
-  .prose hr {
-    margin: 2rem 0;
-    border-color: rgb(var(--border));
-  }
-
-  .prose a {
-    color: rgb(var(--accent));
-  }
-
-  .prose a:hover {
-    text-decoration: underline;
-  }
-
-  .prose blockquote {
-    border-left: 3px solid rgb(var(--accent));
-    padding-left: 1rem;
-    margin: 1.5rem 0;
-    color: rgb(var(--muted));
-    font-style: italic;
-    line-height: 1.7;
-  }
-
-  .prose code {
-    background: rgb(var(--panel));
-    padding: 0.125rem 0.375rem;
-    border-radius: 0.25rem;
-    font-size: 0.875em;
-  }
-
-  .prose pre {
-    background: rgb(var(--panel));
-    padding: 1rem;
-    border-radius: 0.5rem;
-    overflow-x: auto;
-    margin: 1.5rem 0;
-  }
-
-  .prose pre code {
-    background: transparent;
-    padding: 0;
-  }
-
-  .prose table {
-    @apply w-full;
-    border-collapse: collapse;
-    margin: 1.5rem 0;
-    font-size: 0.95em;
-  }
-
-  .prose th,
-  .prose td {
-    @apply px-4 py-3;
-    text-align: left;
-    vertical-align: top;
-  }
-
-  .prose thead th {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: rgb(var(--muted));
-    border-bottom: 1px dashed rgb(var(--border));
-    padding-bottom: 0.6rem;
-  }
-
-  .prose tbody tr {
-    transition: background 120ms ease;
-  }
-
-  .prose tbody tr:nth-child(even) {
-    background: rgb(var(--panel) / 0.55);
-  }
-
-  .prose tbody tr:hover {
-    background: rgb(var(--accent) / 0.06);
-  }
-
-  .prose figure {
-    margin: 1.5rem 0;
-  }
-
-  .prose img,
-  .prose figure img {
-    max-width: 100%;
-    height: auto;
-  }
-}
-
-/* Post layout: TOC and full-bleed escape */
-@layer components {
-  .post-toc ul {
-    list-style: none;
-    padding-left: 0;
-    margin: 0;
-  }
-
-  .post-toc li {
-    margin-bottom: 0.25rem;
-  }
-
-  .post-toc ul ul {
-    padding-left: 0.875rem;
-    margin-top: 0.25rem;
-    border-left: 1px solid rgb(var(--border));
-  }
-
-  .post-toc a {
-    color: rgb(var(--muted));
-    text-decoration: none;
-    display: block;
-    padding: 0.125rem 0.5rem;
-    border-left: 2px solid transparent;
-    margin-left: -0.5rem;
-    transition: color 120ms ease, border-color 120ms ease;
-    line-height: 1.4;
-  }
-
-  .post-toc a:hover {
-    color: rgb(var(--fg));
-  }
-
-  .post-toc a.toc-active {
-    color: rgb(var(--accent));
-    border-left-color: rgb(var(--accent));
-  }
-
-  .post-toc-mobile[open] > summary {
-    color: rgb(var(--fg));
-  }
-
-  /* Full-bleed: break a figure or block out of the prose column on desktop,
-     extending across the right rail. */
-  @media (min-width: 1024px) {
-    .prose .full-bleed,
-    .prose figure.full-bleed {
-      max-width: none;
-      margin-right: calc(-1 * (260px + 3rem));
-    }
-  }
-}
-
 /* Blueprint card corners */
 @layer components {
   .blueprint-card {
@@ -428,7 +504,7 @@
     min-width: 1.25rem;
     overflow: hidden;
     white-space: nowrap;
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     color: rgb(var(--muted));
     opacity: 0.4;
     user-select: none;
@@ -453,7 +529,7 @@
     min-width: 0;
     overflow: hidden;
     margin: 2.25rem 0 1rem;
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.8125rem;
     line-height: 1;
     color: rgb(var(--muted));
@@ -504,7 +580,7 @@
     align-items: baseline;
     gap: 0.5rem;
     min-width: 0;
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.8125rem;
     line-height: 1.5;
     padding: 0.3rem 0;
@@ -563,7 +639,7 @@
     display: inline-block;
     margin-left: 0.4rem;
     padding: 0 0.3rem;
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.625rem;
     line-height: 1.4;
     letter-spacing: 0.03em;
@@ -582,7 +658,7 @@
     border: 1px solid rgb(var(--border));
     background: rgb(var(--panel));
     padding: 0.9rem 1.1rem 1rem;
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.8125rem;
     line-height: 1.7;
     color: rgb(var(--fg));
@@ -668,7 +744,7 @@
     padding: 0.85rem 1rem;
     border: 1px solid rgb(var(--border));
     background: rgb(var(--panel));
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.75rem;
   }
   .prov-chain__node {
@@ -717,7 +793,7 @@
     flex-wrap: wrap;
     gap: 1rem;
     margin-top: 0.6rem;
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.6875rem;
     color: rgb(var(--muted));
   }
@@ -748,7 +824,7 @@
     padding: 0.7rem 0.85rem;
   }
   .prov-flow__kind {
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.625rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -767,7 +843,7 @@
   }
   .prov-flow__meta {
     margin-top: 0.15rem;
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.6875rem;
     color: rgb(var(--muted));
     overflow: hidden;
@@ -783,7 +859,7 @@
     justify-content: center;
     padding: 0 0.6rem;
     color: rgb(var(--muted));
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
   }
 
   /* dual-signing sub-panels (kms / keyless) */
@@ -806,7 +882,7 @@
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 0.4rem;
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -831,7 +907,7 @@
     border-left-width: 3px;
     border-left-color: rgb(var(--accent));
     background: rgb(var(--accent) / 0.06);
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.8125rem;
   }
   .prov-callout__verb {
@@ -865,7 +941,7 @@
     align-items: center;
     gap: 0.6rem;
     padding: 0.8rem 1rem;
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.8125rem;
     color: rgb(var(--fg));
   }
@@ -893,7 +969,7 @@
     padding: 1rem;
   }
   .prov-ledger__sub {
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -906,10 +982,7 @@
     margin-top: 0;
   }
 
-  /* --- inner expandable block (clearly clickable button feel)
-     Used for "show all files", "show rekor inclusion proof",
-     "show signed checkpoint + raw TSR", "show provenance.json",
-     and the app-side vuln findings / sbom / license toggles. */
+  /* --- inner expandable block --- */
   .prov-expand {
     margin-top: 0.85rem;
     border: 1px dashed rgb(var(--border));
@@ -926,7 +999,7 @@
     align-items: center;
     gap: 0.55rem;
     padding: 0.5rem 0.85rem;
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.75rem;
     color: rgb(var(--accent));
     transition: background 120ms ease;
@@ -953,7 +1026,7 @@
   .prov-table {
     width: 100%;
     border-collapse: collapse;
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.75rem;
   }
   .prov-table th,
@@ -980,7 +1053,7 @@
 
   /* small uppercase kicker label */
   .prov-kicker {
-    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 0.625rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -988,36 +1061,14 @@
   }
 }
 
-/* Fonts */
-
-/* source-sans-3-regular - latin */
-@font-face {
-  font-display: swap;
-  font-family: 'Source Sans 3';
-  font-style: normal;
-  font-weight: 400;
-  src: url('/fonts/source-sans-3-v19-latin-regular.woff2') format('woff2');
-}
-
-/* source-sans-3-500 - latin */
-@font-face {
-  font-display: swap;
-  font-family: 'Source Sans 3';
-  font-style: normal;
-  font-weight: 500;
-  src: url('/fonts/source-sans-3-v19-latin-500.woff2') format('woff2');
-}
-
-/* source-sans-3-600 - latin */
-@font-face {
-  font-display: swap;
-  font-family: 'Source Sans 3';
-  font-style: normal;
-  font-weight: 600;
-  src: url('/fonts/source-sans-3-v19-latin-600.woff2') format('woff2');
-}
-
-/* Dialog backdrop */
+/* Dialog backdrop (PhotoSwipe / native dialogs) */
 dialog::backdrop {
   background: rgba(0, 0, 0, 0.85);
+}
+
+.post-body pre.term {
+  color: var(--amber);
+  background: none; 
+  border: 0;
+  padding: 0;
 }

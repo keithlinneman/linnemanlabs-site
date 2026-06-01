@@ -1,0 +1,63 @@
+# Single source of truth for the homepage channels / lanes.
+#
+# `slug` is the join key: it must match each post's `channels: [...]` front matter
+# AND becomes the term-page URL (/channels/<slug>/). Display strings (spaces,
+# slashes) live ONLY here, never in front matter - so renaming a channel is a
+# one-file edit and never touches posts.
+#
+# Design rules:
+#   - Channels stay broad and few (~5-7). They are the top-of-page story, not a
+#     filing cabinet. Exploit classes / tech / tools go in TAGS, not here.
+#   - A channel earns its slot at ~2-3 posts. Below that, use a tag or a `soon`
+#     line, not a room.
+#   - `topics` is a CURATED handful of flagship threads (cap ~2-4), not an index
+#     of every post. The tree shows shape; the feed below carries volume, so the
+#     tree height stays roughly fixed as I publish.
+#
+# Fields:
+#   slug    (req) join key + URL
+#   name    (req) full display name, e.g. the `[ detection / purple team ]` header
+#   label   (req) short label for the sidebar rail
+#   header  (opt) section-header override when it differs from `name`
+#   tree    (opt, default true) include this channel in the ASCII research-signal tree
+#   topics  (opt) curated published sub-topics under the tree branch (cap ~2-4)
+#   soon    (opt) upcoming-but-unpublished items, rendered dimmed with a ·soon marker
+
+- slug: dbus
+  name: "dbus / desktop"
+  label: "dbus / desktop"
+  tree: true
+  topics:
+    - "orca · keyboardmonitor"
+  soon:
+    - "bluez agent hijacking"
+
+- slug: kernel
+  name: "kernel / exploitation"
+  label: "kernel"
+  tree: true
+  topics:
+    - "dirty frag · arm64"
+    - "apparmor profile hops"
+
+- slug: detection
+  name: "detection / purple team"
+  label: "detection"
+  tree: true
+  topics:
+    - "tetragon below the socket"
+    - "glimmer · rust c2 beacon"
+
+- slug: provenance
+  name: "provenance / supply chain"
+  label: "supply chain"
+  tree: true
+  topics:
+    - "fulcio · rekor · tesseract"
+    - "dual-signed bundles"
+
+- slug: infra
+  name: "infra / platform"
+  label: "infra / platform"
+  header: "infra / platform · build log"
+  tree: false

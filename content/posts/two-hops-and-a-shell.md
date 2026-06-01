@@ -1,12 +1,14 @@
 ---
 date: '2026-05-13T00:00:00Z'
-title: "Hello, my name is NOT unconfined: Two Hops and a Shell on Ubuntu"
-summary: "Ubuntu's userns restriction patch checks a pointer, not a property. After one profile hop, the label is still functionally unconfined but it's not the sentinel the patch is looking for. Two aa-exec calls, chained into host root via dirtyfrag. Exploring SiCk's two-hop AppArmor bypass."
-tags: ["bypass-pwn", "AppArmor", "Ubuntu", "Dirty Frag", "CVE-2026-43284", "CVE-2026-43500", "Purple Team", "Kernel Security", "Exploit", "User Namespaces"]
-categories: ["Security Research"]
+title: "Two Hops and a Shell on Ubuntu"
+subtitle: "defeating the userns AppArmor restriction by hopping profiles to host root"
+summary: "Ubuntu's userns AppArmor patch checks a pointer, not a property. Two profile hops chain a confined process to host root."
+tags: ["lpe", "sandbox-escape", "apparmor", "user namespaces", "ubuntu", "dirty frag", "CVE-2026-43284", "CVE-2026-43500", "kernel security", "purple team"]
+channels: ["kernel"]
+cover: "/img/security/hello-my-name-is-not-unconfined.png"
+coverAlt: "A name tag sticker with the name NOT unconfined"
+coverCaption: "Ubuntu's AppArmor only checks the name tag."
 ---
-
-{{< imgmodal src="/img/security/hello-my-name-is-not-unconfined.png" alt="A name tag sticker with the name NOT unconfined" mode="shrink" caption="Ubuntu's AppArmor only checks the name tag." >}}
 
 Ubuntu's AppArmor restrictions on unprivileged user namespaces are controlled by two sysctls:
 
@@ -22,7 +24,7 @@ crun (complain)
 
 ## Background
 
-I landed on [SiCk's bypass-pwn post](https://afflicted.sh/blog/posts/bypass-pwn.html) by chance a few days ago, which demonstrates a two-hop profile transition that defeats Ubuntu's AppArmor-based restrictions on unprivileged user namespaces from an unprivileged user, with both sysctls enabled, on stock Ubuntu 26.04 LTS. The write-up is thorough and the analysis is clean. The PoC is a compiled C binary using `change_onexec()`.
+I landed on [SiCk's bypass-pwn post](https://afflicted.sh/blog/posts/bypass-pwn.html) by chance a few days ago, which demonstrates a two-hop profile transition that defeats Ubuntu's AppArmor-based restrictions on unprivileged user namespaces from an unprivileged user, with both sysctls enabled, on stock Ubuntu 26.04 LTS. The write-up is thorough and the analysis is clean. The PoC is in C using `change_onexec()`.
 
 **Update**: There is existing earlier high-quality research into this from [DEVCORE](https://devco.re/blog/2025/06/26/the-journey-of-bypassing-ubuntus-unprivileged-namespace-restriction-en/) I discovered after writing this post.
 

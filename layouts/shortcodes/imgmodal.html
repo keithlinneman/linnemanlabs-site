@@ -4,11 +4,7 @@
 {{- $mode := .Get "mode" -}}
 {{- $img := resources.Get $src -}}
 {{- if $img -}}
-  {{- $imgClass := "max-h-[400px] object-contain border border-neutral-700 rounded block mx-auto" -}}
-  {{- if eq $mode "crop" -}}
-    {{- $imgClass = "max-h-[400px] w-full object-cover object-top border border-neutral-700 rounded" -}}
-  {{- end -}}
-<figure class="mb-4">
+<figure class="fig">
   <a href="{{ $img.RelPermalink }}"
      data-pswp-width="{{ $img.Width }}"
      data-pswp-height="{{ $img.Height }}"
@@ -18,19 +14,19 @@
          width="{{ $img.Width }}"
          height="{{ $img.Height }}"
          alt="{{ $alt }}"
-         loading="lazy"
-         class="{{ $imgClass }}">
+         loading="lazy"{{ if eq $mode "crop" }}
+         class="crop"{{ end }}>
   </a>
   {{- with $caption }}
-  <figcaption class="text-center italic text-neutral-400 mt-2 text-sm">{{ . }}</figcaption>
+  <figcaption>{{ . }}</figcaption>
   {{- end }}
 </figure>
 {{- else -}}
 <!-- imgmodal: resource not found at assets/{{ $src }} -->
-<figure class="mb-4">
-  <img src="/{{ $src }}" alt="{{ $alt }}" loading="lazy" class="max-h-[400px] object-contain border border-neutral-700 rounded block mx-auto">
+<figure class="fig">
+  <img src="/{{ $src }}" alt="{{ $alt }}" loading="lazy">
   {{- with $caption }}
-  <figcaption class="text-center italic text-neutral-400 mt-2 text-sm">{{ . }}</figcaption>
+  <figcaption>{{ . }}</figcaption>
   {{- end }}
 </figure>
 {{- end -}}

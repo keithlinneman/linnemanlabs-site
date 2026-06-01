@@ -53,17 +53,6 @@ else
   hugo_checksum="unknown"
 fi
 
-# tailwindcss (css generation)
-if command -v tailwindcss &>/dev/null; then
-  tailwind_version="$( NO_COLOR=1 tailwindcss --help | head -1 | awk '{ print $3 }' || echo "unknown" )"
-  # tailwind_verbose="$( tailwindcss --help | head -1 || echo "" )"
-  tailwind_path="$( command -v tailwindcss )"
-  tailwind_checksum="$( sha256sum "${tailwind_path}" 2>/dev/null | awk '{ print $1 }' || echo "unknown" )"
-else
-  tailwind_version="unknown"
-  tailwind_checksum="unknown"
-fi
-
 # tidy (html validation)
 if command -v tidy &>/dev/null; then
   tidy_version="$( tidy --version | head -1 | awk '{ print $NF }' || echo "unknown" )"
@@ -208,8 +197,6 @@ jq -n \
   --argjson git_dirty "${git_dirty}" \
   --arg hugo_version "${hugo_version}" \
   --arg hugo_checksum "${hugo_checksum}" \
-  --arg tailwind_version "${tailwind_version}" \
-  --arg tailwind_checksum "${tailwind_checksum}" \
   --arg tidy_version "${tidy_version}" \
   --arg tidy_checksum "${tidy_checksum}" \
   --arg git_tool_version "${git_tool_version}" \
@@ -285,10 +272,6 @@ jq -n \
       "hugo": {
         "version": $hugo_version,
         "sha256": $hugo_checksum
-      },
-      "tailwindcss": {
-        "version": $tailwind_version,
-        "sha256": $tailwind_checksum
       },
       "tidy": {
         "version": $tidy_version,

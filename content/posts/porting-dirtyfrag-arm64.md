@@ -1,9 +1,10 @@
 ---
 date: '2026-05-11T00:00:00Z'
-title: "Porting Dirty Frag to arm64: Detection, Prevention and Hardening Notes"
-summary: "Porting CVE-2026-43284 exploit to aarch64. The rxrpc path kernel oopses on arm64. Ubuntu 24.04's AppArmor blocked exploitation over SSH, transitioning into existing complain-mode profile leads to success. Analysis of chmod o-r as a mitigation for SUID targets, FIM limitations, and page-cache persistence."
-tags: ["Dirty Frag", "CVE-2026-43284", "AppArmor", "Purple Team", "Detection Engineering", "Kernel Security", "arm64", "aarch64", "Page Cache", "CVE-2026-43500", "Tetragon", "Exploit"]
-categories: ["Security Research"]
+title: "Porting Dirty Frag to arm64"
+subtitle: "taking the CVE-2026-43284 exploit to aarch64, with detection and hardening notes"
+summary: "On aarch64 the rxrpc path oopses and AppArmor blocks the exploit over SSH. A complain-mode profile transition slips it through."
+tags: ["dirty frag", "CVE-2026-43284", "CVE-2026-43500", "lpe", "ubuntu", "apparmor", "arm64", "page cache", "kernel security", "purple team", "detection engineering", "tetragon"]
+channels: ["kernel"]
 ---
 
 ## Intro

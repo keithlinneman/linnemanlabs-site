@@ -1,10 +1,9 @@
 ---
 date: '2026-02-09T00:00:00Z'
 title: 'hello, world'
-summary: 'Introducing LinnemanLabs - 20+ years of breaking and building systems, now writing it down.'
+summary: introducing LinnemanLabs - 20+ years of breaking and building systems, now writing it down.'
 author: 'Keith Linneman'
 tags: ["intro"]
-categories: ["platform"]
 ---
 
 LinnemanLabs is live. I've been building and breaking systems for over 20 years and never really wrote any of it down publicly. That's what this is for.

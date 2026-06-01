@@ -1,9 +1,10 @@
 ---
 date: '2026-04-09T00:00:00Z'
-title: "Purple Team Engineering: Building and Detecting a Rust C2 Beacon"
-summary: "Building an offensive tool and the detection rules to catch it. The architecture behind Glimmer's dual-layer encryption, binary hardening from 1.4MB to 388K, and real-time YARA detection through Wazuh."
-tags: ["Purple Team", "Detection Engineering", "YARA", "Wazuh", "Rust", "C2", "Binary Analysis", "Offensive Security", "SIEM", "Glimmer"]
-categories: ["Security Research"]
+title: "Building and Detecting a Rust C2 Beacon"
+subtitle: "inside Glimmer: the beacon, and the real-time YARA detection that catches it through Wazuh"
+summary: "Dual-layer encryption and a hardening pass from 1.4MB to 388K and the YARA rules that catch the beacon anyway."
+tags: ["purple team", "detection engineering", "yara", "wazuh", "rust", "c2", "binary analysis", "binary hardening", "siem", "glimmer"]
+channels: ["detection"]
 ---
 
 [Glimmer](https://github.com/linnemanlabs/glimmer) is a C2 framework I'm building in Rust as a purple team research project. The goal isn't to create another red team tool - it's to build something real enough that writing detection rules against it teaches me things I can't learn from reading about other people's tools. Every design decision on the offensive side creates a detection surface. Every detection rule I write reveals what to harden next. This post covers the first round of that loop.

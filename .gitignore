@@ -4,8 +4,10 @@
 /.hugo_build.lock
 /release.json
 /data/*
+!/data/channels.yaml
 /site-bundle.tar.gz
 /site-bundle.tar.gz.sha256
 /site-bundle.tar.gz.sigstore.json
 /.release-id
 /static/dev-api
+/resources

@@ -1,10 +1,10 @@
 ---
 date: '2026-03-02T00:00:00Z'
-title: "Building an AI-Powered Alert Triage Engine with Go, Claude, and the Grafana LGTM Stack"
-summary: "How I built Vigil - a Go service that receives Alertmanager webhooks, investigates alerts using Claude's tool-calling API against Mimir and Loki, persists full conversation histories to PostgreSQL, and traces the entire triage lifecycle through Tempo."
-author: 'Keith Linneman'
-tags: ["Go","AI","LLM","Observability","Prometheus","Grafana","Mimir","Loki","Tempo","Pyroscope","OpenTelemetry","Claude","Anthropic","Alertmanager","Infrastructure","PostgreSQL","Vigil"]
-categories: ["Engineering"]
+title: "An AI-Powered Alert Triage Engine"
+subtitle: "Vigil - a Go service wiring Alertmanager, Claude, and the LGTM stack into automated alert triage"
+summary: "Claude investigates each alert by querying Mimir and Loki through tool-calling, then triages it before it pages a human."
+tags: ["go", "ai", "llm", "claude", "anthropic", "alertmanager", "mimir", "loki", "tempo", "postgresql", "opentelemetry", "observability", "vigil"]
+channels: ["infra"]
 ---
 
 When an alert fires, the first five minutes are always the same - check the dashboard, query some metrics, grep through logs, build the mental model of what your infrastructure looks like, think about the context of the alert and where the service fits into your infrastructure and what is wrong. I built Vigil to automate that entire investigation.

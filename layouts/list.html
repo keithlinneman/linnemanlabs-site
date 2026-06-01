@@ -1,22 +1,21 @@
 {{ define "main" }}
-<h1 class="text-2xl font-semibold tracking-tight">{{ .Title }}</h1>
+<div class="channel"><a href="/">home</a> / {{ .Title | lower }}</div>
+<h1>{{ .Title }}</h1>
 
-<div class="mt-6 space-y-4">
-  {{ range .Pages }}
-    <a class="block blueprint-card hover:border-[rgb(var(--accent))] transition-colors" href="{{ .RelPermalink }}">
-      <div class="font-medium">{{ .Title }}</div>
-      <div class="text-sm text-[rgb(var(--muted))] tabular flex items-center gap-2">
-        <span>{{ .Date.Format "2006-01-02" }}</span>
-        {{ $author := .Params.author | default $.Site.Params.author.name }}
-        {{ with $author }}
-          <span>·</span>
-          <span>{{ . }}</span>
-        {{ end }}
-      </div>
-      {{ with .Params.summary }}
-        <div class="text-sm text-[rgb(var(--muted))] mt-2 line-clamp-2">{{ . }}</div>
-      {{ end }}
-    </a>
-  {{ end }}
-</div>
+{{ if eq .Kind "taxonomy" }}
+  {{- $plural := .Data.Plural -}}
+  <section style="margin-top:14px">
+    {{- range .Data.Terms.ByCount -}}
+      <a class="row" href="/{{ $plural }}/{{ .Name | urlize }}/"><span class="mark" aria-hidden="true"></span><span class="col"><span class="title">{{ .Name }} <span class="cnt" style="color:var(--dim);font-size:12px">({{ .Count }})</span></span></span></a>
+    {{- end -}}
+  </section>
+{{ else }}
+  <section style="margin-top:14px">
+    {{- range .Pages.ByDate.Reverse -}}
+      <a class="row" href="{{ .RelPermalink }}"><span class="mark" aria-hidden="true"></span><span class="date">{{ .Date.Format "2006.01.02" }}</span><span class="col"><span class="title">{{ .Title }}</span>{{ with .Summary }}<span class="dek">{{ . }}</span>{{ end }}</span></a>
+    {{- else -}}
+      <p style="color:var(--dim)">Nothing here yet.</p>
+    {{- end -}}
+  </section>
+{{ end }}
 {{ end }}

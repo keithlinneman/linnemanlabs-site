@@ -15,7 +15,6 @@ I stand on plenty of established tools - Ansible, Cosign, Hugo, dozens of others
 
 - **Hugo** generates static HTML with no server-side rendering
 - Minimal JavaScript
-- Content-first design with **Tailwind CSS**
 
 ### Application Server (linnemanlabs-web)
 

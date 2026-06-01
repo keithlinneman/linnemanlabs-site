@@ -1,12 +1,15 @@
 ---
 date: '2026-05-15T00:00:00Z'
-title: "Hello, my name is Orca: Unprivileged Keylogging on Wayland via D-Bus Accessibility"
-summary: "KDE KWin and GNOME Mutter trust a claimable Orca D-Bus name for raw Wayland accessibility keyboard events, including password input."
+title: "Hello, my name is Orca"
+subtitle: "unprivileged keylogging on Wayland via D-Bus accessibility"
+summary: "Any unprivileged app can claim Orca's D-Bus name and read raw Wayland keystrokes - passwords included."
 tags: ["Keylogging", "Wayland", "AT-SPI", "dbus", "KeyboardMonitor", "KWin", "GNOME", "KDE", "Mutter", "Purple Team", "Detection Engineering", "Tetragon", "Glimmer"]
 categories: ["Security Research"]
+channels: ["dbus"]
+cover: "/img/security/hello-my-name-is-orca.png"
+coverAlt: "A name tag sticker with the name orca and malware crossed out"
+coverCaption: "Trust me, bro"
 ---
-
-{{< imgmodal src="/img/security/hello-my-name-is-orca.png" alt="A name tag sticker with the name orca and malware crossed out" mode="shrink" caption="Trust me, bro" >}}
 
 I set out to understand the full path of keyboard input while hardening my workstation and researching methods to add keylogging capabilities to [Glimmer](https://github.com/linnemanlabs/glimmer).
 
