@@ -825,8 +825,8 @@ async function initFooter() {
   const contentVer = document.getElementById('footer-content-version');
   if (appVer) appVer.textContent = appData?.version || '—';
   if (contentVer) contentVer.textContent = data?.version || '—';
-  const commit = document.getElementById('footer-commit');
-  if (commit) commit.textContent = data?.source?.commit_short || data?.commit_short || '—';
+  // const commit = document.getElementById('footer-commit');
+  // if (commit) commit.textContent = data?.source?.commit_short || data?.commit_short || '—';
 }
 
 // init on DOM ready

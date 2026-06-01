@@ -38,7 +38,7 @@
       bgClickAction: 'close',
       // imageClickAction: 'close',
       tapAction: 'close',
-      wheelToZoom: true
+      wheelToZoom: false
     });
     lb.init();
   }

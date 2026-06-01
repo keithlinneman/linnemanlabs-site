@@ -5,7 +5,7 @@
         <span class="logo" aria-hidden="true">{{ os.ReadFile "static/favicon.svg" | safeHTML }}</span>
         <span class="brand">
           <span class="word">{{ lower (replaceRE "([a-z])([A-Z])" "$1 $2" .Site.Title) }}</span>
-          {{ if .IsHome }}{{ with .Site.Params.tagline }}<span class="tag">{{ . }}</span>{{ end }}{{ end }}
+          {{ if .IsHome }}{{ with .Site.Params.tagline }}<span class="tag">{{ range split . " · " }}<span class="tagword">{{ . }}</span>{{ end }}</span>{{ end }}{{ end }}
         </span>
       </a>
     </div>
