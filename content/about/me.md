@@ -69,7 +69,7 @@ description: "Keith Linneman - infrastructure and security engineer with 25+ yea
    998 ./build switchboard --v1 --grpc --spiffe --runbook-proposal              │
    999 ./build hardened-workstation --ebpf --lsm --selinux --secure-boot        │
                                                                                 │
-  $ ps -u k                                                                 │
+  $ ps -u k                                                                     │
     PID  STAT  COMMAND                                                          │
    0001  R     switchboard --version=1                                          │
    0002  S     vigil --version=1 --deployed                                     │
