@@ -33,8 +33,8 @@ publishDir = "public"
     ordered = false
 
 [params]
-  description = "Building systems, breaking systems, observing systems, securing systems, auditing systems... improving systems."
-  tagline = "building · breaking · observing · securing · auditing · improving"
+  description = "Building systems, breaking systems, observing systems... improving systems."
+  tagline = "building · breaking · observing"
   greetz = "me"
   githubRepo = "https://github.com/keithlinneman/linnemanlabs-site"
   logo = "/favicon.svg"

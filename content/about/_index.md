@@ -9,9 +9,9 @@ Start here:
 
 | Page | Topic |
 |------|-------|
-| [About Me →](/about/me/) | background, approach, how I think |
-| [Infrastructure →](/about/infrastructure/) | the platform and the hand-built stack |
-| [Provenance →](/about/provenance/) | how every release is verified |
+| [[+] About Me](/about/me/) | background, approach, how I think |
+| [[+] Infrastructure](/about/infrastructure/) | the platform and the hand-built stack |
+| [[+] Provenance](/about/provenance/) | how every release is verified |
 
 ## The Lab
 

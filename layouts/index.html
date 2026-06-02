@@ -33,7 +33,7 @@
       {{- range $ch := hugo.Data.channels -}}
         {{- with index $.Site.Taxonomies.channels $ch.slug -}}
           {{- $header := $ch.header | default $ch.name -}}
-          <div class="chead"><a href="/channels/{{ $ch.slug }}/"><span>┄┄[ {{ $header }} ]</span></a><span class="fill"></span><span class="cnt">( {{ .Count }} )</span></div>
+          <div class="chead"><span class="fill lead" aria-hidden="true"></span><a href="/channels/{{ $ch.slug }}/">[ {{ $header }} ]</a><span class="fill"></span><span class="cnt">( {{ .Count }} )</span></div>
           {{- range .Pages.ByDate.Reverse -}}
             <a class="row" href="{{ .RelPermalink }}"><span class="mark" aria-hidden="true"></span><span class="date">{{ .Date.Format "2006.01.02" }}</span><span class="col"><span class="title">{{ .Title }}</span>{{ with .Summary }}<span class="dek">{{ . }}</span>{{ end }}</span></a>
           {{- end -}}
@@ -46,7 +46,7 @@
   {{/* right rail */}}
   <aside class="rail">
     <div class="rail-h">$ whoami</div>
-    <div class="ident"><a href="/about/me/"><span class="k">{{ lower .Site.Params.author.name }}</span></a><br>every bit<br>every packet<br>every syscall<br><br>the whole stack, owned.<br><br>→ <a href="/about/">about</a> · <a href="https://github.com/{{ .Site.Params.author.github }}">github</a> · <a href="/index.xml">rss</a></div>
+    <div class="ident"><a href="/about/me/"><span class="k">{{ lower .Site.Params.author.name }}</span></a><br>every bit<br>every packet<br>every syscall<br><br>the whole stack, owned.<br><br>[<a href="/about/">about</a>] · [<a href="https://github.com/{{ .Site.Params.author.github }}">github</a>] · [<a href="/index.xml">rss</a>]</div>
 
     <div class="rail-h two">channels</div>
     {{- range $ch := hugo.Data.channels -}}
@@ -56,7 +56,7 @@
     {{- end -}}
 
     <div class="rail-h two">tags</div>
-    <a class="rch" href="/tags/"><span>all tags</span><span class="c">→</span></a>
+    <a class="rch" href="/tags/"><span>all tags</span><span class="c">+</span></a>
   </aside>
 </div>
 {{ end }}

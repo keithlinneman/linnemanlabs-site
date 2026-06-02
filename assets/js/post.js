@@ -37,7 +37,7 @@
       pswpModule: PhotoSwipe,
       bgClickAction: 'close',
       // imageClickAction: 'close',
-      tapAction: 'close',
+      tapAction: 'zoom-or-close',
       wheelToZoom: false
     });
     lb.init();

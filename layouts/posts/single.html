@@ -9,7 +9,7 @@
     {{- end -}}
     <h1>{{ .Title }}</h1>
     {{ with .Params.subtitle }}<div class="subtitle">{{ . }}</div>{{ end }}
-    <div class="pmeta">{{ .Date.Format "2006.01.02" }} · {{ .ReadingTime }} min · <span class="ok">✓</span> signed &amp; logged{{ with .GitInfo }} · <a href="{{ $.Site.Params.githubRepo }}/commit/{{ .Hash }}">{{ .AbbreviatedHash }}</a>{{ end }}</div>
+    <div class="pmeta">{{ .Date.Format "2006.01.02" }} · {{ .ReadingTime }} min{{ with .GitInfo }} · <a href="{{ $.Site.Params.githubRepo }}/commit/{{ .Hash }}"><span class="ok">signed &amp; logged</span><span class="phash"> · #{{ .AbbreviatedHash }}</span></a>{{ end }}</div>
     {{ with .Params.summary }}<p class="lede">{{ . }}</p>{{ end }}
     {{- with .Params.cover -}}
       {{- $img := resources.Get (strings.TrimPrefix "/" .) -}}

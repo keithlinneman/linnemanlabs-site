@@ -4,14 +4,20 @@
       <a class="home" href="/" aria-label="{{ .Site.Title }} — home">
         <span class="logo" aria-hidden="true">{{ os.ReadFile "static/favicon.svg" | safeHTML }}</span>
         <span class="brand">
-          <span class="word">{{ lower (replaceRE "([a-z])([A-Z])" "$1 $2" .Site.Title) }}</span>
-          {{ if .IsHome }}{{ with .Site.Params.tagline }}<span class="tag">{{ range split . " · " }}<span class="tagword">{{ . }}</span>{{ end }}</span>{{ end }}{{ end }}
+
+          {{ $brand := lower (replaceRE "([a-z])([A-Z])" "$1 $2" .Site.Title) }}
+          {{ $words := split $brand " " }}
+          {{ range $words }}
+            <span class="word">{{ . }}</span>
+          {{ end }}
+
+          {{ with .Site.Params.tagline }}<span class="tag">{{ range split . " · " }}<span class="tagword">{{ . }}</span>{{ end }}</span>{{ end }}
         </span>
       </a>
     </div>
     {{/* app + content version, runtime-bound by main.js (initHeader keys off id="header-provenance"). */}}
     <div class="mast-right" id="header-provenance">
-      <div class="vrow">content&nbsp;<span class="vv" data-bind="hdr.content.version">···</span>&nbsp;<a class="ver hidden" href="/about/provenance/" data-bind-show="hdr.content.verified"><span class="ok">✓</span>&nbsp;verified</a></div>
+      <div class="vrow">content&nbsp;<span class="vv" data-bind="hdr.content.version">···</span>&nbsp;<a class="ver hidden" href="/about/provenance/" data-bind-show="hdr.content.verified"><span class="ok">verified</span></a></div>
     </div>
   </div>
 </header>

@@ -3,7 +3,7 @@
 
 {{- $card := "" -}}
 {{- if .Title -}}
-  {{- with resources.Get "img/og-base.png" -}}
+  {{- with resources.Get "img/og/og-base.png" -}}
     {{- $font := resources.Get "fonts/IBMPlexMono-Regular.ttf" -}}
     {{- $opts := dict "alignx" "center" "aligny" "center" "color" "#e6a948"
           "font" $font "size" 64 "linespacing" 8
@@ -11,7 +11,7 @@
     {{- $card = (.Filter (images.Text (lower $.Title) $opts)).Permalink -}}
   {{- end -}}
 {{- else -}}
-  {{- with resources.Get "img/og-default.png" -}}{{- $card = .Permalink -}}{{- end -}}
+  {{- with resources.Get "img/og/og-default.png" -}}{{- $card = .Permalink -}}{{- end -}}
 {{- end -}}
 
 <meta property="og:title" content="{{ $title }}">
