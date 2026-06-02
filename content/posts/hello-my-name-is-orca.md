@@ -3,8 +3,7 @@ date: '2026-05-15T00:00:00Z'
 title: "Hello, my name is Orca"
 subtitle: "unprivileged keylogging on Wayland via D-Bus accessibility"
 summary: "Any unprivileged app can claim Orca's D-Bus name and read raw Wayland keystrokes - passwords included."
-tags: ["Keylogging", "Wayland", "AT-SPI", "dbus", "KeyboardMonitor", "KWin", "GNOME", "KDE", "Mutter", "Purple Team", "Detection Engineering", "Tetragon", "Glimmer"]
-categories: ["Security Research"]
+tags: ["Keylogging", "Wayland", "AT-SPI", "D-Bus", "KeyboardMonitor", "KWin", "GNOME", "KDE", "Mutter", "Purple Team", "Detection Engineering", "Tetragon", "Glimmer"]
 channels: ["dbus"]
 cover: "/img/security/hello-my-name-is-orca.png"
 coverAlt: "A name tag sticker with the name orca and malware crossed out"

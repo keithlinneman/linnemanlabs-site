@@ -5,6 +5,7 @@ subtitle: "self-hosting Fulcio, Rekor, TesseraCT, and a Timestamp Authority, roo
 summary: "The full Sigstore trust stack, self-hosted from a YubiKey CA up. No public good instance required."
 tags: ["supply chain security", "certificate transparency", "sigstore", "fulcio", "rekor", "rekor-tiles", "tesseract", "timestamp-authority", "yubikey", "infrastructure security"]
 channels: ["provenance"]
+schemaType: "TechArticle"
 ---
 
 ## Background
