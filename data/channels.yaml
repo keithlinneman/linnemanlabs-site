@@ -19,6 +19,7 @@
 #   name    (req) full display name, e.g. the `[ detection / purple team ]` header
 #   label   (req) short label for the sidebar rail
 #   header  (opt) section-header override when it differs from `name`
+#   category(opt) section for OG/JSON-LD, e.g. "Security Research" / "Engineering"
 #   tree    (opt, default true) include this channel in the ASCII research-signal tree
 #   topics  (opt) curated published sub-topics under the tree branch (cap ~2-4)
 #   soon    (opt) upcoming-but-unpublished items, rendered dimmed with a ·soon marker
@@ -26,6 +27,7 @@
 - slug: dbus
   name: "dbus / desktop"
   label: "dbus / desktop"
+  category: "Security Research"
   tree: true
   topics:
     - "orca · keyboardmonitor"
@@ -35,6 +37,7 @@
 - slug: kernel
   name: "kernel / exploitation"
   label: "kernel"
+  category: "Security Research"
   tree: true
   topics:
     - "dirty frag · arm64"
@@ -43,6 +46,7 @@
 - slug: detection
   name: "detection / purple team"
   label: "detection"
+  category: "Security Research"
   tree: true
   topics:
     - "tetragon below the socket"
@@ -51,6 +55,7 @@
 - slug: provenance
   name: "provenance / supply chain"
   label: "supply chain"
+  category: "Engineering"
   tree: true
   topics:
     - "fulcio · rekor · tesseract"
@@ -59,5 +64,6 @@
 - slug: infra
   name: "infra / platform"
   label: "infra / platform"
+  category: "Engineering"
   header: "infra / platform · build log"
   tree: false

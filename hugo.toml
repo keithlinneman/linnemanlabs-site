@@ -1,6 +1,6 @@
 baseURL = 'https://linnemanlabs.com/'
 languageCode = 'en-us'
-title = 'LinnemanLabs'
+title = 'Linneman Labs'
 enableRobotsTXT = true
 enableGitInfo = true
 
@@ -34,19 +34,18 @@ publishDir = "public"
 
 [params]
   description = "Building systems, breaking systems, observing systems... improving systems."
+  defaultCategory = "Security Research"
   tagline = "building · breaking · observing"
   greetz = "me"
   githubRepo = "https://github.com/keithlinneman/linnemanlabs-site"
   logo = "/favicon.svg"
+  logopng = "/icon-512.png"
 
 [params.author]
   name = "Keith Linneman"
   bio = "Building, breaking, and securing infrastructure since the mid-90s"
   github = "keithlinneman"
-
-[build]
-  [build.buildStats]
-    enable = true
+  url = "/about/me/"
 
 [menus]
   [[menus.main]]

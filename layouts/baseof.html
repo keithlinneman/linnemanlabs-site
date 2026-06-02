@@ -4,10 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ with .Summary }}{{ . }}{{ else }}{{ .Site.Params.description }}{{ end }}{{ end }}">
+  <link rel="canonical" href="{{ .Permalink }}">
+  <meta name="author" content="{{ .Site.Params.Author.name }}">
   <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }}{{ with .Params.subtitle }} - {{ . }}{{ end }} · {{ .Site.Title }}{{ end }}</title>                                                                                                                                                
   {{ partial "head-css.html" . }}
   {{ with .Site.Params.logo }}<link rel="icon" href="{{ . }}" type="image/svg+xml">{{ end }}
   {{ partial "opengraph.html" . }}
+  {{ partial "schema.html" . }}
 </head>
 {{- $body := "is-page" -}}
 {{- if .IsHome -}}{{- $body = "is-home" -}}{{- else if and .IsPage (eq .Section "posts") -}}{{- $body = "is-post" -}}{{- end -}}

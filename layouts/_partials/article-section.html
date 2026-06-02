@@ -1,0 +1,12 @@
+{{- /* Returns the article section/category for a post, most-specific first */ -}}
+{{- $section := "" -}}
+{{- with .Params.categories -}}
+  {{- $section = index . 0 -}}
+{{- else -}}
+  {{- with .Params.channels -}}
+    {{- $slug := index . 0 -}}
+    {{- range hugo.Data.channels -}}{{- if eq .slug $slug -}}{{- $section = .category -}}{{- end -}}{{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- if not $section -}}{{- $section = site.Params.defaultCategory -}}{{- end -}}
+{{- return $section -}}

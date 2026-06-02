@@ -1,0 +1,14 @@
+{{- /* Returns the absolute OG card image URL: a per-page title-overlay card, or the site default. Shared by opengraph.html and schema.html so the image is computed once. */ -}}
+{{- $card := "" -}}
+{{- if .Title -}}
+  {{- with resources.Get "img/og/og-base.png" -}}
+    {{- $font := resources.Get "fonts/IBMPlexMono-Regular.ttf" -}}
+    {{- $opts := dict "alignx" "center" "aligny" "center" "color" "#e6a948"
+          "font" $font "size" 64 "linespacing" 8
+          "x" (mul .Width 0.5 | int) "y" (mul .Height 0.5 | int) -}}
+    {{- $card = (.Filter (images.Text (lower $.Title) $opts)).Permalink -}}
+  {{- end -}}
+{{- else -}}
+  {{- with resources.Get "img/og/og-default.png" -}}{{- $card = .Permalink -}}{{- end -}}
+{{- end -}}
+{{- return $card -}}

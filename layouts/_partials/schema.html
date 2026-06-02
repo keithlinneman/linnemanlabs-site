@@ -1,0 +1,76 @@
+{{- /* JSON-LD structured data, branched by page type. */ -}}
+{{- $isPost := and .IsPage (eq .Section "posts") -}}
+{{- $orgID := printf "%s#organization" (absURL "/") -}}
+{{- $org := dict
+      "@type" "Organization"
+      "@id" $orgID
+      "name" site.Title
+      "url" (absURL "/")
+      "logo" (dict "@type" "ImageObject" "url" (site.Params.logopng | absURL) "width" 512 "height" 512) -}}
+{{- $author := dict
+      "@type" "Person"
+      "name" site.Params.author.name
+      "url" (site.Params.author.url | absURL) -}}
+{{- $data := dict -}}
+
+{{- if $isPost -}}
+  {{- $data = dict
+      "@context" "https://schema.org"
+      "@type" (.Params.schemaType | default "BlogPosting")
+      "@id" (printf "%s#article" .Permalink)
+      "mainEntityOfPage" (dict "@type" "WebPage" "@id" .Permalink)
+      "url" .Permalink
+      "headline" .Title
+      "description" (.Params.summary | default .Summary | default site.Params.description)
+      "datePublished" .Date
+      "dateModified" .Lastmod
+      "author" $author
+      "publisher" $org -}}
+  {{- with partial "og-card.html" . }}{{ $data = merge $data (dict "image" (dict "@type" "ImageObject" "url" .)) }}{{ end -}}
+  {{- with .Params.tags }}{{ $data = merge $data (dict "keywords" .) }}{{ end -}}
+  {{- with partial "article-section.html" $ }}{{ $data = merge $data (dict "articleSection" . "category" .) }}{{ end -}}
+
+{{- else if .IsHome -}}
+  {{- $data = dict
+      "@context" "https://schema.org"
+      "@graph" (slice
+        (dict "@type" "WebSite" "@id" (printf "%s#website" (absURL "/")) "name" site.Title "url" (absURL "/") "description" site.Params.description "publisher" (dict "@id" $orgID))
+        $org) -}}
+
+{{- else if eq .RelPermalink "/about/me/" -}}
+  {{- $data = dict
+      "@context" "https://schema.org"
+      "@type" "Person"
+      "name" site.Params.author.name
+      "url" .Permalink
+      "description" (.Description | default site.Params.author.bio)
+      "sameAs" (slice (printf "https://github.com/%s" site.Params.author.github))
+      "worksFor" $org -}}
+
+{{- else if eq .Params.type "provenance" -}}
+  {{- $data = dict
+      "@context" "https://schema.org"
+      "@type" "WebPage"
+      "name" .Title
+      "url" .Permalink
+      "description" (.Description | default site.Params.description) -}}
+
+{{- else if or (eq .Kind "taxonomy") (eq .Kind "term") (eq .Kind "section") -}}
+  {{- $data = dict
+      "@context" "https://schema.org"
+      "@type" "CollectionPage"
+      "name" .Title
+      "url" .Permalink
+      "description" (.Description | default site.Params.description) -}}
+
+{{- else -}}
+  {{- $data = dict
+      "@context" "https://schema.org"
+      "@type" "WebPage"
+      "name" .Title
+      "url" .Permalink
+      "description" (.Description | default site.Params.description) -}}
+{{- end -}}
+<script type="application/ld+json">
+{{ jsonify (dict "indent" "  ") $data | safeJS }}
+</script>
