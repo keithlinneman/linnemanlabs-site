@@ -62,6 +62,12 @@ function readInlineJSON(id) {
   const txt = el.textContent.trim();
   if (!txt) return null;
   try { return JSON.parse(txt); } catch (e) { console.error(`Inline JSON #${id} parse failed:`, e); return null; }
+  try {
+    const parsed = JSON.parse(txt);
+    // the island ships a sentinel STRING ("__PROVENANCE_*_DATA__") the server replaces with the real
+    // JSON objec.; a non-object (the un-replaced sentinel) means "use the fetch fallback".
+    return (parsed && typeof parsed === 'object') ? parsed : null
+  } catch (e) { console.error(`inline json #${id} pase failed:`, e); return null; }
 }
 
 // DOM helpers

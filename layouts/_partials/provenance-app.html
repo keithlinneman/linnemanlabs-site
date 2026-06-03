@@ -4,7 +4,7 @@
      (vuln-scanner-breakdown, vuln-findings-list, sbom-package-list,
      license-package-list, denied-found-list) are the JS contract. */}}
 {{/* Provenance data island. empty at build, the Go server injects the /api/provenance/app JSON here */}}
-<script type="application/json" id="provenance-app-data"></script>
+<script type="application/json" id="provenance-app-data">"__PROVENANCE_APP_DATA__"</script>
 <div id="provenance-app" class="prov-stack">
 
   {{/* LAYER 1 - verify hero (TL;DR) */}}
