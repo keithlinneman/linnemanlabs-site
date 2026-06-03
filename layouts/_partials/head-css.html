@@ -1,14 +1,14 @@
+{{ $mono400 := resources.Get "fonts/ibm-plex-mono-latin-400.woff2" | fingerprint }}
+{{ $sans400 := resources.Get "fonts/ibm-plex-sans-latin-400.woff2" | fingerprint }}
+{{ $mono500 := resources.Get "fonts/ibm-plex-mono-latin-500.woff2" | fingerprint }}
+{{ $sans500 := resources.Get "fonts/ibm-plex-sans-latin-500.woff2" | fingerprint }}
 {{- /* Preload the primary self-hosted faces */ -}}
-<link rel="preload" href="/fonts/ibm-plex-mono-latin-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/ibm-plex-sans-latin-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="{{ $mono400.RelPermalink }}" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="{{ $sans400.RelPermalink }}" as="font" type="font/woff2" crossorigin>
 
-{{- $css := resources.Get "css/main.css" -}}
+{{- $css := resources.Get "css/main.css" | resources.ExecuteAsTemplate "css/main.css" (dict "Mono400" $mono400 "Sans400" $sans400 "Mono500" $mono500 "Sans500" $sans500) -}}
 {{- $css = $css | minify | fingerprint -}}
 <link rel="stylesheet" href="{{ $css.RelPermalink }}" integrity="{{ $css.Data.Integrity }}">
-
-{{- $syntax := resources.Get "css/syntax.css" -}}
-{{- $syntax = $syntax | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $syntax.RelPermalink }}" integrity="{{ $syntax.Data.Integrity }}">
 
 {{- $pswpCss := resources.Get "vendor/photoswipe/photoswipe.css" -}}
 {{- $pswpCss = $pswpCss | minify | fingerprint -}}

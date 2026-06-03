@@ -3,13 +3,15 @@
      Container id, app.* data-bind paths, and the renderer target ids
      (vuln-scanner-breakdown, vuln-findings-list, sbom-package-list,
      license-package-list, denied-found-list) are the JS contract. */}}
-<div id="provenance-app" class="space-y-3">
+{{/* Provenance data island. empty at build, the Go server injects the /api/provenance/app JSON here */}}
+<script type="application/json" id="provenance-app-data"></script>
+<div id="provenance-app" class="prov-stack">
 
   {{/* LAYER 1 - verify hero (TL;DR) */}}
-  <div class="flex items-center justify-between gap-3 flex-wrap">
+  <div class="prov-tldr-head">
     <div class="prov-kicker">tl;dr · what verifies today</div>
     <div class="prov-kicker">
-      app <span class="text-[rgb(var(--fg))]" data-bind="app.version">—</span>
+      app <span class="prov-fg" data-bind="app.version">—</span>
       · <span data-bind="app.track">—</span>
     </div>
   </div>
@@ -47,7 +49,7 @@
     </div>
     <div class="prov-term__result">
       <span data-bind="app.status-text">verifying…</span>
-      <span class="text-[rgb(var(--muted))]"> at <span data-bind="app.fetched_at" data-format="datetime">—</span></span>
+      <span class="prov-muted"> at <span data-bind="app.fetched_at" data-format="datetime">—</span></span>
     </div>
   </div>
 
@@ -60,11 +62,11 @@
     <span class="prov-frame__corner" aria-hidden="true">┐</span>
   </div>
   <div class="prov-cert">
-    <p class="text-sm text-[rgb(var(--muted))] mb-3">
+    <p class="prov-note">
       Every release is dual-signed: an AWS&nbsp;KMS key signs the artifacts and inventory, and a
       keyless Fulcio certificate - minted from the workflow's GitHub OIDC identity - is logged to
       Rekor and anchored with an RFC&nbsp;3161 timestamp. Both chains root in the self-hosted stack at
-      <a href="https://trust.linnemanlabs.com/" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">trust.linnemanlabs.com</a>.
+      <a href="https://trust.linnemanlabs.com/" class="prov-link" target="_blank" rel="noopener">trust.linnemanlabs.com</a>.
     </p>
 
     {{/* AWS KMS signature */}}
@@ -74,12 +76,12 @@
         <span class="prov-row__label">signed</span>
         <span class="prov-leader" aria-hidden="true"></span>
         <span class="prov-row__value">
-          <span class="inline-flex flex-wrap gap-x-4 gap-y-1">
-            <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.signing.artifacts_attested:prov-check--ok:prov-check--bad"></span>artifacts</span>
-            <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.signing.index_attested:prov-check--ok:prov-check--bad"></span>index</span>
-            <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.signing.inventory_signed:prov-check--ok:prov-check--bad"></span>inventory</span>
-            <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.signing.release_signed:prov-check--ok:"></span>release</span>
-            <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.signing.release_sigstore_bundled:prov-check--ok:"></span>sigstore bundle</span>
+          <span class="prov-inline">
+            <span><span class="prov-check" data-bind-class="app.signing.artifacts_attested:prov-check--ok:prov-check--bad"></span>artifacts</span>
+            <span><span class="prov-check" data-bind-class="app.signing.index_attested:prov-check--ok:prov-check--bad"></span>index</span>
+            <span><span class="prov-check" data-bind-class="app.signing.inventory_signed:prov-check--ok:prov-check--bad"></span>inventory</span>
+            <span><span class="prov-check" data-bind-class="app.signing.release_signed:prov-check--ok:"></span>release</span>
+            <span><span class="prov-check" data-bind-class="app.signing.release_sigstore_bundled:prov-check--ok:"></span>sigstore bundle</span>
           </span>
         </span>
       </div>
@@ -290,24 +292,24 @@
     <div class="prov-flow__node">
       <div class="prov-flow__kind">source</div>
       <div class="prov-flow__title">
-        <a data-bind-href="app.source.repository" data-bind-title="app.source.repository" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">application source</a>
+        <a data-bind-href="app.source.repository" data-bind-title="app.source.repository" class="prov-link" target="_blank" rel="noopener">application source</a>
       </div>
       <div class="prov-flow__meta">
         <span data-bind="app.source.branch">—</span>@<a data-bind-href="app.source.commit_url" data-bind-title="app.source.commit" target="_blank" rel="noopener"><span data-bind="app.source.commit_short">—</span></a>
-        <span data-bind-show="app.source.dirty" class="text-[rgb(var(--warn))] hidden">·dirty</span>
+        <span data-bind-show="app.source.dirty" class="prov-warn hidden">·dirty</span>
       </div>
     </div>
-    <div class="prov-flow__arrow"><span class="hidden md:inline">→</span><span class="md:hidden">↓</span></div>
+    <div class="prov-flow__arrow" aria-hidden="true"></div>
     <div class="prov-flow__node">
       <div class="prov-flow__kind">build</div>
       <div class="prov-flow__title">
-        <a data-bind-href="app.build_run_url" data-bind-title="app.build_run_url" class="text-[rgb(var(--accent))] hover:underline" target="_blank" rel="noopener">github actions</a>
+        <a data-bind-href="app.build_run_url" data-bind-title="app.build_run_url" class="prov-link" target="_blank" rel="noopener">github actions</a>
       </div>
       <div class="prov-flow__meta">
         <span data-bind="app.build_actor">—</span> · run #<span data-bind="app.build_run_id">—</span>
       </div>
     </div>
-    <div class="prov-flow__arrow"><span class="hidden md:inline">→</span><span class="md:hidden">↓</span></div>
+    <div class="prov-flow__arrow" aria-hidden="true"></div>
     <div class="prov-flow__node">
       <div class="prov-flow__kind">artifact</div>
       <div class="prov-flow__title">container image</div>
@@ -321,45 +323,45 @@
     <span class="prov-leader prov-leader--dash" aria-hidden="true"></span>
     <span class="prov-frame__corner" aria-hidden="true">┐</span>
   </div>
-  <div class="prov-callout mb-3">
+  <div class="prov-callout">
     <span class="prov-callout__verb">policy gate</span>
     <span data-bind="app.vulnerabilities.gate_result">—</span>
-    <span class="text-[rgb(var(--muted))]">
+    <span class="prov-muted">
       · worst <span data-bind="app.vulnerabilities.worst_severity">—</span>
       · enforcement <span data-bind="app.policy.enforcement">—</span>
     </span>
   </div>
-  <div class="prov-cert space-y-4">
+  <div class="prov-cert prov-stack">
     {{/* Severity grid */}}
-    <div>
-      <div class="prov-kicker mb-2">vulnerabilities</div>
-      <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
-        <div class="text-center">
-          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--bad))]/20 text-[rgb(var(--bad))] font-semibold text-lg mono" data-bind="app.vulnerabilities.counts.critical">—</div>
-          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">critical</div>
+    <div class="prov-stack">
+      <div class="prov-fieldlabel">vulnerabilities</div>
+      <div class="prov-sevgrid">
+        <div>
+          <div class="prov-sevgrid__num prov-sevgrid__num--crit" data-bind="app.vulnerabilities.counts.critical">—</div>
+          <div class="prov-sevgrid__label">critical</div>
         </div>
-        <div class="text-center">
-          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--warn))]/20 text-[rgb(var(--warn))] font-semibold text-lg mono" data-bind="app.vulnerabilities.counts.high">—</div>
-          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">high</div>
+        <div>
+          <div class="prov-sevgrid__num prov-sevgrid__num--high" data-bind="app.vulnerabilities.counts.high">—</div>
+          <div class="prov-sevgrid__label">high</div>
         </div>
-        <div class="text-center">
-          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--accent))]/20 text-[rgb(var(--accent))] font-semibold text-lg mono" data-bind="app.vulnerabilities.counts.medium">—</div>
-          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">medium</div>
+        <div>
+          <div class="prov-sevgrid__num prov-sevgrid__num--med" data-bind="app.vulnerabilities.counts.medium">—</div>
+          <div class="prov-sevgrid__label">medium</div>
         </div>
-        <div class="text-center">
-          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--muted))]/20 text-[rgb(var(--muted))] font-semibold text-lg mono" data-bind="app.vulnerabilities.counts.low">—</div>
-          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">low</div>
+        <div>
+          <div class="prov-sevgrid__num prov-sevgrid__num--low" data-bind="app.vulnerabilities.counts.low">—</div>
+          <div class="prov-sevgrid__label">low</div>
         </div>
-        <div class="text-center">
-          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))] font-semibold text-lg mono" data-bind="app.vulnerabilities.counts.negligible">—</div>
-          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">negligible</div>
+        <div>
+          <div class="prov-sevgrid__num prov-sevgrid__num--negl" data-bind="app.vulnerabilities.counts.negligible">—</div>
+          <div class="prov-sevgrid__label">negligible</div>
         </div>
-        <div class="text-center">
-          <div class="h-10 rounded flex items-center justify-center bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))] font-semibold text-lg mono" data-bind="app.vulnerabilities.counts.unknown">—</div>
-          <div class="text-[10px] text-[rgb(var(--muted))] mt-1">unknown</div>
+        <div>
+          <div class="prov-sevgrid__num prov-sevgrid__num--unknown" data-bind="app.vulnerabilities.counts.unknown">—</div>
+          <div class="prov-sevgrid__label">unknown</div>
         </div>
       </div>
-      <div class="prov-grid prov-grid--2 mt-2">
+      <div class="prov-grid prov-grid--2">
         <div class="prov-row">
           <span class="prov-row__label">total findings</span>
           <span class="prov-leader" aria-hidden="true"></span>
@@ -374,13 +376,13 @@
     </div>
 
     {{/* License compliance */}}
-    <div class="border-t border-[rgb(var(--border))] pt-3">
-      <div class="prov-kicker mb-2">licenses</div>
+    <div class="prov-subsection">
+      <div class="prov-fieldlabel">licenses</div>
       <div class="prov-row">
         <span class="prov-row__label">status</span>
         <span class="prov-leader" aria-hidden="true"></span>
         <span class="prov-row__value">
-          <span class="inline-block w-2 h-2 rounded-full align-middle mr-1 bg-[rgb(var(--muted))]" data-bind-class="app.licenses.compliant:bg-[rgb(var(--good))]:bg-[rgb(var(--bad))]"></span>
+          <span class="prov-dot" data-bind-class="app.licenses.compliant:prov-dot--good:prov-dot--bad"></span>
           <span data-bind="app.computed.license_status">—</span>
         </span>
       </div>
@@ -393,16 +395,16 @@
         <span class="prov-row__label">denied found</span>
         <span class="prov-leader" aria-hidden="true"></span>
         <span class="prov-row__value">
-          <span class="inline-flex flex-wrap gap-1 justify-end" id="denied-found-list">
-            <span class="text-xs text-[rgb(var(--good))]">none</span>
+          <span class="prov-chips prov-chips--end" id="denied-found-list">
+            <span class="prov-empty prov-empty--good">none</span>
           </span>
         </span>
       </div>
     </div>
 
     {{/* SBOM at a glance */}}
-    <div class="border-t border-[rgb(var(--border))] pt-3">
-      <div class="prov-kicker mb-2">software bill of materials</div>
+    <div class="prov-subsection">
+      <div class="prov-fieldlabel">software bill of materials</div>
       <div class="prov-grid prov-grid--2">
         <div class="prov-row">
           <span class="prov-row__label">source packages</span>
@@ -429,7 +431,7 @@
       application evidence - findings, SBOM packages, licenses, policy, attestations, artifacts
       <span class="prov-ledger__hint">for auditors</span>
     </summary>
-    <div class="prov-ledger__body space-y-2">
+    <div class="prov-ledger__body">
 
       <div class="prov-ledger__sub">build tooling</div>
       <table class="prov-table">
@@ -477,16 +479,16 @@
         <div class="prov-row"><span class="prov-row__label">deduplication</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.vulnerabilities.deduplication">—</span></div>
         <div class="prov-row"><span class="prov-row__label">gate threshold</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.vulnerabilities.gate_threshold">—</span></div>
       </div>
-      <div class="prov-kicker mt-3 mb-1">scanners</div>
-      <div class="flex flex-wrap gap-1" data-bind-list="app.vulnerabilities.scanners_used"></div>
-      <div class="prov-kicker mt-3 mb-1">per-scanner results</div>
-      <div id="vuln-scanner-breakdown" class="space-y-2"></div>
-      <details class="prov-expand group">
+      <div class="prov-fieldlabel">scanners</div>
+      <div class="prov-chips" data-bind-list="app.vulnerabilities.scanners_used"></div>
+      <div class="prov-fieldlabel">per-scanner results</div>
+      <div id="vuln-scanner-breakdown"></div>
+      <details class="prov-expand">
         <summary>
-          <span class="group-open:hidden">show findings</span>
-          <span class="hidden group-open:inline">hide findings</span>
+          <span class="prov-expand__more">show findings</span>
+          <span class="prov-expand__less">hide findings</span>
         </summary>
-        <div class="mt-2 space-y-2 max-h-96 overflow-y-auto" id="vuln-findings-list"></div>
+        <div class="prov-expand__scroll" id="vuln-findings-list"></div>
       </details>
 
       {{/* SBOM detail */}}
@@ -496,28 +498,28 @@
           <tr><td>generated at</td><td data-bind="app.sbom.generated_at" data-format="datetime">—</td></tr>
         </tbody>
       </table>
-      <div class="prov-kicker mt-3 mb-1">generators</div>
-      <div class="flex flex-wrap gap-1" data-bind-list="app.sbom.generators"></div>
-      <div class="prov-kicker mt-3 mb-1">formats produced</div>
-      <div class="flex flex-wrap gap-1" data-bind-list="app.sbom.formats_produced"></div>
-      <details class="prov-expand group">
+      <div class="prov-fieldlabel">generators</div>
+      <div class="prov-chips" data-bind-list="app.sbom.generators"></div>
+      <div class="prov-fieldlabel">formats produced</div>
+      <div class="prov-chips" data-bind-list="app.sbom.formats_produced"></div>
+      <details class="prov-expand">
         <summary>
-          <span class="group-open:hidden">show all packages</span>
-          <span class="hidden group-open:inline">hide packages</span>
+          <span class="prov-expand__more">show all packages</span>
+          <span class="prov-expand__less">hide packages</span>
         </summary>
-        <div class="mt-2 max-h-96 overflow-y-auto" id="sbom-package-list"></div>
+        <div class="prov-expand__scroll" id="sbom-package-list"></div>
       </details>
 
       {{/* License detail */}}
       <div class="prov-ledger__sub">licenses</div>
-      <div class="prov-kicker mb-1">licenses found</div>
-      <div class="flex flex-wrap gap-1" data-bind-list="app.licenses.license_counts" data-bind-list-allow="app.policy.license.allowed" data-bind-list-deny="app.policy.license.denied"></div>
-      <details class="prov-expand group">
+      <div class="prov-fieldlabel">licenses found</div>
+      <div class="prov-chips" data-bind-list="app.licenses.license_counts" data-bind-list-allow="app.policy.license.allowed" data-bind-list-deny="app.policy.license.denied"></div>
+      <details class="prov-expand">
         <summary>
-          <span class="group-open:hidden">show packages by license</span>
-          <span class="hidden group-open:inline">hide packages by license</span>
+          <span class="prov-expand__more">show packages by license</span>
+          <span class="prov-expand__less">hide packages by license</span>
         </summary>
-        <div class="mt-2 space-y-2 max-h-96 overflow-y-auto" id="license-package-list"></div>
+        <div class="prov-expand__scroll" id="license-package-list"></div>
       </details>
 
       {{/* Policy */}}
@@ -527,12 +529,12 @@
         <div class="prov-row"><span class="prov-row__label">allow if VEX</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.computed.allow_vex_text">—</span></div>
         <div class="prov-row"><span class="prov-row__label">unknown licenses</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.computed.allow_unknown_text">—</span></div>
       </div>
-      <div class="prov-kicker mt-3 mb-1">block on severity</div>
-      <div class="flex flex-wrap gap-1" data-bind-list="app.policy.vulnerability.block_on"></div>
-      <div class="prov-kicker mt-3 mb-1">allowed licenses</div>
-      <div class="flex flex-wrap gap-1" data-bind-list="app.policy.license.allowed" data-bind-list-color="good"></div>
-      <div class="prov-kicker mt-3 mb-1">denied licenses</div>
-      <div class="flex flex-wrap gap-1" data-bind-list="app.policy.license.denied" data-bind-list-color="bad"></div>
+      <div class="prov-fieldlabel">block on severity</div>
+      <div class="prov-chips" data-bind-list="app.policy.vulnerability.block_on"></div>
+      <div class="prov-fieldlabel">allowed licenses</div>
+      <div class="prov-chips" data-bind-list="app.policy.license.allowed" data-bind-list-color="good"></div>
+      <div class="prov-fieldlabel">denied licenses</div>
+      <div class="prov-chips" data-bind-list="app.policy.license.denied" data-bind-list-color="bad"></div>
 
       {{/* Attestations */}}
       <div class="prov-ledger__sub">attestations</div>
@@ -541,17 +543,17 @@
         <div class="prov-row"><span class="prov-row__label">source</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.attestations.source">—</span></div>
         <div class="prov-row"><span class="prov-row__label">artifact</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.attestations.artifact">—</span></div>
       </div>
-      <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs mono">
-        <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.attestations.sbom_attested:prov-check--ok:prov-check--bad"></span>SBOM</span>
-        <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.attestations.scan_attested:prov-check--ok:prov-check--bad"></span>scan</span>
-        <span class="inline-flex items-center gap-1.5"><span class="prov-check" data-bind-class="app.attestations.license_attested:prov-check--ok:prov-check--bad"></span>license</span>
+      <div class="prov-inline mono">
+        <span><span class="prov-check" data-bind-class="app.attestations.sbom_attested:prov-check--ok:prov-check--bad"></span>SBOM</span>
+        <span><span class="prov-check" data-bind-class="app.attestations.scan_attested:prov-check--ok:prov-check--bad"></span>scan</span>
+        <span><span class="prov-check" data-bind-class="app.attestations.license_attested:prov-check--ok:prov-check--bad"></span>license</span>
       </div>
-      <details class="prov-expand group">
+      <details class="prov-expand">
         <summary>
-          <span class="group-open:hidden">show attestation files</span>
-          <span class="hidden group-open:inline">hide attestation files</span>
+          <span class="prov-expand__more">show attestation files</span>
+          <span class="prov-expand__less">hide attestation files</span>
         </summary>
-        <div class="mt-2 max-h-96 overflow-auto" id="attestation-file-list"></div>
+        <div class="prov-expand__scroll" id="attestation-file-list"></div>
       </details>
 
       {{/* Evidence files */}}
@@ -561,14 +563,14 @@
           <tr><td>file count</td><td class="prov-num" data-bind="app.evidence.file_count">—</td></tr>
         </tbody>
       </table>
-      <div class="prov-kicker mt-3 mb-1">categories</div>
-      <div class="flex flex-wrap gap-1" data-bind-list="app.evidence.categories"></div>
-      <details class="prov-expand group">
+      <div class="prov-fieldlabel">categories</div>
+      <div class="prov-chips" data-bind-list="app.evidence.categories"></div>
+      <details class="prov-expand">
         <summary>
-          <span class="group-open:hidden">show evidence files</span>
-          <span class="hidden group-open:inline">hide evidence files</span>
+          <span class="prov-expand__more">show evidence files</span>
+          <span class="prov-expand__less">hide evidence files</span>
         </summary>
-        <div class="mt-2 max-h-96 overflow-auto" id="evidence-file-list"></div>
+        <div class="prov-expand__scroll" id="evidence-file-list"></div>
       </details>
 
       <div class="prov-ledger__sub">transparency · keyless</div>
@@ -588,26 +590,26 @@
         <div class="prov-row prov-row--break"><span class="prov-row__label">tsa serial</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.timestamp.serial_number" data-bind-title="app.signatures.keyless.timestamp.serial_number">—</span></div>
         <div class="prov-row"><span class="prov-row__label">tsa policy oid</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.keyless.timestamp.policy_oid">—</span></div>
       </div>
-      <details class="prov-expand group">
+      <details class="prov-expand">
         <summary>
-          <span class="group-open:hidden">show rekor inclusion proof</span>
-          <span class="hidden group-open:inline">hide inclusion proof</span>
+          <span class="prov-expand__more">show rekor inclusion proof</span>
+          <span class="prov-expand__less">hide inclusion proof</span>
         </summary>
-        <div class="mt-2 flex flex-wrap gap-1" data-bind-list="app.signatures.keyless.rekor.inclusion_proof_hashes"></div>
+        <div class="prov-chips prov-chips--tight" data-bind-list="app.signatures.keyless.rekor.inclusion_proof_hashes"></div>
       </details>
-      <details class="prov-expand group">
+      <details class="prov-expand">
         <summary>
-          <span class="group-open:hidden">show signed checkpoint + raw TSR</span>
-          <span class="hidden group-open:inline">hide signed checkpoint + raw TSR</span>
+          <span class="prov-expand__more">show signed checkpoint + raw TSR</span>
+          <span class="prov-expand__less">hide signed checkpoint + raw TSR</span>
         </summary>
-        <div class="mt-2 space-y-3">
+        <div class="prov-stack">
           <div>
-            <div class="prov-kicker mb-1">rekor signed checkpoint</div>
-            <pre class="sig-block text-[10px] overflow-x-auto" data-bind="app.signatures.keyless.rekor.checkpoint_envelope"></pre>
+            <div class="prov-fieldlabel">rekor signed checkpoint</div>
+            <pre class="sig-block prov-raw" data-bind="app.signatures.keyless.rekor.checkpoint_envelope"></pre>
           </div>
           <div>
-            <div class="prov-kicker mb-1">RFC 3161 TimeStampResp · DER · base64</div>
-            <pre class="sig-block text-[10px] overflow-x-auto" data-bind="app.signatures.keyless.timestamp.raw_tsr"></pre>
+            <div class="prov-fieldlabel">RFC 3161 TimeStampResp · DER · base64</div>
+            <pre class="sig-block prov-raw" data-bind="app.signatures.keyless.timestamp.raw_tsr"></pre>
           </div>
         </div>
       </details>
@@ -626,26 +628,26 @@
         <div class="prov-row prov-row--break"><span class="prov-row__label">tsa serial</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.kms.timestamp.serial_number" data-bind-title="app.signatures.kms.timestamp.serial_number">—</span></div>
         <div class="prov-row"><span class="prov-row__label">tsa policy oid</span><span class="prov-leader" aria-hidden="true"></span><span class="prov-row__value" data-bind="app.signatures.kms.timestamp.policy_oid">—</span></div>
       </div>
-      <details class="prov-expand group">
+      <details class="prov-expand">
         <summary>
-          <span class="group-open:hidden">show rekor inclusion proof</span>
-          <span class="hidden group-open:inline">hide inclusion proof</span>
+          <span class="prov-expand__more">show rekor inclusion proof</span>
+          <span class="prov-expand__less">hide inclusion proof</span>
         </summary>
-        <div class="mt-2 flex flex-wrap gap-1" data-bind-list="app.signatures.kms.rekor.inclusion_proof_hashes"></div>
+        <div class="prov-chips prov-chips--tight" data-bind-list="app.signatures.kms.rekor.inclusion_proof_hashes"></div>
       </details>
-      <details class="prov-expand group">
+      <details class="prov-expand">
         <summary>
-          <span class="group-open:hidden">show signed checkpoint + raw TSR</span>
-          <span class="hidden group-open:inline">hide signed checkpoint + raw TSR</span>
+          <span class="prov-expand__more">show signed checkpoint + raw TSR</span>
+          <span class="prov-expand__less">hide signed checkpoint + raw TSR</span>
         </summary>
-        <div class="mt-2 space-y-3">
+        <div class="prov-stack">
           <div>
-            <div class="prov-kicker mb-1">rekor signed checkpoint</div>
-            <pre class="sig-block text-[10px] overflow-x-auto" data-bind="app.signatures.kms.rekor.checkpoint_envelope"></pre>
+            <div class="prov-fieldlabel">rekor signed checkpoint</div>
+            <pre class="sig-block prov-raw" data-bind="app.signatures.kms.rekor.checkpoint_envelope"></pre>
           </div>
           <div>
-            <div class="prov-kicker mb-1">RFC 3161 TimeStampResp · DER · base64</div>
-            <pre class="sig-block text-[10px] overflow-x-auto" data-bind="app.signatures.kms.timestamp.raw_tsr"></pre>
+            <div class="prov-fieldlabel">RFC 3161 TimeStampResp · DER · base64</div>
+            <pre class="sig-block prov-raw" data-bind="app.signatures.kms.timestamp.raw_tsr"></pre>
           </div>
         </div>
       </details>
@@ -667,12 +669,12 @@
 
       {{/* Raw JSON */}}
       <div class="prov-ledger__sub">raw release manifest</div>
-      <details class="prov-expand group">
+      <details class="prov-expand">
         <summary>
-          <span class="group-open:hidden">show release json</span>
-          <span class="hidden group-open:inline">hide release json</span>
+          <span class="prov-expand__more">show release json</span>
+          <span class="prov-expand__less">hide release json</span>
         </summary>
-        <pre class="sig-block text-[10px] overflow-x-auto max-h-96 mt-2" data-bind="app.raw-json"></pre>
+        <pre class="sig-block prov-raw" data-bind="app.raw-json"></pre>
       </details>
 
     </div>

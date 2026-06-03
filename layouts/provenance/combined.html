@@ -1,9 +1,9 @@
 {{ define "main" }}
-<article class="space-y-6">
-  <header class="space-y-2">
-    <h1 class="text-3xl font-semibold tracking-tight text-balance">{{ .Title }}</h1>
+<article class="prov-article">
+  <header>
+    <h1 class="prov-h1">{{ .Title }}</h1>
     {{ with .Description }}
-      <p class="text-lg text-[rgb(var(--muted))]">{{ . }}</p>
+      <p class="prov-lead">{{ . }}</p>
     {{ end }}
   </header>
 
@@ -14,18 +14,18 @@
   {{ end }}
 
   {{/* Navigation */}}
-  <nav class="flex gap-4 text-sm border-b border-[rgb(var(--border))] pb-4">
-    <span class="text-[rgb(var(--fg))] font-medium">Viewing: All</span>
-    <a href="/about/provenance/app/" class="text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))]">App only</a>
-    <a href="/about/provenance/content/" class="text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))]">Content only</a>
+  <nav class="prov-nav">
+    <span class="prov-nav__current">Viewing: All</span>
+    <a href="/about/provenance/app/">App only</a>
+    <a href="/about/provenance/content/">Content only</a>
   </nav>
 
   {{/* LAYER 1 (shared): verification chain banner */}}
   {{ partial "provenance-chain.html" . }}
 
   {{/* Application bundle */}}
-  <section class="space-y-3 pt-4">
-    <h2 class="text-xl font-semibold tracking-tight flex items-baseline gap-3">
+  <section class="prov-section prov-stack">
+    <h2 class="prov-h2">
       <span>Application bundle</span>
       <span class="prov-kicker">the running server binary</span>
     </h2>
@@ -33,8 +33,8 @@
   </section>
 
   {{/* Content bundle */}}
-  <section class="space-y-3 pt-8 mt-6 border-t border-[rgb(var(--border))]">
-    <h2 class="text-xl font-semibold tracking-tight flex items-baseline gap-3">
+  <section class="prov-section--divided prov-stack">
+    <h2 class="prov-h2">
       <span>Content bundle</span>
       <span class="prov-kicker">the static site being served</span>
     </h2>
@@ -42,4 +42,9 @@
   </section>
 
 </article>
+{{ end }}
+
+{{ define "scripts" }}
+{{- $provJs := resources.Get "js/provenance.js" | minify | fingerprint "sha384" -}}
+<script src="{{ $provJs.RelPermalink }}" integrity="{{ $provJs.Data.Integrity }}" defer></script>
 {{ end }}

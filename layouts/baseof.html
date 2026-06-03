@@ -17,7 +17,9 @@
 <body class="{{ $body }}">
   <div class="wrap">
     {{ partial "header.html" . }}
-    {{ block "main" . }}{{ end }}
+    <main id="content" tabindex="-1">
+      {{ block "main" . }}{{ end }}
+    </main>
     {{ partial "footer.html" . }}
   </div>
   {{ block "scripts" . }}{{ end }}
