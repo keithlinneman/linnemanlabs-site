@@ -1,5 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
-  <!-- linnemanlabs: IBM Plex Mono SemiBold 'l' outline + tall dropped block cursor -->
   <rect width="160" height="160" fill="#0a0d0b"/>
   <g transform="matrix(0.11239,0,0,-0.11239,15.038,105.569)" fill="#e6a948">
     <path d="M72 101H236V639H72V740H364V101H529V0H72Z"/>

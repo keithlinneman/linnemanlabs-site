@@ -1,5 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
-  <!-- linnemanlabs mark, transparent (for masthead overlay) -->
   <g transform="matrix(0.11239,0,0,-0.11239,15.038,105.569)" fill="#e6a948">
     <path d="M72 101H236V639H72V740H364V101H529V0H72Z"/>
     <rect x="764" y="-285" width="320" height="968"/>
