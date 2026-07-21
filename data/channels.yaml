@@ -33,6 +33,7 @@
     - "orca · keyboardmonitor"
   soon:
     - "bluez agent hijacking"
+    - "dbus purple-team analysis"
 
 - slug: kernel
   name: "kernel / exploitation"
@@ -42,6 +43,22 @@
   topics:
     - "dirty frag · arm64"
     - "apparmor profile hops"
+    - "selinux · systemd confinement"
+
+- slug: vulnerability
+  name: "vulnerabilities / research"
+  label: "kernel"
+  category: "Vulnerability Research"
+  tree: true
+  topics:
+    - "sandbox escapes"
+  soon:
+    - "fprintd bypass LPE (root)"
+    - "2 pi-hole RCE, 3 LPE (root)"
+    - "nm-l2tp LPE (root)"
+    - "bluez LPE (root)"
+    - "ceph cluster-wide data leak"
+    - "open-iscsi socket LPE (root)"
 
 - slug: detection
   name: "detection / purple team"
@@ -49,7 +66,7 @@
   category: "Security Research"
   tree: true
   topics:
-    - "tetragon below the socket"
+    - "tetragon · eBPF · LSM"
     - "glimmer · rust c2 beacon"
 
 - slug: provenance
@@ -59,7 +76,7 @@
   tree: true
   topics:
     - "fulcio · rekor · tesseract"
-    - "dual-signed bundles"
+    - "cosign · dual-signed bundles"
 
 - slug: infra
   name: "infra / platform"
