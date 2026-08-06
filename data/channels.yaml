@@ -45,16 +45,16 @@
     - "apparmor profile hops"
     - "selinux · systemd confinement"
 
-- slug: vulnerability
+- slug: vuln-research
   name: "vulnerabilities / research"
-  label: "kernel"
+  label: "vuln / research"
   category: "Vulnerability Research"
   tree: true
   topics:
     - "sandbox escapes"
+    - "pi-hole 2 RCE, 3 LPE (root)"
   soon:
     - "fprintd bypass LPE (root)"
-    - "2 pi-hole RCE, 3 LPE (root)"
     - "nm-l2tp LPE (root)"
     - "bluez LPE (root)"
     - "ceph cluster-wide data leak"
