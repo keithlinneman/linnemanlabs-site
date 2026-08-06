@@ -1,6 +1,6 @@
 ---
 title: "Measuring the Blast Radius of a Root Daemon"
-subtitle: "Measuring what root exec in a daemon actually buys you. Where SELinux, systemd, and DAC each draw the line."
+subtitle: "What root exec in a daemon actually buys you. Where SELinux, systemd, and DAC each draw the line."
 date: '2026-07-20T00:00:00Z'
 summary: "The real confinement of a root daemon is the intersection of SELinux policy, systemd sandboxing, Linux capabilities, and DAC."
 tags: ["security", "offensive-security", "selinux", "systemd", "privilege-escalation", "dbus", "linux"]
@@ -12,7 +12,7 @@ This is part 1 of a series on SELinux and systemd confinement.
 | Article | Contents |
 |---|---|
 | [Measuring the Blast Radius of a Root Daemon](/posts/measuring-selinux-systemd-confinement/) | Measure the real constraints when getting root exec |
-| Confined Root Is Still Root (coming soon) | Paths to escaping confinement |
+| [Confined Root Is Still Root](/posts/escaping-selinux-systemd-confinement) | Paths to escaping confinement |
 | Hardening and Detection (coming soon) | Hardening and detection configurations |
 
 You found a bug. Memory corruption in a daemon that runs as root - pick your poison: `bluetoothd`, `cupsd`, a `NetworkManager` plugin, the `fingerprint` daemon. You have code execution in that process. On a box with no Mandatory Access Control you are halfway there: root is root, see what you can influence from the systemd sandbox, maybe drop a setuid binary or a cron job and go home.
@@ -216,6 +216,14 @@ CapBnd: 0000000000001400
 CapAmb: 0000000000000000
 ```
 
+View all atributes belonging to the type:
+
+```bash
+$ seinfo -t bluetooth_t -x
+Types: 1
+   type bluetooth_t, corenet_unlabeled_type, daemon, domain, kernel_system_state_reader, netlabel_peer_type, nsswitch_domain, pcmcia_typeattr_1, syslog_client_type;
+```
+
 Enumerate the SELinux rules reachable from the source type:
 
 ```bash
@@ -248,12 +256,54 @@ Type Attributes: 1
 
 SELinux permits each of those source domains to send D-Bus messages to dbusd_unconfined targets. Same as the rest of this post, that is the ceiling and starting point - you need to confirm that the bus policy, destination object, interface, method, or application-level authorization will accept a useful request.
 
-Map what transitions are possible from the domain:
+On the opposite side, to list all the domains that carry the dbusd_unconfined attribute you can potentially reach now:
+
+```bash
+$ seinfo -a dbusd_unconfined -x
+
+Type Attributes: 1
+   attribute dbusd_unconfined;
+        NetworkManager_dispatcher_custom_t
+        abrt_handle_event_t
+        anaconda_t
+... ( snipped 89 lines )
+```
+
+Dig through the services, introspect their D-Bus services, find something that contributes to a chain you want to build.
+
+Maybe you need to fetch a remote file because you are in a confined domain that cant create a filesystem image (that reference will make sense in post 2). Enumerate if you can connect out on TCP or UDP:
+
+```bash
+$ sesearch -A -s bluetooth_t -c tcp_socket,udp_socket -p connect
+allow bluetooth_t bluetooth_t:tcp_socket { accept append bind connect create getattr getopt ioctl listen lock read setattr setopt shutdown write };
+allow bluetooth_t bluetooth_t:udp_socket { append bind connect create getattr getopt ioctl lock read setattr setopt shutdown write };
+```
+
+You are halfway there and are allowed to connect both tcp and udp sockets, but can you actually connect to any ports?
+
+```bash
+$ sesearch -A -s bluetooth_t -c tcp_socket,udp_socket -p name_connect
+allow nsswitch_domain dns_port_t:tcp_socket { name_connect recv_msg send_msg };
+allow nsswitch_domain dnssec_port_t:tcp_socket name_connect;
+... ( snipped 8 boolean-gated grants )
+```
+
+No UDP ports allowed, two tcp types allowed `dns_port_t` and `dnssec_port_t`. Enumerate exactly what ports are in those types:
+
+```bash
+$ sudo semanage port -l | grep -E "^(dns_port_t|dnssec_port_t).*tcp"
+dns_port_t                     tcp      53, 853
+dnssec_port_t                  tcp      8955
+```
+
+So all members of `nsswitch_domain` can connect out on tcp ports `53`, `853`, and `8955`. Host and network firewalls may separately block it but SELinux will not.
+
+Can our domain directly transitionto any interesting domains:
 
 ```bash
 $ sesearch -T -s bluetooth_t -c process
 type_transition bluetooth_t abrt_helper_exec_t:process abrt_helper_t;
-type_transition bluetooth_t pppd_exec_t:process pppd_t;
+type_transition bluetooth_t pppd_exec_t:process pppd_t; 
 ```
 
 If the service is confined with NoNewPrivileges, map out which transitions carry an explicit allow:
@@ -272,6 +322,38 @@ Typebounds: 0
 ```
 
 There is no applicable `nnp_transition` permission, and neither `pppd_t` nor `abrt_helper_t` is bounded by `bluetooth_t` - both transitions are denied under NNP.
+
+Have a directory you want to write to? Find it's type, see if you have a grant or transition to it:
+
+```bash
+$ ls -dZ /run
+system_u:object_r:var_run_t:s0 /run
+
+$ sesearch -A -T -s bluetooth_t -t var_run_t -c dir -p search,write,add_name
+allow bluetooth_t var_run_t:dir { add_name remove_name write };
+allow domain base_file_type:dir { getattr open search };
+allow nsswitch_domain pidfile:dir { getattr open search };
+
+$ sesearch -A -T -s bluetooth_t -t var_run_t -c file
+allow domain file_type:file map; [ domain_can_mmap_files ]:True
+type_transition bluetooth_t var_run_t:file bluetooth_var_run_t;
+```
+
+Can a specific type (in this case init_t) read that file you just wrote?
+
+```bash
+$ sesearch -A -s init_t -t bluetooth_var_run_t -c file -p read
+allow init_t pidfile:file { ioctl lock map open read unlink };
+```
+
+Who else can read that file you just wrote:
+```bash
+$ sesearch -A -t bluetooth_var_run_t -c file -p read
+allow abrt_dump_oops_t non_security_file_type:file { append create getattr ioctl link lock map open read rename setattr unlink watch watch_reads write };
+allow aide_t file_type:file { getattr ioctl lock map open read };
+allow amanda_t file_type:file { getattr ioctl lock open read };
+... (snipped 51 lines)
+```
 
 To confirm systemd `ConfigurationDirectory=bluetooth` mounted /etc/bluetooth `rw`:
 
@@ -299,13 +381,14 @@ TARGET SOURCE FSTYPE OPTIONS
 /run   tmpfs  tmpfs  rw,nosuid,nodev,seclabel,size=13150400k,nr_inodes=819200,mode=755,inode64
 ```
 
-A writable mount is not necessarily an escalation path. It may still provide a rendezvous point for data, sockets, FIFOs, or files consumed by another domain. I explore those uses in the next post.
+A writable mount is not necessarily an escalation path. It may still provide a rendezvous point for data, sockets, FIFOs, or files consumed by another domain. I explore those uses in the next post: [Confined Root Is Still Root](/posts/escaping-selinux-systemd-confinement).
 
 ## Testing Environment
 
 The shown SELinux policy output and systemd environment I am working on in this post is:
 - Fedora 44 Plasma
 - Kernel 7.0.10-201.fc44
+- systemd-259.6-1.fc44
 - selinux-policy-44.1-1.fc44
 - bluez-5.86-4.fc44
 
