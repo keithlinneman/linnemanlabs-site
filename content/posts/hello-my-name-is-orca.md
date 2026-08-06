@@ -151,7 +151,7 @@ CommandLine=dbus-test-tool black-hole --session --name=org.gnome.Orca.KeyboardMo
 
 This only proves that the name is claimable. The process calling `WatchKeyboard` must own the name on the same D-Bus connection, so the PoC performs both actions in one process: request `org.gnome.Orca.KeyboardMonitor`, then call `WatchKeyboard`.
 
-Using a [small Python script](https://github.com/linnemanlabs/linnemanlabs-tools/blob/main/poc/a11y-keyboardmonitor/a11y-keyboardmonitor-poc.py) to claim the name and call the `WatchKeyboard` method again we now receive `KeyEvent` signals from every keystroke the compositor receives:
+Using a [small Python script](https://github.com/linnemanlabs/advisories/blob/main/poc/a11y-keyboardmonitor/a11y-keyboardmonitor-poc.py) to claim the name and call the `WatchKeyboard` method again we now receive `KeyEvent` signals from every keystroke the compositor receives:
 
 ```bash
 k@devbox:~$ python3 a11y-keyboardmonitor-poc.py 
@@ -248,7 +248,7 @@ A malicious plugin in an application with session-bus access may be able to keyl
 
 I was curious to test this so I put together a simple plugin for Eclipse that writes and executes a Python script at startup that handles the D-Bus interaction. I don't know (or want to know) Java or Python, and I also don't use Eclipse, so this PoC is intentionally minimal. The goal was not to build a polished plugin, only to verify whether code running inside the Flatpak could reach the host KeyboardMonitor path and capture keystrokes from unrelated host windows.
 
-The [source for the Eclipse PoC](https://github.com/linnemanlabs/linnemanlabs-tools/tree/main/poc/a11y-keyboardmonitor) is on GitHub.
+The [source for the Eclipse PoC](https://github.com/linnemanlabs/advisories/tree/main/poc/a11y-keyboardmonitor) is on GitHub.
 
 After building the jar, I start eclipse:
 
@@ -423,7 +423,7 @@ I do not consider this a serious protection. It is race-prone, fragile, and conf
 
 Tested on Fedora 44 Plasma with KDE KWin 6.6.4-2.fc44 and Ubuntu 26.04 LTS with GNOME Mutter 50.1-0ubuntu2. Default install configuration, no changes to a11y or other settings required.
 
-- [a11y-keyboardmonitor-poc.py](https://github.com/linnemanlabs/linnemanlabs-tools/blob/main/poc/a11y-keyboardmonitor/a11y-keyboardmonitor-poc.py) - standalone python script
+- [a11y-keyboardmonitor-poc.py](https://github.com/linnemanlabs/advisories/blob/main/poc/a11y-keyboardmonitor/a11y-keyboardmonitor-poc.py) - standalone python script
 - [Glimmer](https://github.com/linnemanlabs/glimmer) - dump_keypress is a standalone binary that will print keypresses to the console
 
 ## Closing
