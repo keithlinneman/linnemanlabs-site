@@ -4,7 +4,7 @@ subtitle: "What root exec in a daemon actually buys you. Where SELinux, systemd,
 date: '2026-07-20T00:00:00Z'
 summary: "The real confinement of a root daemon is the intersection of SELinux policy, systemd sandboxing, Linux capabilities, and DAC."
 tags: ["security", "offensive-security", "selinux", "systemd", "privilege-escalation", "dbus", "linux"]
-channels: ["kernel"]
+channels: ["vuln-research"]
 ---
 
 This is part 1 of a series on SELinux and systemd confinement.
@@ -12,8 +12,8 @@ This is part 1 of a series on SELinux and systemd confinement.
 | Article | Contents |
 |---|---|
 | [Measuring the Blast Radius of a Root Daemon](/posts/measuring-selinux-systemd-confinement/) | Measure the real constraints when getting root exec |
-| [Confined Root Is Still Root](/posts/escaping-selinux-systemd-confinement) | Paths to escaping confinement |
-| Hardening and Detection (coming soon) | Hardening and detection configurations |
+| [Confined Root Is Still Root](/posts/confined-root-is-still-root/) | Escaping SELinux and systemd confinement by borrowing authority from brokers and deputies |
+| Hardening and Detection (coming soon) | Closing the lanes, and catching what's left |
 
 You found a bug. Memory corruption in a daemon that runs as root - pick your poison: `bluetoothd`, `cupsd`, a `NetworkManager` plugin, the `fingerprint` daemon. You have code execution in that process. On a box with no Mandatory Access Control you are halfway there: root is root, see what you can influence from the systemd sandbox, maybe drop a setuid binary or a cron job and go home.
 
@@ -237,7 +237,7 @@ allow bluetooth_t alsa_var_lib_t:file { getattr ioctl lock open read };
 Query the permission, not the type name. If you have a specific escape path in mind like an unconfined dbus service (covered in next post), to test its reachability:
 
 ```bash
-$ sesearch -A -s bluetooth_t -c dbus -p send_msg | grep dbusd_unconfined
+$ sesearch -A -s bluetooth_t -t dbusd_unconfined -c dbus -p send_msg -dt
 allow nsswitch_domain dbusd_unconfined:dbus send_msg;
 ```
 
@@ -381,7 +381,7 @@ TARGET SOURCE FSTYPE OPTIONS
 /run   tmpfs  tmpfs  rw,nosuid,nodev,seclabel,size=13150400k,nr_inodes=819200,mode=755,inode64
 ```
 
-A writable mount is not necessarily an escalation path. It may still provide a rendezvous point for data, sockets, FIFOs, or files consumed by another domain. I explore those uses in the next post: [Confined Root Is Still Root](/posts/escaping-selinux-systemd-confinement).
+A writable mount is not necessarily an escalation path. It may still provide a rendezvous point for data, sockets, FIFOs, or files consumed by another domain. I explore those uses in the next post: [Confined Root Is Still Root](/posts/confined-root-is-still-root).
 
 ## Testing Environment
 
