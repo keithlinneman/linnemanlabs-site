@@ -137,13 +137,13 @@ It is more interesting than that though. Monitor `CheckAuthorization` on `org.fr
 
 - **systemd services skip polkit entirely for uid 0.** `hostnamed`, `logind`, `timedated`, `systemd1`, `resolved`, `homed`, `portabled` route checks through `bus_verify_polkit_async -> sd_bus_query_sender_privilege`, which returns "allowed" immediately if the caller's `euid == 0` (or its uid matches the daemon's, or it holds the checked capability). polkit is never consulted - a uid-0 call produces zero `CheckAuthorization` messages.
 
-- **polkit itself authorizes a uid-0 subject.** KDE's KAuth helpers, PackageKit, anything using libpolkit directly do consult polkitd which treats a subject already running as uid 0 as an administrator and returns authorized without a challenge.
+- **polkit itself authorizes a uid-0 subject.** KDE's KAuth helpers, PackageKit, and anything using libpolkit directly do consult polkitd - which allows uid 0 before it evaluates anything. The function `check_authorization_sync()` has a comment ["special case: uid 0, root, is always authorized for anything"](https://github.com/polkit-org/polkit/blob/b3492d5ea73e030dedf53a08091d54c0ccb08acc/src/polkitbackend/polkitbackendinteractiveauthority.c#L1297): it returns an authorized response, not a challenge, and skips past the session lookup, the implicit-authorization (auth_admin) decision, and the rules engine. The action's auth_admin setting is never hit, which is how a session-less daemon with no authentication agent passes.
 
 Two code paths, same destination, and neither is closable in polkit configuration.
 
 When code-exec drops you somewhere and a privileged method is `auth_admin`-gated, you automatically pass if you are uid 0. Separately, you will pass if your uid equals the target daemon's uid (systemd same-uid trust). Even if you have dropped all capabilities and are in a heavily confined SELinux domain.
 
-On the hardening side, `auth_admin` is worthless against a compromised root service. The fix isn't in polkit - it's stop running daemons as root.
+On the hardening side, `auth_admin` is worthless against a compromised root service. The fix isn't in polkit - it's stop running daemons as root. The calling service can opt-out of the self-pass with a `POLKIT_CHECK_AUTHORIZATION_FLAGS_ALWAYS_CHECK` flag but no Polkit services I examined use it, and none of the other helpers used here do either. That flag would break any legitimate session-less root callers though also.
 
 ### SELinux (un)confined
 
@@ -609,7 +609,7 @@ CapBnd: 000001ffffffffff
 
 Note: the /etc/fstab entry is persistent, but the loop device is not. Establish persistence through another technique.
 
-#### Mount as a Typed Directory-Write
+### Mount as Write
 
 A mount is a method to write directories you can't actually write. SELinux and DAC guard the contents of a directory - `bluetooth_t` can't create a file in `/etc/cron.hourly` because SELinux typing. But mounting doesn't write into the directory, it shadows it. Use one of the mount techniques that uses an attacker filesystem and overlay it on top of a config directory a root process reads, or overlay it on top of directory it executes binaries from or reads libraries from. The files that process now sees are yours with no `create`/`write` on the target type at all.
 
@@ -621,6 +621,7 @@ The fstab `context=` option sets the files to any label the consuming domain exp
 | `/etc/cron.hourly` | `run-parts` `readdir()`s the dir when the hourly job fires | yes |
 | `/etc/logrotate.d` | `logrotate` re-reads the drop-in dir every run | yes |
 | `/etc/sudoers.d` | `sudo` re-parses the drop-in dir on every invocation | yes |
+| `/run/systemd/system` | systemd reads config at service load time, unloaded service configs can be replaced | yes |
 
 `/etc/cron.d` is the interesting obvious thing to do with a write, but its inotify design complicates an overlay. Knowing which consumers `readdir()` and which cache is required.
 
@@ -721,7 +722,7 @@ You must select a service that is not loaded or else it already has its dependen
 Enumerate the D-Bus activated services, that are not currently loaded, that you have SELinux grants allowing you to reach. Script for enumerating reachable targets from a specific confined domain is available in the [Proofs of Concept](#proofs-of-concept):
 
 ```bash
-$ ./cold-activatable-pivots.sh bluetooth_t
+$ ./cold-activatable-services.sh bluetooth_t
 DBUS NAME                          UNIT                                       STATE  REACHABLE-BY-bluetooth_t
 ... trimmed unreachable
 fi.w1.wpa_supplicant1              wpa_supplicant.service                     COLD   yes(NetworkManager_t)
@@ -762,7 +763,7 @@ Warning: The unit file, source configuration file or drop-ins of linnemanlabs-po
      Active: inactive (dead)
 ```
 
-Interesting side note, that warning about daemon-reload does not impact us. It noticed a file has been updated since its last reload, the `passim` service we are adding ourselves as a dependency to has not been loaded and cached yet so no reload is required, the `passim` unit will get read fresh, the `wants` symlink will be seen, our service gets started. This is why we had to search for a service that has not yet been loaded a couple steps ago.
+Interesting side note, that warning about daemon-reload does not impact us. It noticed a file has been updated since its last reload. The `passim` service we are adding ourselves as a dependency to has not been loaded and cached yet so no reload is required, the `passim` unit will get read fresh, the `wants` symlink will be seen, our service gets started. This is why we had to search for a service that has not yet been loaded a couple steps ago.
 
 Service status is `linked`, now we need to enable it. Call `EnableUnitFiles`:
 
