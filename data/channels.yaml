@@ -24,6 +24,31 @@
 #   topics  (opt) curated published sub-topics under the tree branch (cap ~2-4)
 #   soon    (opt) upcoming-but-unpublished items, rendered dimmed with a ·soon marker
 
+- slug: vuln-research
+  name: "vulnerabilities / research"
+  label: "vuln / research"
+  category: "Vulnerability Research"
+  tree: true
+  topics:
+    - "selinux · systemd confinement"
+    - "sandbox escapes"
+    - "pi-hole 2 RCE, 3 LPE (root)"
+  soon:
+    - "fprintd bypass LPE (root)"
+    - "nm-l2tp LPE (root)"
+    - "bluez LPE (root)"
+    - "ceph cluster-wide data leak"
+    - "open-iscsi socket LPE (root)"
+
+- slug: kernel
+  name: "kernel / exploitation"
+  label: "kernel"
+  category: "Security Research"
+  tree: true
+  topics:
+    - "dirty frag · arm64"
+    - "apparmor profile hops"
+
 - slug: dbus
   name: "dbus / desktop"
   label: "dbus / desktop"
@@ -34,31 +59,6 @@
   soon:
     - "bluez agent hijacking"
     - "dbus purple-team analysis"
-
-- slug: kernel
-  name: "kernel / exploitation"
-  label: "kernel"
-  category: "Security Research"
-  tree: true
-  topics:
-    - "dirty frag · arm64"
-    - "apparmor profile hops"
-    - "selinux · systemd confinement"
-
-- slug: vuln-research
-  name: "vulnerabilities / research"
-  label: "vuln / research"
-  category: "Vulnerability Research"
-  tree: true
-  topics:
-    - "sandbox escapes"
-    - "pi-hole 2 RCE, 3 LPE (root)"
-  soon:
-    - "fprintd bypass LPE (root)"
-    - "nm-l2tp LPE (root)"
-    - "bluez LPE (root)"
-    - "ceph cluster-wide data leak"
-    - "open-iscsi socket LPE (root)"
 
 - slug: detection
   name: "detection / purple team"
