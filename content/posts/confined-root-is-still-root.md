@@ -17,11 +17,11 @@ This is part 2 of a series on SELinux and systemd confinement. Post 1 left bluet
 | [Confined Root Is Still Root](/posts/confined-root-is-still-root/) | Escaping SELinux and systemd confinement by borrowing authority from brokers and deputies |
 | Hardening and Detection (coming soon) | Closing the lanes, and catching what's left |
 
-Over the past several months I've found and reported a string of root-daemon vulnerabilities both remote and local and written working exploits for each. Every time, the exploit landed and SELinux was already there. Code execution as root, confined to a domain that could do almost nothing, exactly as intended. So while those bugs sit under embargo, I went after the next question: how contained is a compromised root daemon?
+Over the past several months I've found and reported a string of root-daemon vulnerabilities both remote and local and written working exploits for each. Every time, the exploit landed and SELinux was already there. Code execution as root, confined to a domain that could do almost nothing, exactly as intended. So while those bugs sat under embargo, I went after the next question: how contained is a compromised root daemon?
 
-What started as that question turned into several months of testing: mapping the reachable graph of gadgets across six stock installations, reproducing each chain end to end, building standalone PoCs for the techniques, and documenting a lot of it here.
+What started as that question turned into several months of testing: mapping the reachable graph of gadgets across five stock installations, reproducing each chain end to end, building standalone PoCs for the techniques, and documenting a lot of it here.
 
-The answer: not very contained. Across six stock Fedora, RHEL, openSUSE, and SLES installs, SELinux confined every UID-0 daemon I compromised - and stopped none of them from recruiting a more privileged part of the system to act on its behalf. Every UID-0 service domain for a daemon I wrote exploits for had at least one working route to unconfined, and these paths appear to extend to most UID-0 daemons.
+The answer: not very contained. Across five stock Fedora, RHEL (9 and 10), openSUSE, and SLES installs, SELinux confined every UID-0 daemon I compromised - and stopped none of them from recruiting a more privileged part of the system to act on its behalf. Every UID-0 service domain for a daemon I wrote exploits for had at least one working route to unconfined, and these paths appear to extend to most UID-0 daemons.
 
 A confined process cannot assign itself a better SELinux domain. It does not need to. It can ask a package manager to run a scriptlet, ask a storage service to replace another process's view of the filesystem, rewrite PID 1's unit-file state, poison the service environment, or recruit a launcher that performs a favorable type transition.
 
@@ -30,13 +30,13 @@ A confined process cannot assign itself a better SELinux domain. It does not nee
 | Class               | Technique                            | Result                                             | Availability                 |
 | ------------------- | ------------------------------------ | -------------------------------------------------- | ---------------------------- |
 | Execution deputy    | PackageKit `%post`                   | `rpm_script_t`, full-cap root                      | Fedora/RHEL/openSUSE         |
-| Execution deputy    | KDE KAuth helpers                    | arbitrary write/account creation/unconfined exec   | Plasma systems               |
-| Storage deputy      | Blivet                               | arbitrary mount options and destination            | Fedora with Blivet           |
+| Execution deputy    | KDE helpers                          | arbitrary write/account creation/unconfined exec   | KDE systems                  |
+| Storage deputy      | Blivet                               | arbitrary mount options + destination              | Fedora with Blivet           |
 | Storage deputy      | UDisks fstab overlay                 | typed mount -> consumer execution                  | Fedora/RHEL/openSUSE         |
-| PID 1 control plane | Unit-file mutation + cold activation | `unconfined_service_t`, full caps                  | all tested systems           |
+| PID 1 control plane | Unit-file mutation + cold activation | `unconfined_service_t`, full cap root              | all tested systems           |
 | PID 1 control plane | `SetEnvironment`                     | poisoned future service execution                  | all tested systems           |
 | Filesystem view     | sysext `/usr` overlay                | replace executable -> chosen transition            | systemd ≥255 where reachable |
-| Direct transition   | `startx`/`initrc_exec_t`             | `initrc_t` execution                               | systems with xinit           |
+| Direct transition   | `startx`/`initrc_exec_t`             | `initrc_t` execution                               | xinit installed startx labeled `initrc_exec_t` |
 | Boundary bypass     | UserDatabase                         | password hashes despite `shadow_t` denial          | Fedora+RHEL10                |
 | Boundary bypass     | Repart `CopyFiles`                   | arbitrary privileged file read                     | systemd 259 (Fedora)         |
 
@@ -121,7 +121,7 @@ When a confined daemon asks another daemon to do something privileged over D-Bus
 
 Three gates, and for a caller that is **uid 0**, they are frequently open:
 
-- **Gate 1 is open by attribute.** `allow nsswitch_domain dbusd_unconfined:dbus send_msg` - one rule hands every NSS-using domain (297 confined domains, nearly every daemon on the box) `send_msg` to the entire fleet of unconfined services. `bluetooth_t` inherits it for the unrelated reason that it does name lookups. This is the attribute trap from Post 1: the reach lives on an attribute, not on `bluetooth_t`.
+- **Gate 1 is open by attribute.** `allow nsswitch_domain dbusd_unconfined:dbus send_msg` - one rule hands every NSS-using domain `send_msg` to the entire fleet of unconfined services. That is 297 confined domains including nearly every daemon on the box. `bluetooth_t` inherits it for the unrelated reason that it does name lookups. This is the attribute trap from Post 1: the reach lives on an attribute, not on `bluetooth_t`.
 - **Gate 2 is open.** The fleet ships `<policy context="default"><allow send_destination=...>` in their own `.conf`, with a comment: "Allow anyone to call into the service - we'll reject callers using PolicyKit." The handful that restrict to `user="root"`, a uid-0 caller clears anyway.
 - **Gate 3 is self-passed.** polkit authorizes a uid-0 subject regardless of any rule, and for systemd's own services it is skipped entirely.
 
@@ -190,7 +190,7 @@ org.freedesktop.PackageKit /org/freedesktop/PackageKit \
 PackageKit creates a transaction and hands an ID back to us: `"/org/freedesktop/PackageKit/Transaction/247_deadbeef"`. We then call `InstallFiles` on that transaction and hand it a crafted rpm:
 
 ```
-org.freedesktop.PackageKit /247_deadbeef \
+org.freedesktop.PackageKit /org/freedesktop/PackageKit/Transaction/247_deadbeef \
     org.freedesktop.PackageKit.Transaction \
     InstallFiles tas 0 1 /dev/shm/linnemanlabs-poc.rpm
 ```
@@ -199,7 +199,7 @@ The privileged action for an unsigned attacker .rpm - `org.freedesktop.packageki
 
 ## 19 KDE entry points
 
-KDE ships a small army of privileged helpers through KAuth. A Plasma workstation has ~19, and from a confinement-escape standpoint many are very useful. Things to note:
+KDE ships a small army of privileged helpers, most of them through KAuth. A Plasma workstation has ~19, and from a confinement-escape standpoint many are very useful. Things to note:
 
 - Each is a `User=root` D-Bus system service on a plain `bin_t` binary (so: `unconfined_service_t` on activation)
 - Each exposes the same `org.kde.kf6auth.performAction` interface accepting an action-string argument
@@ -207,7 +207,7 @@ KDE ships a small army of privileged helpers through KAuth. A Plasma workstation
 
 Pick an action string, call `performAction`, and an unconfined root helper does the work with polkit as the only gate, which we self-pass as uid0. The action strings are self-documenting - they're the `<action id>` entries under `/usr/share/polkit-1/actions/`, so enumerating the surface is one grep.
 
-Since the writing domain is unconfined the target type is auto-applied. These all execute unconfined. Of the nineteen on my Fedora system, the most interesting are the handful that create accounts, write files, or run commands.
+These all execute unconfined, and because the writer is unconfined the files they create take the destination directory's type - e.g. `system_cron_spool_t` under `/etc/cron.d` - correctly typed with no extra work. Of these KDE helpers, the most interesting are the handful that create accounts, write files, or run commands.
 
 | helper (action) | method | what you get |
 |---|---|---|
@@ -219,7 +219,7 @@ Since the writing domain is unconfined the target type is auto-applied. These al
 
 One interesting note: `kio.admin` returns "Access denied" to `busctl introspect` because its `.conf` comments out `Introspectable` while still allowing the command interfaces to any sender. An introspection-based reachability scan misses it which is what happened to me at first.
 
-The [kauthclient code and full PoCs](#proofs-of-concept) for each of these helpers are in the table at the end.
+The [kauthclient code and full PoCs](#proofs-of-concept) for each of the KDE helpers are in the table at the end.
 
 ### fontinst
 
@@ -339,7 +339,7 @@ kpmcore's ExternalCommandHelper (`org.kde.kpmcore.helperinterface`) exposes inte
 
 Altering the underlying storage provides several escape routes. Two patterns:
 
-1. Change what a consumer sees by mounting a path on top of an existing one. Gain execution in the consumers domain by mounting over its binary. Overwrite a configuration file to influence what a consumer in a more privileged domain does. Overlay a systemd directory and drop a unit file. Easy example: mount `/etc/cron.hourly/` over the existing, wait for the next :00 hour mark -> your code runs as `system_cronjob_t` which is effectively unconfined root. `/etc/cron.d/` sounds like the natural choice, but it tracks the underlying `/etc/cron.d/` inode with `inotify` and it will not see your overlay unless restarted. `/etc/cron.hourly` is checked on exec by run-parts, which means our overlay does get used.
+1. Change what a consumer sees by mounting a path on top of an existing one. Gain execution in the consumers domain by mounting over its binary. Overwrite a configuration file to influence what a consumer in a more privileged domain does. Overlay a systemd directory and drop a unit file. Easy example: mount `/etc/cron.hourly/` over the existing, wait for the next hourly :01 minute (`0hourly` runs 1 minute into the hour) -> your code runs as `system_cronjob_t` which is effectively unconfined root. `/etc/cron.d/` sounds like the natural choice, but it tracks the underlying `/etc/cron.d/` inode with `inotify` and it will not see your overlay unless restarted. `/etc/cron.hourly` is checked on exec by run-parts, which means our overlay does get used.
 
 When able to pass in `context=` to the mount we also bypass SELinux typing issues. We may lack permissions to write `system_cron_spool_t` but by mounting over it with `context=system_cron_spool_t` we get a correctly typed file.
 
@@ -666,7 +666,7 @@ Five of the seven unit-file writer paths perform no SELinux authorization agains
 
 Three areas of impactful things we can do:
 
-- **Start a unit as root.** `EnableUnitFiles` doesn't start anything directly. It writes the `WantedBy=` symlink. But an enabled unit is started by PID 1 as part of the boot transaction or as a dependency, and that path has no D-Bus caller, so `mac_selinux_unit_access_check` never runs. Drop a `.service` (via any write primitive above - into `/etc/systemd/system`, which auto-types `systemd_unit_file_t`, or point systemd at one anywhere with `LinkUnitFiles`, then `EnableUnitFiles`. Boot-persistence code execution, entirely below the SELinux line.
+- **Start a unit as root.** `EnableUnitFiles` doesn't start anything directly. It writes the `WantedBy=` symlink. But an enabled unit is started by PID 1 as part of the boot transaction or as a dependency, and that path has no D-Bus caller, so `mac_selinux_unit_access_check` never runs. Drop a `.service` (via one of the write gadgets) - into `/etc/systemd/system`, which auto-types `systemd_unit_file_t`, or point systemd at one anywhere with `LinkUnitFiles`, then `EnableUnitFiles`. Persistent if you use a /etc/ variant.
 - **Disable defender services.** `MaskUnitFiles(["auditd.service","nftables.service"], runtime=false, force=true)` symlinks their `/etc/systemd/system` unit file to `/dev/null` persistently. auditd, the EDR, the firewall don't come back on the next start or reboot. No `start`/`stop` permission required - masking is a unit-file op.
 - **Strip added hardening.** `RevertUnitFiles` reverts a unit to its vendor version, discarding customized hardening an admin may have done: a systemd override that added `ProtectSystem=`, `CapabilityBoundingSet`, a seccomp filter.
 
@@ -674,7 +674,7 @@ I will start with the most interesting: a confined uid‑0 daemon with zero `ser
 
 ### Want. Link. Enable
 
-The first step is to write a systemd service file. This must be a type and path that `init_t` can read and that you can write. `bluetooth_t` and virtually every other root domain can write directly to `/run`. This is shown in more detail in the first post in the series measuring this. Briefly:
+The first step is to write a systemd service file. This must be a type and path that `init_t` can read and that you can write. `bluetooth_t` and many other root domains can write directly to `/run`. This is shown in more detail in the first post in the series measuring this. Briefly:
 
 ```bash
 $ ls -dZ /run
@@ -717,7 +717,9 @@ EOF
 
 `WantedBy=` is critical. You can not start your freshly-created unit (StartUnit is SELinux‑denied) but you can tell systemd that another service depends on you. And you can start a systemd service that is backing a D-Bus interface by sending a message to its D-Bus well-known name. So find a service that is not started, make it depend on you, start it.
 
-You must select a service that is not loaded or else it already has its dependencies cached and would require a `systemd daemon-reload` that we cannot trigger. The confinement/caps of the target service do not matter, our service is independent and runs with our systemd unit file with full caps and no hardening applied.
+You must select a service that is not loaded or else it already has its dependencies cached and would require a `systemd daemon-reload` that we cannot trigger.
+
+The confinement/caps of the target service do not matter here - we are creating an independent service that runs with its own systemd unit file with full caps and no hardening applied. Notable because many of the other techniques do ride on the target services caps/confinement.
 
 Enumerate the D-Bus activated services, that are not currently loaded, that you have SELinux grants allowing you to reach. Script for enumerating reachable targets from a specific confined domain is available in the [Proofs of Concept](#proofs-of-concept):
 
@@ -872,7 +874,9 @@ CapAmb: 0000000000000000
 
 #### Clean-up
 
-The persistent `.wants` symlink survives reboot, but our .service target we placed under /run is a tmpfs and does not. `systemctl disable <service>` will remove the dependency symlink and the linked unit file. A daemon-reload after will clear cache states.
+The persistent `.wants` symlink survives reboot, but our .service target we placed under /run is a tmpfs and does not so this is not persistent on its own. For the escape to survive a reboot, once you are unconfined write the `.service` to `/etc/systemd/system` instead of `/run` and `daemon-reload` and the enabled unit will start on every boot.
+
+`systemctl disable <service>` will remove the dependency symlink and the linked unit file. A daemon-reload after will clear cache states.
 
 ### Env Poisoning
 
@@ -901,7 +905,7 @@ If you can exec from a daemon in those domains it can chain into this. I recentl
 
 `logrotate` is a notable member. It turns an `etc_t` file write grant into root code exec as `logrotate_t`. Now, chain that confined code-exec into systemd environment poisoning -> unconfined exec.
 
-The priority order for overriding these environment variables is manager-global (this poison) -> unit Environment= -> systemd runtime vars. So our variables can be overridden by a later unit file that does `UnsetEnvironment=` or overrides one of our exact variables.
+Environment variables under systemd can come from many sources. The rough priority order goes manager-global (this poison) -> unit Environment= -> systemd runtime vars. Our environment poisoning here sits at the bottom of the stack. Meaning a unit could override our variables by setting the same variable in `Environment=` or `UnsetEnvironment=`, etc. 
 
 There are a large number of techniques to turn environment control into code exec. The three classes I developed PoC's for here:
 
@@ -909,7 +913,7 @@ There are a large number of techniques to turn environment control into code exe
 - `Interpreter class` - `PYTHONPATH` + a sitecustomize.py, `BASH_ENV` (shell wrappers), `NODE_OPTIONS`=--require, `JAVA_TOOL_OPTIONS`=-javaagent.
 - `PATH` - our path gets passed in directly. Place a binary of the same name as any that will get executed.
 
-The LD_* class works because init_t carries `noatsecure` to its children (root services only). The interpreter class doesn't rely on `AT_SECURE` and generally checks for euid != uid which passes for a root service.
+The LD_* class works because init_t carries the `noatsecure` permission, so the kernel does not set `AT_SECURE` like it normally would when changing contexts, which means the environment sanitization is not applied. The interpreter class doesn't rely on `AT_SECURE` and generally checks for euid != uid which passes for a root service.
 
 ```bash
 $ sesearch -A -s init_t -c process -p noatsecure
@@ -918,7 +922,7 @@ allow init_t domain:process { getattr getpgid noatsecure rlimitinh setrlimit set
 
 #### Step-By-Step
 
-I will walk through this from the `logrotate_t` domain. Gaining execution via logrotate is covered in another section. From the logrotate_t domain, I will use the `PYTHONPATH` route but PoCs for each are on my GitHub. First, create a python script:
+I will walk through this from the `logrotate_t` domain. Gaining execution via logrotate is covered in another section. From the logrotate_t domain, I will use the `PYTHONPATH` route but the PoC on my GitHub uses the more portable LD_AUDIT approach. First, create a python script:
 
 ```bash
 $ id -Z
@@ -950,14 +954,14 @@ $ systemctl show-environment | grep PYTHONPATH
 PYTHONPATH=/var/lib/logrotate
 ```
 
-Start/Re-Start a service backed by a python script, it runs with PYTHONPATH, checks for $PYTHONPATH/sitecustomize.py, runs our python script. Enumerate them on your box or use a different technique like LD_AUDIT or PATH. I am using `tuned` here:
+Start/Re-Start a service backed by a python script, it runs with PYTHONPATH, checks for $PYTHONPATH/sitecustomize.py, runs our python script. Enumerate them on your box or use a different technique like LD_AUDIT or PATH. I am using `blivet` here:
 
 ```bash
 $ id -Z
 system_u:system_r:logrotate_t:s0
 
 $ busctl call org.freedesktop.systemd1 /org/freedesktop/systemd1 \
-    org.freedesktop.systemd1.Manager RestartUnit ss tuned.service replace
+    org.freedesktop.systemd1.Manager RestartUnit ss blivet.service replace
 o "/org/freedesktop/systemd1/job/1131748"
 ```
 
@@ -968,8 +972,7 @@ $ cat /tmp/env.py.status
 poisoned-env py ran
 
 uid=0(root) gid=0(root) groups=0(root) context=system_u:system_r:unconfined_service_t:s0
-
-Name:   tuned
+Name:   blivetd
 ...
 CapEff: 000001ffffffffff
 CapBnd: 000001ffffffffff
@@ -1028,17 +1031,17 @@ $ busctl call org.freedesktop.systemd1 /org/freedesktop/systemd1 org.freedesktop
 
 #### Prior Art
 
-I found a post from Jann Horn all the way back in a 2018 [AppArmor report](https://bugs.launchpad.net/ubuntu/+source/apparmor/+bug/1788929) where he clearly recognized the impact of SetEnvironment from an attacker perspective. My contribution is the SELinux/system-manager reachability analysis and application to escaping those domains.
+I found a post from Jann Horn all the way back in a 2018 [AppArmor report](https://bugs.launchpad.net/ubuntu/+source/apparmor/+bug/1788929) where he clearly recognized the impact of SetEnvironment from an attacker perspective. It does not look like the technique ever got applied more broadly. My contribution is the SELinux/system-manager reachability analysis and application to escaping those domains.
 
 ### /proc/1/root
 
 systemd's filesystem hardening (`PrivateTmp=`, `ProtectSystem=`, `ProtectHome=`, `PrivateDevices=`) all work the same way: they put the service in a private mount namespace with a different view of the filesystem. A private /tmp, a read-only /usr, an empty /home. PID 1 is not in that namespace. It sits in the host's, with the real mounts.
 
-`/proc/1/root` is a `magic link` symlink to PID 1's root directory. Follow it and you're looking at the real filesystem - the real /tmp, the writable /etc, the real /var, outside of your own sandbox. `ProtectSystem=strict` only made your `/etc` read-only, `/proc/1/root/etc` is not.
+`/proc/1/root` is a `magic link` symlink to PID 1's root directory. Follow it and you're looking at the real filesystem - the real /tmp, the writable /etc, the real /var, outside of your own sandbox. `ProtectSystem=` only made your `/etc` read-only, `/proc/1/root/etc` is not.
 
 The important limit is that this bypasses the namespace, not the label. SELinux still type-checks everything you reach through the link against your own domain. `/proc/1/root/etc/shadow` still needs shadow_t:file read, and `bluetooth_t` still doesn't have it. It defeats systemd's mount-based sandbox, not SELinux type enforcement. Which is why it's an enabling technique rather than an escape on its own.
 
-To reach it you need two things: `CAP_SYS_PTRACE` (uid 0 alone isn't enough - PID 1 isn't ptrace-accessible without it, and the SELinux read check. Following the magic link is `PTRACE_MODE_READ`, so SELinux checks `<domain> init_t:file read` - not `init_t:process ptrace`. That process-class check only fires for attach-mode operations (`/proc/pid/mem`, `process_vm_writev`), which stay denied. 229 confined domains hold the file:read half, against ~297 for the fleet. Still a very large set. This is one of the few techniques `bluetooth_t`, my running example, cannot use - it doesn't have `CAP_SYS_PTRACE` or the read grant.
+To reach it you need two things: `CAP_SYS_PTRACE` (uid 0 alone isn't enough - PID 1 is non-dumpable), and the SELinux read check. Following the magic link (to read or write) is `PTRACE_MODE_READ`, so SELinux checks `<domain> init_t:file read` - not `init_t:process ptrace`. That process-class check only fires for attach-mode operations (`/proc/pid/mem`, `process_vm_writev`), which stay denied. 229 confined domains hold the file:read half, against ~297 for the fleet. Still a very large set. This is one of the few techniques `bluetooth_t`, my running example, cannot use - it doesn't have `CAP_SYS_PTRACE` or the read grant.
 
 A domain that can reach it gets the real filesystem to stage into or read from, past its own sandbox: deliver a payload to the real /tmp for an unconfined consumer to pick up without PrivateTmp hiding it, or to /var without ProtectSystem making it read-only, or drop a result somewhere you can actually retrieve it like in the environment-poisoning proof earlier. The limit is the normal filesystem labels.
 
@@ -1048,7 +1051,7 @@ A large number of daemons retain CAP_SYS_PTRACE while setting various protection
 
 #### Prior Art
 
-`/proc/<pid>/root` is a longstanding Linux magic link that resolves paths through the target process's filesystem view, including its mount namespace. If the confined service remains in the host PID namespace, PID 1 provides a particularly useful view outside the service's private mount namespace. This technique has been applied to at least container escapes.
+`/proc/<pid>/root` is a longstanding Linux magic link that resolves paths through the target process's filesystem view, including its mount namespace. If the confined service remains in the host PID namespace, PID 1 provides a particularly useful view outside the service's private mount namespace. This technique has been applied to at least container escapes. Including it here so it isn't left unexplained while I use it in several escapes.
 
 ## Varlink
 
@@ -1101,13 +1104,13 @@ Looking at the `init_var_run_t` sockets, the grants come from attributes that al
 
 ### sysext Overlay
 
-sysext is designed for image-based/immutable OSes that ship with `/usr` read-only to let you overlay removable, versioned images after boot. The varlink socket was introduced in systemd >= 255, which all of my tests systems run except RHEL9 which uses 252.
+sysext is designed for image-based/immutable OSes that ship with `/usr` read-only to let you overlay removable, versioned images after boot. The varlink socket was introduced in systemd >= 255, which all of my test systems run except RHEL9 which uses 252.
 
-The varlink socket at `/run/systemd/io.systemd.sysext` for managing these overlays provides a `Merge` method that will overlay anything in `/usr` or `/opt` or their subdirectories. The overlay is mounted `ro,nodev` but not `nosuid` and preserves the original files SELinux label and permissions we control.
+The varlink socket at `/run/systemd/io.systemd.sysext` for managing these overlays provides a `Merge` method that will overlay anything in `/usr` or `/opt` or their subdirectories. The overlay is mounted `ro,nodev` but not `nosuid`, and the merged files have the SELinux label and permissions we baked into the image, which is ideal.
 
 Overlay an existing binary, give it a favorable label for transition, the next time the system attempts to execute the binary at that path it will be our attacker-supplied binary instead.
 
-Or overwrite /usr/systemd/ and modify unit files, or overwrite polkit or d-bus policies, or drop an SUID binary. On merged-usr systems /bin is a symlink to /usr/bin, so /bin is covered too. Too many options to list.
+Or overwrite /usr/lib/systemd/ and modify unit files, or overwrite polkit or d-bus policies, or drop an SUID binary. On merged-usr systems /bin is a symlink to /usr/bin, so /bin is covered too. Too many options to list.
 
 #### Setup
 
@@ -1126,7 +1129,7 @@ At a high level the process is:
 - call Varlink to Merge, which overlays our image on top of /usr
 - call inactive D-Bus service that runs the binary we overlaid in /usr
 
-For this example, I will be overlaying /usr to place a crafted binary that backs a systemd service that is D-Bus activated. When we call that D-Bus service, our binary executes in the desired domain. I will use `realmd` in this example since it is portable across the RHEL/Fedora family. When choosing a daemon the normal SELinux domain does not matter since you are labeling the binary yourself and `init_t` transitions to it, but you will want to choose a service that runs with minimal systemd confinement as that is still applied to your process. `sudo busctl --system -l --activatable` will enumerate many options for you.
+For this example, I will be overlaying /usr to place a crafted binary that backs a systemd service that is D-Bus activated. When we call that D-Bus service, our binary executes in the desired domain. I will use `realmd` in this example since it is portable across the RHEL/Fedora family. When choosing a daemon the normal SELinux domain does not matter since you are labeling the binary yourself and `init_t` transitions to it.  Unlike the ["want. link. enable."](#want-link-enable) technique where we add a new service, we are only replacing the binary of an existing service here, so you will want to choose a service that runs with minimal systemd confinement as that is still applied to your process. `sudo busctl --system -l --activatable` will enumerate many options for you, read through their unit files and get familiar with which run the least confined.
 
 By also overlaying the services systemd unit file this allows us to remove any systemd restrictions normally on that service. We can remove `ProtectSystem`, `CapabilityBoundingSet`, `PrivateTmp`, etc to get our binary with our SELinux label ran with no systemd sandboxing.
 
@@ -1204,6 +1207,8 @@ $ grep -E "^Cap(Eff|Bnd)" /tmp/sysext.status
 CapEff: 000001f3f5fcffff
 CapBnd: 000001f3f5fcffff
 ```
+
+`000001f3f5fcffff` is not quite full caps - it is `realmd`'s own `CapabilityBoundingSet` (drops `SYS_MODULE`, `SYS_RAWIO`, `SYS_TIME`, `MKNOD`, `SYSLOG`, `WAKE_ALARM`). Same as earlier, escaping the SELinux domain does not escape the systemd sandbox of the unit. If you want one of these caps (or to get out of the other realmd systemd hardening), from the unconfined_service_t domain you can use many techniques for the last hop.
 
 You could pick any other service, or any other file under `/usr` or `/opt`. There are too many techniques to list. This approach is just a simple example.
 
@@ -1351,9 +1356,11 @@ $ bash repart-read.sh /etc/shadow /var/lib/bluetooth/new
 
 ## startx
 
-On a system with xorg-x11-xinit installed `startx` is a clean example of the direct exec transition lane.
+On a system with xorg-x11-xinit installed and the SELinux policy labels `/usr/bin/startx` `initrc_exec_t` it's a clean example of the direct exec transition lane.
 
-`/usr/bin/startx` is a shellscript labeled `initrc_exec_t` and it executes an X server that you can choose through $XSERVERRC (or $HOME/.xserverrc, or the -- &lt;server&gt; arg). By pointing that to our own script startx transitions through `initrc_exec_t` ->  `initrc_t` -> runs our script as unconfined root. startx times out trying to connect to the display but our script executes first. No monitor actually required, just need startx installed.
+`/usr/bin/startx` is a shellscript labeled `initrc_exec_t` that executes an X server that you can choose with the `--<server>` arg (or $HOME/.xserverrc, or $XSERVERRC env var). By pointing that at our own script startx transitions through `initrc_exec_t` ->  `initrc_t` -> runs our target binary from initrc_t which is highly privileged. startx times out trying to connect to the display but our script executes first, so no physical monitor is required for this to work.
+
+That label is distro and version-dependent: Fedora 44 and openSUSE Leap/SLES 16 label `/usr/bin/startx` `initrc_exec_t`, but RHEL 9's policy still points its fcontext rule at the old `/usr/sbin/startx` path, so the binary there is `bin_t` and the transition never fires.
 
 I will use `logrotate` for the example as it is one of the few domains that is eligible and also a domain I frequently find myself landing in (file write -> exec shown earlier). `logrotate_t` carries a transition from initrc_exec_t to initrc_t:
 
@@ -1398,7 +1405,7 @@ cat | sudo tee /etc/logrotate.d/x <<'EOF'
     copytruncate
     nodateext
     postrotate
-        HOME=/var/lib/logrotate XSERVERRC=/var/lib/logrotate/x /usr/bin/startx -- /var/lib/logrotate/x >/dev/null 2>&1 || true
+        HOME=/var/lib/logrotate /usr/bin/startx -- /var/lib/logrotate/x >/dev/null 2>&1 || true
     endscript
 }
 EOF
@@ -1419,7 +1426,9 @@ CapEff: 000001f3f5fcffff
 CapBnd: 000001f3f5fcffff
 ```
 
-`initrc_t` is a very privileged domain and has `setenforce`, `load_policy`, `setbool` grants. Write a systemd unit file and start a new service with full caps and no confinement. logrotate runs with `ProtectSystem=full` but retains CAP_SYS_PTRACE, so just write through /proc/1/root/etc/systemd or write it to /run and start it.
+You are still affected by the systemd hardening applied to the unit your original process started under - so mount namespaces, `CapabilityBoundingSet`, etc still apply. Here it is `logrotate`'s (`000001f3f5fcffff`) which drops `SYS_MODULE`, `SYS_RAWIO`, `SYS_TIME`, `MKNOD`, `SYSLOG`, `WAKE_ALARM`.
+
+If you wanted one of those missing caps, `initrc_t` is a very privileged domain and has `setenforce`, `load_policy`, `setbool` grants. Write a systemd unit file and start a new service with full caps and no confinement. logrotate runs with `ProtectSystem=full` but retains CAP_SYS_PTRACE, so just write through /proc/1/root/etc/systemd or write it to /run and start it.
 
 ## Proofs of Concept
 
@@ -1431,14 +1440,14 @@ For each individual technique used above.
 | [KAuth helpers](#19-kde-entry-points) | [kauthclient](https://github.com/linnemanlabs/advisories/blob/main/poc/selinux/confined-root-is-still-root/kauthclient/) | Same fleet on systems with KAuth (KDE) |
 | [kpmcore](#kpmcore) | [kpmcore.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/selinux/confined-root-is-still-root/kpmcore.sh) | Same fleet, on systems with kpmcore (KDE) |
 | [kio.admin](#kioadmin) | [kioadmin.py](https://github.com/linnemanlabs/advisories/blob/main/poc/selinux/confined-root-is-still-root/kioadmin.py) | Same fleet, on systems with kio-admin (KDE) |
-| [Blivet mount](#blivet) | [blivet-mount.py](https://github.com/linnemanlabs/advisories/blob/main/poc/selinux/confined-root-is-still-root/blivet-mount.py) | Same fleet |
+| [Blivet mount](#blivet) | [blivet-mount.py](https://github.com/linnemanlabs/advisories/blob/main/poc/selinux/confined-root-is-still-root/blivet-mount.py) | Same fleet, (Fedora only) |
 | [UDisks overlay](#udisks2) | [udisks-overlay.py](https://github.com/linnemanlabs/advisories/blob/main/poc/selinux/confined-root-is-still-root/udisks-overlay.py) | Same fleet on systems with UDisks2 |
-| [systemd activation pull](#want-link-enable) | [activation-pull.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/selinux/confined-root-is-still-root/activation-pull.sh) | Same fleet, needs eligible pivot service |
+| [systemd activation pull](#want-link-enable) | [activation-pull.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/selinux/confined-root-is-still-root/activation-pull.sh) | Domains reaching PID 1 over D-Bus (`init_t:dbus`, 342 on my FC44 system) + an eligible cold service |
 | [environment poisoning](#env-poisoning) | [env-poison.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/selinux/confined-root-is-still-root/env-poison.sh) | Domains with `system:reload` (31) |
 | [sysext overlay](#sysext-overlay) | [sysext](https://github.com/linnemanlabs/advisories/blob/main/poc/selinux/confined-root-is-still-root/sysext/) | uid-0 that can create the search dir (206) |
 | [UserDatabase](#userdatabase) | [varlink-userdatabase.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/selinux/confined-root-is-still-root/varlink-userdatabase.sh) | Any uid-0 daemon reaching the userdb varlink (612) |
 | [Repart](#repart) | [repart-read.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/selinux/confined-root-is-still-root/repart-read.sh) | Any uid-0 daemon reaching the Repart varlink (586) |
-| [startx](#startx) | [startx.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/selinux/confined-root-is-still-root/startx.sh) | `logrotate_t`, `NetworkManager_t` (+ startx installed) |
+| [startx](#startx) | [startx.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/selinux/confined-root-is-still-root/startx.sh) | `logrotate_t`, `NetworkManager_t` (where startx is `initrc_exec_t`) |
 
 Tools to support the above PoCs.
 
@@ -1448,23 +1457,22 @@ Tools to support the above PoCs.
 
 ## Tested Versions
 
-I tested against Fedora 44 Plasma, RHEL 9 Workstation, RHEL 10 Workstation, RHEL10 Server, SUSE SLES16, openSUSE Leap 16 KDE.
+I tested against Fedora 44 Plasma, RHEL10 Server, RHEL 9 Server, SUSE SLES16, openSUSE Leap 16 KDE.
 
 | OS | systemd | selinux-policy | libselinux | Window Manager |
 |---|---|---|---|---|
-| Fedora 44 Plasma          | 259 | 44.4-1.fc44               | 3.10 | KDE Plasma 6.7.3 |
-| RHEL 10.2 (Workstation)   | 257 | 42.1.18-4.el10_2.1        | 3.10 | GNOME Shell 49.4 |
-| RHEL 10.2 (Server)        | 257 | 42.1.18-4.el10_2.1        | 3.10 | - |
-| RHEL 9.8 (Workstation)    | 252 | 38.1.75-2.el9_8           | 3.6  | GNOME Shell 40.10 |
-| SUSE SLES 16              | 257 | 20250627+git385.2b2068bc0 | 3.81 | - |
-| openSUSE LEAP 16          | 257 | 20250627+git385.2b2068bc0 | 3.81 | KDE Plasma 6.4.2 |
+| Fedora 44 Plasma (Workstation) | 259 | 44.4-1.fc44               | 3.10  | KDE Plasma 6.7.3 |
+| RHEL 10.2 (Server)             | 257 | 42.1.18-4.el10_2.1        | 3.10  | - |
+| RHEL 9.8 (Server)              | 252 | 38.1.75-2.el9_8           | 3.6   | - |
+| SUSE SLES 16 (Server)          | 257 | 20250627+git385.2b2068bc0 | 3.8.1 | - |
+| openSUSE LEAP 16 (Workstation) | 257 | 20250627+git385.2b2068bc0 | 3.8.1 | KDE Plasma 6.4.2 |
 
 The majority of my in-depth research was done on Fedora 44. I then tested to re-create everything on each OS in the table above to confirm portability, which is what is documented.
 
-| Technique | Fed 44 | RHEL 10 | RHEL 9 | Leap 16 | SLES 16 |
+| Technique | Fed 44 WS | RHEL 10 Server | RHEL 9 Server | Leap 16 WS | SLES 16 Server |
 | --- | --- | --- | --- | --- | --- |
-| PackageKit `%post` -> `rpm_t` | x | x | x | x | |
-| KAuth (KDE helpers) | x | | | x | |
+| PackageKit `%post` -> `rpm_t` | x | x | x | blocked | |
+| KDE helpers | x | | | x | |
 | Blivet | x | | | | |
 | UDisks2 (loop-mount / fstab write) | x | x | x | x | |
 | Unit-file writers + activation-pull | x | x | x | x | x |
@@ -1472,18 +1480,25 @@ The majority of my in-depth research was done on Fedora 44. I then tested to re-
 | sysext `/usr` overlay | x | x | | x | x |
 | Repart (arbitrary read) | x | | | | |
 | UserDatabase hash-read | x | x | | disable | disable |
-| startx -> `initrc_t` | x | | x |  | |
-| `/proc/1/root` sandbox bypass | x | x | | x | x |
+| startx -> `initrc_t` | x | | | x | |
 
-All the empty cells are because the component is not installed or the systemd version is too old. 
+An empty cell means the technique does not apply on that system, mostly for one of two simple reasons: the component isn't installed or the systemd version is too old.
 
-UserDatabase on SUSE is the interesting exception that is an intentional hardening. Fedora/RHEL use systemd's default preset but SUSE ships their own presets with a default `disable *` and they opt-in to interfaces they want, and they did not choose to opt-in to UserDatabase. 
+`UserDatabase` on SUSE is interesting that is an intentional hardening. Fedora/RHEL use systemd's default preset but SUSE intentionally does not use the systemd `90-systemd.preset` and ships their own presets where they opt-in to interfaces they want, and they did not choose to opt-in to UserDatabase.
+
+Another interesting SUSE exception, `PackageKit` is present on openSUSE Leap and the package-install-untrusted polkit action self-passes. But the zypp backend enforces package signatures and does not allow the unsigned rpm to be installed. SLES doesn't even ship PackageKit in the base server install. The whole SUSE family is not vulnerable to this one.
+
+Another SUSE note, UDisks2 is not installed by default on SLES. It is pulled into openSUSE Leap by the KDE packages. On the RHEL servers, cockpit gets installed by default, which pulls in UDisks2 and PackageKit.
+
+The last exception is RHEL9 where `startx` is not installed as you would expect, but even if it was (a server-gui install or workstation) the policy still labels the binary `bin_t` (its fcontext rule targets the old `/usr/sbin/startx` path but the binary moved to `/usr/bin/startx`), so the `initrc_exec_t` transition never happens.
+
+Shout-out to SUSE doing some nice work with SLES.
 
 ## Prior Art
 
-I researched and developed these chains independently. Many ingredients are established behavior, and related work exists for systemd environment poisoning, using privileged D-Bus helpers, and attacker-controlled mounts in general.
+I found and tested each of these techniques independently. I cited prior related work in relevant sections. The most notable is Jann Horn's 2018 note on SetEnvironment. I found no prior public work on the specific interfaces, methods, and confined-root escape chains documented here.
 
-For most of the exact SELinux/systemd confined-root chains described here, I found no prior public documentation. Related work is cited with the relevant sections. Reach out if I should add anyone.
+Reach out if I should add anyone.
 
 ---
 
@@ -1493,7 +1508,7 @@ These techniques are all basically a collection of gadgets. A domain, a helper, 
 
 I am not trying to demonstrate every possible chain here but show how to measure a foothold. A uid-0 daemon's blast radius isn't its own SELinux grants and systemd confinement, it's the authority it can reach: every deputy, launcher, mount service, and consumer one D-Bus call away. bluetooth_t on paper is a very tightly confined daemon. bluetooth_t plus the unconfined helpers it can message is unconfined root.
 
-Most of the components in these chains are individually working as intentionally designed. Some of the auth gaps might be bugs, but the overall escape concept doesn't require any one component to be broken. polkit approves uid 0 because root is an administrator. systemd runs your unit as init_t because that's its entire job. The overall concept doesn't rely on any single component being broken. The danger lives in the seam between such a complex interaction of systems and permission models that are each individually correct but compose into these chains.
+Most of the components in these chains are individually working as intentionally designed. Some of the auth gaps might be bugs, but the overall escape concept doesn't require any one component to be broken. polkit approves uid 0 because root is an administrator. systemd runs your unit as init_t because that's its entire job. The danger lives in the seam between such a complex interaction of systems and permission models that are each individually correct but compose into these chains.
 
 SELinux confines the daemon's direct actions, polkit authorizes the operation, the deputy performs it - and no one owns the composition. Which is the whole point of the post. A confined root daemon's containment is real for what it does directly, and largely illusory for what it can reach. Confined root is still root.
 
