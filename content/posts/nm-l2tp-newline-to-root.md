@@ -928,12 +928,12 @@ One of the quickest to reply and most engaged maintainers I have worked with - t
 
 PoCs are up on the [LinnemanLabs Advisories GitHub](https://github.com/linnemanlabs/advisories/).
 
-| Purpose | PoC |
+| PoC | Purpose |
 |-|-|
-| add profile, connect, exploit   | [nm-l2tp-inject.py](https://github.com/linnemanlabs/advisories/blob/main/poc/nm-l2tp/nm-l2tp-inject.py) |
-| Go IKE responder (needed for strongswan) | [nm-l2tp-responder](https://github.com/linnemanlabs/advisories/blob/main/poc/nm-l2tp/nm-l2tp-responder.go) |
+| [nm-l2tp-inject.py](https://github.com/linnemanlabs/advisories/blob/main/poc/nm-l2tp/nm-l2tp-inject.py) | add profile, connect, exploit |
+| [nm-l2tp-responder.go](https://github.com/linnemanlabs/advisories/blob/main/poc/nm-l2tp/nm-l2tp-responder.go) | Go IKE responder (needed for strongswan) |
 
-I am using 127.0.0.2 in the PoC because 127.0.0.0/8 is entirely loopback - the kernel routes any 127.x to lo. pluto's conn is `left=127.0.0.1 right=127.0.0.2` and since `right=` is not a locally bound address it gets treated as a remote peer. Another benefit is there is no external traffic to be detected by upstream network monitoring.
+I am using 127.0.0.2 in the PoC because 127.0.0.0/8 is entirely loopback - the kernel routes any 127.x to lo. The vpn conn is `left=127.0.0.1 right=127.0.0.2` and since `right=` is not a locally bound address it gets treated as a remote peer. Another benefit is there is no external traffic to be detected by upstream network monitoring.
 
 ### Clean-up
 
