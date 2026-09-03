@@ -33,9 +33,9 @@
     - "selinux · systemd confinement"
     - "sandbox escapes"
     - "pi-hole 2 RCE, 3 LPE (root)"
+    - "nm-l2tp LPE (root)"
   soon:
     - "fprintd bypass LPE (root)"
-    - "nm-l2tp LPE (root)"
     - "bluez LPE (root)"
     - "ceph cluster-wide data leak"
     - "open-iscsi socket LPE (root)"
