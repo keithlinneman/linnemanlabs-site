@@ -1164,7 +1164,8 @@ PoCs are up on the [LinnemanLabs Advisories GitHub](https://github.com/linnemanl
 |-|-|
 | [nm-l2tp-poc.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/nm-l2tp/nm-l2tp-poc.sh) | self-contained, portable exploit |
 | [nm-l2tp-inject.py](https://github.com/linnemanlabs/advisories/blob/main/poc/nm-l2tp/nm-l2tp-inject.py) | add profile, connect, exploit |
-| [nm-l2tp-responder.go](https://github.com/linnemanlabs/advisories/blob/main/poc/nm-l2tp/nm-l2tp-responder.go) | Go IKE responder (needed for strongswan) |
+| [nm-l2tp-responder.py](https://github.com/linnemanlabs/advisories/blob/main/poc/nm-l2tp/nm-l2tp-responder.py) | Python IKE responder (needed for strongswan/older libreswan) |
+| [nm-l2tp-responder.go](https://github.com/linnemanlabs/advisories/blob/main/poc/nm-l2tp/nm-l2tp-responder.go) | Go IKE responder (needed for strongswan/older libreswan) |
 
 ### End-to-End
 
