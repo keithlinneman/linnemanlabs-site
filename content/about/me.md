@@ -159,9 +159,11 @@ I run LinnemanLabs as a working lab for security research and infrastructure eng
 
 The recent focus has been a several months-long audit of many Linux userspace daemons and libraries. This resulted in 15 CVEs issued so far across 9 separate projects with more disclosures ongoing. I [write and share exploits](https://github.com/linnemanlabs/advisories) for many as they come out of embargo. I went on to research [escaping SELinux confinement](/posts/confined-root-is-still-root) and documented 10+ methods from a compromised root daemon across the major distros.
 
-Before this vulnerability research I was running a purple-team loop in the lab - building offensive tooling, exercising it against my own systems, writing the detection rules to catch it, then modifying my tooling to evade detection. I'm researching how production infrastructure (especially observability pipelines) can be subverted from within, and I'm building systems where security properties are cryptographically provable rather than assumed: a self-hosted Sigstore stack with hardware-rooted trust, dual-signing through keyless OIDC and KMS, and deploy-time verification. Integrating secure-boot, TPM, and IMA are areas I plan to explore next, with the end goal being cryptographic trust from silicon to running application.
+Before this vulnerability research I was running a purple-team loop in the lab - building offensive tooling, exercising it against my own systems, writing the detection rules to catch it, then modifying my tooling to evade detection. I'm researching how production infrastructure (especially observability pipelines) can be subverted from within. 
 
-Detection-coverage tooling that tests new techniques I develop and verifies "did we catch it?" as a continuous property across every SIEM and log backend, and deception environments realistic enough that malware behaves naturally rather than recognizing the lab are two areas I plan to push into next.
+I'm building systems where security properties are cryptographically provable: a self-hosted Sigstore stack with hardware-rooted trust, dual-signing through keyless OIDC and KMS, deploy-time verification, and SPIFFE/SPIRE. Integrating secure-boot, TPM, and IMA are areas I plan to explore next, with the end goal being cryptographic trust from silicon to running application.
+
+Detection-coverage tooling that tests new techniques I develop and verifies "did we catch it?" as a continuous property across every SIEM and log backend is an area I plan to push into soon.
 
 ---
 
@@ -179,7 +181,7 @@ Selected CVEs:
 
 | CVE              | Project             | Finding / impact                          | Links                     |
 | ---------------- | ------------------- | ----------------------------------------- | ------------------------- |
-| `CVE-2026-19624` | NetworkManager-l2tp | Newline injection -> root LPE             | [CVE](#) |
+| `CVE-2026-19624` | NetworkManager-l2tp | Newline injection -> root LPE             | [CVE](https://www.cve.org/CVERecord?id=CVE-2026-19624) |
 | `CVE-2026-44943` | open-iscsi          | Remote arbitrary file write as root       | [CVE](https://www.cve.org/CVERecord?id=CVE-2026-44943) |
 | `CVE-2026-44944` | open-iscsi          | Local control-socket authorization bypass | [CVE](https://www.cve.org/CVERecord?id=CVE-2026-44944) |
 | `CVE-2026-18724` | open-iscsi          | Stack buffer overflow                     | [CVE](https://access.redhat.com/security/cve/cve-2026-18724) |
@@ -187,19 +189,19 @@ Selected CVEs:
 | `CVE-2026-55995` | open-isns           | Double-free, DoS                          | [CVE](https://access.redhat.com/security/cve/cve-2026-55995) |
 | `CVE-2026-84267` | gvfs                | Heap disclosure / ASLR defeat             | [CVE](https://access.redhat.com/security/cve/cve-2026-84267) |
 | `CVE-2026-84268` | gvfs                | SFTP heap buffer overflow                 | [CVE](https://access.redhat.com/security/cve/cve-2026-84268) |
-| `CVE-2026-74861` | fprintd             | System authentication bypass              | [CVE](#) |
+| `CVE-2026-74861` | fprintd             | System authentication bypass, LPE         | [CVE](#) |
 
 ## How I work
 
 I trust what I can explain. If I can't reason about how something works, I won't trust it in production.
 
-First principles over cargo culting. I understand the primitives end to end before I abstract or automate.
+I understand the system end to end before I abstract or automate.
 
-I'd rather understand one system completely than be passingly familiar with ten. Full-stack ownership means knowing how the system behaves from protocol to code to infrastructure to operations - not just the layer I'm responsible for on the org chart.
+I'd rather understand one system completely than be passingly familiar with ten. Full-stack ownership means knowing how the system behaves from protocol to code to infrastructure to operations.
 
 I prefer small, composable systems over big frameworks. When I learn a better model, I refactor and simplify rather than layering on complexity. I'd rather own fewer things well than accumulate technical debt across many.
 
-I weave security through every component of systems I build rather than tack on a layer at the end. That means building guardrails into CI/CD, treating operability (telemetry, rollback, recovery) as a primary feature, and designing systems where the easy thing and the secure thing are the same thing.
+I weave security through every component of systems I build rather than tack on a layer at the end.
 
 These principles don't change with the artifact. Provenance, integrity, and verification matter whether what you're shipping is application code, a container image, an infrastructure definition, a configuration, a log event, an ML model, or firmware.
 
