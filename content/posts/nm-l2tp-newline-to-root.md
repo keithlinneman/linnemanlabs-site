@@ -1,13 +1,13 @@
 ---
-title: "A Newline to Root: CVE-2026-19624"
+title: "NetworkManager-l2tp: A Newline to Root"
 summary: "An unprivileged D-Bus call writes a root-parsed VPN config value. One newline, root code execution, confinement escape."
 date: '2026-09-02T00:00:00Z'
-subtitle: "Unconfined root from NetworkManager-l2tp via ipsec.conf injection"
+subtitle: "Unconfined root via ipsec.conf injection"
 tags: ["security", "offensive-security", "CVE-2026-19624", "selinux", "apparmor", "networkmanager", "nm-l2tp", "ipsec", "dbus", "polkit", "privilege-escalation", "linux", "exploit", "libreswan", "strongswan"]
 channels: ["vuln-research"]
 ---
 
-A single newline in a VPN field, submitted over D-Bus by any logged-in local user, becomes root code execution. The bug (CVE-2026-19624) is one missing check.
+A single newline in a VPN field, submitted over D-Bus by any logged-in local user, becomes root code execution. The bug ([CVE-2026-19624](https://www.cve.org/CVERecord?id=CVE-2026-19624)) is one missing check.
 
 The interesting part is firing the exploit and escaping the MAC confinement you land in, which plays out differently across libreswan/strongSwan and SELinux/AppArmor. This turned into a comparison: same injection vulnerability, three completely different post-exploitation stories depending on your distro's IPsec daemon and MAC system.
 
@@ -44,7 +44,7 @@ In 2024 NetworkManager's libreswan plugin got [CVE-2024-9050](https://access.red
 A flaw was found in the libreswan client plugin for NetworkManager (NetworkManager-libreswan), where it fails to properly sanitize the VPN configuration from the local unprivileged user. In this configuration, composed by a key-value format, the plugin fails to escape special characters, leading the application to interpret values as keys.
 ```
 
-The l2tp plugin had a similar vulnerability, and now it gets CVE-2026-19624.
+The l2tp plugin had a similar vulnerability, and now it gets [CVE-2026-19624](https://www.cve.org/CVERecord?id=CVE-2026-19624).
 
 This is a writeup of the bug and the root execution the exploit produces, and escaping the MAC confinement of the SELinux domain or AppArmor profile you land in. There are many differences between the different distros and the ipsec daemons they use and the post-exploitation work. I found working paths from an unprivileged local user to unconfined root on each.
 
@@ -1235,7 +1235,7 @@ Run nmcli from the same local login session.
 - SELinux post-exploitation lands in `ipsec_mgmt_t` which we have several routes to escape to unconfined root with full caps
 - AppArmor enforcing on my tested Debian/Ubuntu systems does not prevent the exploit or any post-exploitation work, trivial escape to unconfined root with full caps
 - [confined root is still root](/posts/confined-root-is-still-root/)
-- CVE-2026-19624, fixed in 1.52.4 / 1.20.24 / 1.8.10 / 1.2.22 / 1.0.16
+- [CVE-2026-19624](https://www.cve.org/CVERecord?id=CVE-2026-19624), fixed in 1.52.4 / 1.20.24 / 1.8.10 / 1.2.22 / 1.0.16
 
 ## Closing Thoughts
 
